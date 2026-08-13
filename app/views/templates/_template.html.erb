@@ -1,0 +1,5 @@
+<div id="<%= dom_id(template) %>" class="template-card">
+  <h3><%= template.web_template["concept"] || template.template_id %></h3>
+  <p><%= template.template_id %> (v<%= template.version %>)</p>
+  <%= link_to "Open form", "/forms/#{template.template_id}" %>
+</div>

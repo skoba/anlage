@@ -1,13 +1,27 @@
 <h1>Templates</h1>
 
-<div id="catalog">
-  <% if @templates.empty? %>
-    <p>No templates registered yet. Drop an OPT file to get started.</p>
-  <% else %>
-    <ul>
-      <% @templates.each do |template| %>
-        <li><%= template.template_id %> (v<%= template.version %>)</li>
-      <% end %>
-    </ul>
-  <% end %>
+<div data-controller="dropzone"
+     data-dropzone-preview-url-value="<%= templates_preview_path %>"
+     data-dropzone-register-url-value="<%= templates_path %>"
+     data-action="dragover->dropzone#dragover dragenter->dropzone#dragenter dragleave->dropzone#dragleave drop->dropzone#drop">
+
+  <div data-dropzone-target="overlay" id="dropzone_overlay">Drop the .opt file to try it on</div>
+
+  <div id="dropzone_hint" data-action="click->dropzone#browse">
+    Drop an .opt file anywhere, or click to choose
+  </div>
+  <input type="file" accept=".opt,.xml" hidden
+         data-dropzone-target="fileInput"
+         data-action="change->dropzone#fileSelected">
+
+  <p id="upload_status"></p>
+
+  <turbo-frame id="fitting_room" data-dropzone-target="fittingRoom"></turbo-frame>
+
+  <div id="catalog">
+    <% if @templates.empty? %>
+      <p id="empty_notice">No templates registered yet. Drop an OPT file to get started.</p>
+    <% end %>
+    <%= render @templates %>
+  </div>
 </div>

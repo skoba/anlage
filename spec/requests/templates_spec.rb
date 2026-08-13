@@ -27,6 +27,15 @@ RSpec.describe "Templates", type: :request do
       expect(Template.count).to eq(0)
     end
 
+    it "renders the fitting-room HTML with a live form preview and register/discard buttons" do
+      post templates_preview_path, params: { file: upload(opt_path) }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("試着室")
+      expect(response.body).to include('data-action="click->dropzone#register"')
+      expect(response.body).to include('data-action="click->dropzone#discard"')
+    end
+
     it "flags an already-registered template by checksum" do
       Template.build_from_opt_xml(opt_path.read).save!
 
@@ -85,6 +94,53 @@ RSpec.describe "Templates", type: :request do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.parsed_body["error"]).to match(/DOCTYPE/)
+        expect(Template.count).to eq(0)
+      end
+    end
+  end
+
+  describe "POST /templates" do
+    it "registers a new template and returns it as created" do
+      post templates_path(format: :json), params: { file: upload(opt_path) }
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body["template_id"]).to be_present
+      expect(Template.count).to eq(1)
+    end
+
+    it "renders a turbo-stream that appends a catalog card" do
+      post templates_path, params: { file: upload(opt_path) }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(response.body).to include('turbo-stream action="append" target="catalog"')
+      expect(Template.count).to eq(1)
+    end
+
+    it "does not create a duplicate when the same checksum is dropped again" do
+      Template.build_from_opt_xml(opt_path.read).save!
+
+      post templates_path(format: :json), params: { file: upload(opt_path) }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["notice"]).to match(/already registered/)
+      expect(Template.count).to eq(1)
+    end
+
+    it "rejects a DOCTYPE payload the same way preview does" do
+      xxe_payload = <<~XML
+        <?xml version="1.0"?>
+        <!DOCTYPE template [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]>
+        <template><concept>&xxe;</concept></template>
+      XML
+
+      Tempfile.create([ "xxe", ".opt" ]) do |f|
+        f.write(xxe_payload)
+        f.flush
+
+        post templates_path(format: :json), params: { file: upload(f.path, filename: "xxe.opt") }
+
+        expect(response).to have_http_status(:unprocessable_content)
         expect(Template.count).to eq(0)
       end
     end

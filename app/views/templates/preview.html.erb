@@ -1,5 +1,4 @@
-<turbo-frame id="fitting_room">
-  <h2>試着室: <%= @template.template_id %></h2>
+<h2>試着室: <%= @template.template_id %></h2>
 
   <% if @existing %>
     <p class="already-registered">登録済みです（v<%= @existing.version %>）。</p>
@@ -36,5 +35,7 @@
         </div>
       <% end %>
     </fieldset>
+
+    <button type="button" data-action="click->dropzone#register">登録</button>
+    <button type="button" data-action="click->dropzone#discard">破棄</button>
   <% end %>
-</turbo-frame>
