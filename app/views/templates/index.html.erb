@@ -1,0 +1,13 @@
+<h1>Templates</h1>
+
+<div id="catalog">
+  <% if @templates.empty? %>
+    <p>No templates registered yet. Drop an OPT file to get started.</p>
+  <% else %>
+    <ul>
+      <% @templates.each do |template| %>
+        <li><%= template.template_id %> (v<%= template.version %>)</li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

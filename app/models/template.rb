@@ -26,7 +26,7 @@ class Template < ApplicationRecord
   # save -- callers decide what to do on checksum collision (see
   # Templates::PreviewSummary / Templates#create).
   def self.build_from_opt_xml(source_xml)
-    opt = OpenehrRails::Opt.parse(source_xml)
+    opt = Opt::SafeParser.parse(source_xml)
     raise InvalidTemplate, "template has no template_id" if opt.template_id.value.to_s.empty?
 
     extractor = OpenehrRails::Opt::FieldExtractor.new(opt)
@@ -38,7 +38,7 @@ class Template < ApplicationRecord
       status: "active",
       checksum: Digest::SHA256.hexdigest(source_xml)
     )
-  rescue InvalidTemplate
+  rescue InvalidTemplate, Opt::UnsafeTemplate
     raise
   rescue StandardError => e
     raise InvalidTemplate, "not a valid operational template: #{e.message}"
