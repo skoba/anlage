@@ -21,5 +21,8 @@ Rails.application.routes.draw do
   get  "compositions",              to: "compositions#index"
   get  "compositions/:id",          to: "compositions#show", as: :composition
 
+  get "fhir/r5/StructureDefinition/:id", to: "fhir/profiles#show",
+      constraints: { id: /[^\/]+/ }, format: false
+
   root "templates#index"
 end
