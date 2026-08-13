@@ -3,14 +3,14 @@ import { Controller } from "@hotwired/stimulus"
 const LOG_LINE_DELAY_MS = 200
 
 // Turns the whole catalog page into an OPT dropzone: drag-in shows a
-// full overlay, dropping one or more files previews them one at a time
-// in the "fitting room" turbo frame (queued, so a multi-file drop
-// doesn't overwhelm the visitor with N modals at once), and confirming
-// registers each via a turbo-stream response that appends a card to the
-// catalog without a page reload.
+// full overlay, dropping one or more files (or submitting a URL)
+// previews them one at a time in the "fitting room" turbo frame
+// (queued, so a multi-file drop doesn't overwhelm the visitor with N
+// modals at once), and confirming registers each via a turbo-stream
+// response that appends a card to the catalog without a page reload.
 export default class extends Controller {
   static targets = [
-    "overlay", "fittingRoom", "fileInput", "queueStatus",
+    "overlay", "fittingRoom", "fileInput", "queueStatus", "urlInput",
     "parseLog", "parseEntries", "fittingRoomContent"
   ]
   static values = { previewUrl: String, registerUrl: String }
@@ -25,8 +25,17 @@ export default class extends Controller {
   }
 
   async fileSelected() {
-    this.enqueue(Array.from(this.fileInputTarget.files))
+    this.enqueue(Array.from(this.fileInputTarget.files).map((file) => ({ kind: "file", file })))
     this.fileInputTarget.value = ""
+  }
+
+  async importUrl(event) {
+    event.preventDefault()
+    const url = this.urlInputTarget.value.trim()
+    if (!url) return
+
+    this.enqueue([ { kind: "url", url } ])
+    this.urlInputTarget.value = ""
   }
 
   dragover(event) {
@@ -50,20 +59,20 @@ export default class extends Controller {
     this.dragDepth = 0
     this.overlayTarget.classList.remove("visible")
 
-    this.enqueue(Array.from(event.dataTransfer.files))
+    this.enqueue(Array.from(event.dataTransfer.files).map((file) => ({ kind: "file", file })))
   }
 
-  async enqueue(files) {
-    if (files.length === 0) return
+  async enqueue(sources) {
+    if (sources.length === 0) return
 
-    this.queue.push(...files)
-    if (!this.pendingFile) await this.previewNext()
+    this.queue.push(...sources)
+    if (!this.pendingSource) await this.previewNext()
   }
 
   async previewNext() {
-    const file = this.queue.shift()
-    if (!file) {
-      this.pendingFile = null
+    const source = this.queue.shift()
+    if (!source) {
+      this.pendingSource = null
       this.fittingRoomTarget.innerHTML = ""
       this.queueStatusTarget.textContent = ""
       return
@@ -72,16 +81,16 @@ export default class extends Controller {
     this.queueStatusTarget.textContent = this.queue.length > 0
       ? `残り${this.queue.length}件を後ほど確認します`
       : ""
-    await this.preview(file)
+    await this.preview(source)
   }
 
-  async preview(file) {
-    this.pendingFile = file
+  async preview(source) {
+    this.pendingSource = source
 
     const response = await fetch(this.previewUrlValue, {
       method: "POST",
       headers: { "X-CSRF-Token": this.csrfToken(), Accept: "text/html" },
-      body: this.formDataFor(file)
+      body: this.formDataFor(source)
     })
     this.fittingRoomTarget.innerHTML = await response.text()
     await this.revealParseLog()
@@ -112,12 +121,12 @@ export default class extends Controller {
 
   async register(event) {
     event.preventDefault()
-    if (!this.pendingFile) return
+    if (!this.pendingSource) return
 
     const response = await fetch(this.registerUrlValue, {
       method: "POST",
       headers: { "X-CSRF-Token": this.csrfToken(), Accept: "text/vnd.turbo-stream.html" },
-      body: this.formDataFor(this.pendingFile)
+      body: this.formDataFor(this.pendingSource)
     })
     Turbo.renderStreamMessage(await response.text())
     await this.previewNext()
@@ -127,9 +136,13 @@ export default class extends Controller {
     await this.previewNext()
   }
 
-  formDataFor(file) {
+  formDataFor(source) {
     const formData = new FormData()
-    formData.append("file", file)
+    if (source.kind === "url") {
+      formData.append("url", source.url)
+    } else {
+      formData.append("file", source.file)
+    }
     return formData
   }
 

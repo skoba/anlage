@@ -117,9 +117,53 @@ RSpec.describe "Templates", type: :request do
       expect(response.body).to include("v1.0.1")
       expect(response.body).to include("Systolic Pressure")
     end
+
+    it "fetches from an allowlisted URL server-side and previews it" do
+      allow(OpenehrRails::Opt::RemoteFetcher).to receive(:fetch)
+        .with("https://ckm.openehr.org/templates/patient_blood_pressure.opt")
+        .and_return(opt_path.read)
+
+      post templates_preview_path(format: :json),
+           params: { url: "https://ckm.openehr.org/templates/patient_blood_pressure.opt" }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["template_id"]).to be_present
+      expect(Template.count).to eq(0)
+    end
+
+    it "rejects a URL on a host outside the allowlist without fetching it" do
+      expect(OpenehrRails::Opt::RemoteFetcher).not_to receive(:fetch)
+
+      post templates_preview_path(format: :json), params: { url: "https://evil.example.com/x.opt" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["error"]).to match(/ckm\.openehr\.org/)
+    end
+
+    it "surfaces a RemoteFetcher failure as a validation error" do
+      allow(OpenehrRails::Opt::RemoteFetcher).to receive(:fetch)
+        .and_raise(OpenehrRails::Opt::RemoteFetcher::FetchError, "failed to fetch: 404 Not Found")
+
+      post templates_preview_path(format: :json), params: { url: "https://ckm.openehr.org/missing.opt" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["error"]).to match(/404/)
+    end
   end
 
   describe "POST /templates" do
+    it "registers a template fetched from an allowlisted URL" do
+      allow(OpenehrRails::Opt::RemoteFetcher).to receive(:fetch)
+        .with("https://ckm.openehr.org/templates/patient_blood_pressure.opt")
+        .and_return(opt_path.read)
+
+      post templates_path(format: :json),
+           params: { url: "https://ckm.openehr.org/templates/patient_blood_pressure.opt" }
+
+      expect(response).to have_http_status(:created)
+      expect(Template.count).to eq(1)
+    end
+
     it "registers a new template and returns it as created" do
       post templates_path(format: :json), params: { file: upload(opt_path) }
 

@@ -14,6 +14,11 @@
          data-dropzone-target="fileInput"
          data-action="change->dropzone#fileSelected">
 
+  <form data-action="submit->dropzone#importUrl">
+    <input type="url" placeholder="https://ckm.openehr.org/..." data-dropzone-target="urlInput">
+    <button type="submit">URLから取り込む</button>
+  </form>
+
   <p id="upload_status"></p>
   <p id="queue_status" data-dropzone-target="queueStatus"></p>
 

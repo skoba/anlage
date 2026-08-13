@@ -4,6 +4,12 @@ class TemplatesController < ApplicationController
   MAX_UPLOAD_SIZE = 5.megabytes
   ALLOWED_EXTENSIONS = /\.(opt|xml)\z/i
 
+  # CKM (Clinical Knowledge Manager) is the only external source this
+  # demo trusts to fetch OPTs from server-side; RemoteFetcher's own
+  # private/loopback/link-local IP blocking guards the fetch itself,
+  # this is an additional, stricter allowlist on top of it.
+  ALLOWED_URL_HOSTS = %w[ckm.openehr.org].freeze
+
   def index
     @templates = Template.active.order(:template_id)
   end
@@ -12,7 +18,7 @@ class TemplatesController < ApplicationController
   # "fitting room"): summary + a live form preview, so the visitor can
   # inspect the template before deciding to register it.
   def preview
-    content = read_validated_upload || return
+    content = read_validated_content || return
     return unless (@template = parse_upload(content))
 
     @existing = Template.find_by_checksum(content)
@@ -40,7 +46,7 @@ class TemplatesController < ApplicationController
   # to the catalog via a Turbo Stream, so the drop-to-register flow never
   # needs a full page reload.
   def create
-    content = read_validated_upload || return
+    content = read_validated_content || return
 
     if (existing = Template.find_by_checksum(content))
       return render_notice("already registered as #{existing.template_id} (v#{existing.version})")
@@ -70,6 +76,12 @@ class TemplatesController < ApplicationController
 
   private
 
+  def read_validated_content
+    return read_validated_url if params[:url].present?
+
+    read_validated_upload
+  end
+
   def read_validated_upload
     file = params[:file]
     unless file
@@ -86,6 +98,37 @@ class TemplatesController < ApplicationController
     end
 
     file.read.force_encoding(Encoding::UTF_8)
+  end
+
+  # Fetches an OPT from an allowlisted URL server-side, via
+  # OpenehrRails::Opt::RemoteFetcher (blocks private/loopback/link-local
+  # targets, caps redirects and response size). The fetched body still
+  # goes through parse_upload -> Opt::SafeParser afterwards, same as an
+  # uploaded file, since RemoteFetcher's own validation doesn't guard
+  # against XXE.
+  def read_validated_url
+    url = params[:url].to_s
+    host = begin
+      URI.parse(url).host
+    rescue URI::InvalidURIError
+      nil
+    end
+
+    unless host && ALLOWED_URL_HOSTS.include?(host)
+      render_upload_error("only URLs on #{ALLOWED_URL_HOSTS.join(', ')} are supported")
+      return nil
+    end
+
+    content = OpenehrRails::Opt::RemoteFetcher.fetch(url).force_encoding(Encoding::UTF_8)
+    if content.bytesize > MAX_UPLOAD_SIZE
+      render_upload_error("file exceeds the 5MB limit")
+      return nil
+    end
+
+    content
+  rescue OpenehrRails::Opt::RemoteFetcher::FetchError => e
+    render_upload_error(e.message)
+    nil
   end
 
   def parse_upload(content)
