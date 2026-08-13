@@ -293,10 +293,18 @@
 - 一覧・詳細画面。
 - system spec（fixtureは `patient_blood_pressure.opt` を使用）。
 
-### Phase 2 / 3
-依頼書のとおり。Phase 2 着手前に semantic diff・バージョニングの
-テーブル設計（superseded遷移）を改めて確認する。Phase 3 は FHIR facade
-再利用可否の再調査結果を踏まえて計画し直す。
+### Phase 2（完了）
+4項目とも実装済み:
+- 複数ファイル一括ドロップの整流（キュー化、1件ずつ試着室に表示）
+- パース過程のログ演出（クライアント側の段階表示。実データに基づくが
+  サーバは1回のHTTP応答のまま）
+- semantic diff・バージョニング（`Opt::TemplateDiff`、`[template_id,
+  version]` 複合ユニーク、旧バージョンの superseded 化）
+- URLドロップ（`OpenehrRails::Opt::RemoteFetcher` を再利用、
+  `ckm.openehr.org` のみのアプリ側ドメイン許可リストを追加）
+
+### Phase 3（未着手）
+FHIR facade 再利用可否の再調査結果を踏まえて計画し直す。
 
 ## 5. 汎用化候補（先出し）
 
