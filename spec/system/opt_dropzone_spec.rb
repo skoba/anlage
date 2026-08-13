@@ -1,8 +1,9 @@
 require "rails_helper"
 
 # JS-driven (drag&drop → fitting room → register → Turbo Stream card).
-# Requires a headless Chrome/Chromium; not runnable in this sandbox
-# (no browser installed here) -- run in CI or a dev machine with Chrome.
+# Drag&drop itself can't be scripted portably across browsers, so this
+# exercises the click-to-choose path (same controller actions, same
+# server round trips) via the hidden file input.
 RSpec.describe "OPT dropzone", type: :system, js: true do
   let(:opt_path) { Rails.root.join("spec/fixtures/opt/patient_blood_pressure.opt") }
 
@@ -10,9 +11,7 @@ RSpec.describe "OPT dropzone", type: :system, js: true do
     visit templates_path
     expect(page).to have_content("No templates registered yet")
 
-    attach_file(nil, opt_path.to_s) do
-      find("#dropzone_hint").click
-    end
+    attach_file("opt_file_input", opt_path.to_s, visible: false)
 
     expect(page).to have_content("試着室")
     expect(page).to have_button("登録")
@@ -27,9 +26,7 @@ RSpec.describe "OPT dropzone", type: :system, js: true do
     Template.build_from_opt_xml(opt_path.read).save!
     visit templates_path
 
-    attach_file(nil, opt_path.to_s) do
-      find("#dropzone_hint").click
-    end
+    attach_file("opt_file_input", opt_path.to_s, visible: false)
 
     expect(page).to have_content("登録済み")
   end

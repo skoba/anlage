@@ -43,7 +43,12 @@ class TemplatesController < ApplicationController
 
     if template.save
       respond_to do |format|
-        format.turbo_stream { render turbo_stream: turbo_stream.append("catalog", partial: "templates/template", locals: { template: template }) }
+        format.turbo_stream do
+          render turbo_stream: [
+            turbo_stream.remove("empty_notice"),
+            turbo_stream.append("catalog", partial: "templates/template", locals: { template: template })
+          ]
+        end
         format.json { render json: { template_id: template.template_id, name: template.web_template["concept"] }, status: :created }
       end
     else
