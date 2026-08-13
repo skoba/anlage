@@ -3,16 +3,23 @@
 <% if @existing %>
   <p class="already-registered">登録済みです（v<%= @existing.version %>）。</p>
 <% else %>
-  <dl>
-    <dt>archetype数</dt><dd><%= @template.entries.size %></dd>
-    <dt>フィールド数</dt><dd><%= @template.fields.size %></dd>
-  </dl>
+  <div id="parse_log" data-dropzone-target="parseLog"></div>
 
-  <h3>フォームプレビュー</h3>
-  <fieldset>
-    <%= render partial: "templates/field", collection: @template.fields, as: :field, locals: { disabled: true } %>
-  </fieldset>
+  <% parse_summary = @template.entries.map { |e| { concept: e["concept"] || e["archetype_id"], field_count: (e["fields"] || []).size } } %>
+  <script type="application/json" data-dropzone-target="parseEntries"><%= json_escape(parse_summary.to_json).html_safe %></script>
 
-  <button type="button" data-action="click->dropzone#register">登録</button>
-  <button type="button" data-action="click->dropzone#discard">破棄</button>
+  <div id="fitting_room_content" data-dropzone-target="fittingRoomContent" hidden>
+    <dl>
+      <dt>archetype数</dt><dd><%= @template.entries.size %></dd>
+      <dt>フィールド数</dt><dd><%= @template.fields.size %></dd>
+    </dl>
+
+    <h3>フォームプレビュー</h3>
+    <fieldset>
+      <%= render partial: "templates/field", collection: @template.fields, as: :field, locals: { disabled: true } %>
+    </fieldset>
+
+    <button type="button" data-action="click->dropzone#register">登録</button>
+    <button type="button" data-action="click->dropzone#discard">破棄</button>
+  </div>
 <% end %>

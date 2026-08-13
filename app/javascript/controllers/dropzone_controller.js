@@ -1,5 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
+const LOG_LINE_DELAY_MS = 200
+
 // Turns the whole catalog page into an OPT dropzone: drag-in shows a
 // full overlay, dropping one or more files previews them one at a time
 // in the "fitting room" turbo frame (queued, so a multi-file drop
@@ -7,7 +9,10 @@ import { Controller } from "@hotwired/stimulus"
 // registers each via a turbo-stream response that appends a card to the
 // catalog without a page reload.
 export default class extends Controller {
-  static targets = ["overlay", "fittingRoom", "fileInput", "queueStatus"]
+  static targets = [
+    "overlay", "fittingRoom", "fileInput", "queueStatus",
+    "parseLog", "parseEntries", "fittingRoomContent"
+  ]
   static values = { previewUrl: String, registerUrl: String }
 
   connect() {
@@ -79,6 +84,30 @@ export default class extends Controller {
       body: this.formDataFor(file)
     })
     this.fittingRoomTarget.innerHTML = await response.text()
+    await this.revealParseLog()
+  }
+
+  // Plays back the (already-complete) parse result as a "detecting
+  // archetype N..." log, then reveals the fitting room's form preview.
+  // Not a live progress report from the server -- the parse itself is
+  // fast; this paces out its real result for the "a model just appeared"
+  // effect the demo is going for.
+  async revealParseLog() {
+    if (!this.hasParseEntriesTarget || !this.hasParseLogTarget) return
+
+    const entries = JSON.parse(this.parseEntriesTarget.textContent)
+    for (const entry of entries) {
+      const line = document.createElement("p")
+      line.textContent = `archetype検出: ${entry.concept}（${entry.field_count}フィールド）`
+      this.parseLogTarget.appendChild(line)
+      await this.delay(LOG_LINE_DELAY_MS)
+    }
+
+    if (this.hasFittingRoomContentTarget) this.fittingRoomContentTarget.hidden = false
+  }
+
+  delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
   async register(event) {
