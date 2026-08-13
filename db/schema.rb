@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_120003) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_120730) do
   create_table "openehr_ehrs", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ehr_id", null: false
@@ -150,5 +150,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_120003) do
     t.datetime "updated_at", null: false
     t.string "version"
     t.index ["template_id"], name: "index_openehr_templates_on_template_id", unique: true
+  end
+
+  create_table "templates", force: :cascade do |t|
+    t.string "checksum", null: false
+    t.datetime "created_at", null: false
+    t.datetime "dropped_at"
+    t.string "dropped_by"
+    t.text "source_xml", null: false
+    t.string "status", default: "active", null: false
+    t.string "template_id", null: false
+    t.datetime "updated_at", null: false
+    t.string "version", default: "1.0.0", null: false
+    t.json "web_template"
+    t.index ["checksum"], name: "index_templates_on_checksum", unique: true
+    t.index ["template_id", "version"], name: "index_templates_on_template_id_and_version", unique: true
   end
 end
