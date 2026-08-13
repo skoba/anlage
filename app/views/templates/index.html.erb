@@ -10,11 +10,12 @@
   <div id="dropzone_hint" data-action="click->dropzone#browse">
     Drop an .opt file anywhere, or click to choose
   </div>
-  <input type="file" id="opt_file_input" accept=".opt,.xml" hidden
+  <input type="file" id="opt_file_input" accept=".opt,.xml" multiple hidden
          data-dropzone-target="fileInput"
          data-action="change->dropzone#fileSelected">
 
   <p id="upload_status"></p>
+  <p id="queue_status" data-dropzone-target="queueStatus"></p>
 
   <turbo-frame id="fitting_room" data-dropzone-target="fittingRoom"></turbo-frame>
 

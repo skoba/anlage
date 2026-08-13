@@ -1,15 +1,18 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Turns the whole catalog page into an OPT dropzone: drag-in shows a
-// full overlay, dropping a file previews it in the "fitting room" turbo
-// frame, and confirming registers it via a turbo-stream response that
-// appends a card to the catalog without a page reload.
+// full overlay, dropping one or more files previews them one at a time
+// in the "fitting room" turbo frame (queued, so a multi-file drop
+// doesn't overwhelm the visitor with N modals at once), and confirming
+// registers each via a turbo-stream response that appends a card to the
+// catalog without a page reload.
 export default class extends Controller {
-  static targets = ["overlay", "fittingRoom", "fileInput"]
+  static targets = ["overlay", "fittingRoom", "fileInput", "queueStatus"]
   static values = { previewUrl: String, registerUrl: String }
 
   connect() {
     this.dragDepth = 0
+    this.queue = []
   }
 
   browse() {
@@ -17,8 +20,7 @@ export default class extends Controller {
   }
 
   async fileSelected() {
-    const [ file ] = Array.from(this.fileInputTarget.files)
-    if (file) await this.preview(file)
+    this.enqueue(Array.from(this.fileInputTarget.files))
     this.fileInputTarget.value = ""
   }
 
@@ -43,8 +45,29 @@ export default class extends Controller {
     this.dragDepth = 0
     this.overlayTarget.classList.remove("visible")
 
-    const [ file ] = Array.from(event.dataTransfer.files)
-    if (file) await this.preview(file)
+    this.enqueue(Array.from(event.dataTransfer.files))
+  }
+
+  async enqueue(files) {
+    if (files.length === 0) return
+
+    this.queue.push(...files)
+    if (!this.pendingFile) await this.previewNext()
+  }
+
+  async previewNext() {
+    const file = this.queue.shift()
+    if (!file) {
+      this.pendingFile = null
+      this.fittingRoomTarget.innerHTML = ""
+      this.queueStatusTarget.textContent = ""
+      return
+    }
+
+    this.queueStatusTarget.textContent = this.queue.length > 0
+      ? `残り${this.queue.length}件を後ほど確認します`
+      : ""
+    await this.preview(file)
   }
 
   async preview(file) {
@@ -68,12 +91,11 @@ export default class extends Controller {
       body: this.formDataFor(this.pendingFile)
     })
     Turbo.renderStreamMessage(await response.text())
-    this.discard()
+    await this.previewNext()
   }
 
-  discard() {
-    this.fittingRoomTarget.innerHTML = ""
-    this.pendingFile = null
+  async discard() {
+    await this.previewNext()
   }
 
   formDataFor(file) {
