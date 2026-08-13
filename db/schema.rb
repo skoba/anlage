@@ -10,7 +10,15 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_13_120730) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_13_123655) do
+  create_table "compositions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.json "rm_composition", null: false
+    t.integer "template_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["template_id"], name: "index_compositions_on_template_id"
+  end
+
   create_table "openehr_ehrs", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ehr_id", null: false
@@ -166,4 +174,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_13_120730) do
     t.index ["checksum"], name: "index_templates_on_checksum", unique: true
     t.index ["template_id", "version"], name: "index_templates_on_template_id_and_version", unique: true
   end
+
+  add_foreign_key "compositions", "templates"
 end

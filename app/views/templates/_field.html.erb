@@ -1,0 +1,31 @@
+<%
+disabled ||= false
+value ||= nil
+error ||= nil
+%>
+<div class="field <%= "field-error" if error %>">
+  <label for="field_<%= field["name"] %>"><%= field["label"] %><%= " *" if field["required"] %></label>
+
+  <% case field["rm_type"] %>
+  <% when "DV_QUANTITY" %>
+    <input type="number" step="any" id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]"
+           <% if field["magnitude_range"] %>
+             min="<%= field["magnitude_range"][0] %>" max="<%= field["magnitude_range"][1] %>"
+           <% end %>
+           value="<%= value %>"
+           <%= "disabled" if disabled %>>
+    <span class="units"><%= field["units"] %></span>
+  <% when "DV_CODED_TEXT" %>
+    <select id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]" <%= "disabled" if disabled %>>
+      <option value=""></option>
+      <% (field["code_list"] || []).each do |code| %>
+        <option value="<%= code %>" <%= "selected" if value == code %>><%= field.dig("code_labels", code) || code %></option>
+      <% end %>
+    </select>
+  <% else %>
+    <input type="text" id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]"
+           value="<%= value %>" <%= "disabled" if disabled %>>
+  <% end %>
+
+  <% if error %><p class="field-error-message"><%= error %></p><% end %>
+</div>

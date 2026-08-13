@@ -14,5 +14,12 @@ Rails.application.routes.draw do
   post "templates/preview", to: "templates#preview"
   post "templates",         to: "templates#create"
 
+  get  "forms/:template_id",        to: "forms#show", as: :form,
+       format: false, constraints: { template_id: /[^\/]+/ }
+  post "compositions/:template_id", to: "compositions#create", as: :template_compositions,
+       format: false, constraints: { template_id: /[^\/]+/ }
+  get  "compositions",              to: "compositions#index"
+  get  "compositions/:id",          to: "compositions#show", as: :composition
+
   root "templates#index"
 end

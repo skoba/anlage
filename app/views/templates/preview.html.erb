@@ -1,41 +1,18 @@
 <h2>試着室: <%= @template.template_id %></h2>
 
-  <% if @existing %>
-    <p class="already-registered">登録済みです（v<%= @existing.version %>）。</p>
-  <% else %>
-    <dl>
-      <dt>archetype数</dt><dd><%= @template.entries.size %></dd>
-      <dt>フィールド数</dt><dd><%= @template.fields.size %></dd>
-    </dl>
+<% if @existing %>
+  <p class="already-registered">登録済みです（v<%= @existing.version %>）。</p>
+<% else %>
+  <dl>
+    <dt>archetype数</dt><dd><%= @template.entries.size %></dd>
+    <dt>フィールド数</dt><dd><%= @template.fields.size %></dd>
+  </dl>
 
-    <h3>フォームプレビュー</h3>
-    <fieldset>
-      <% @template.fields.each do |field| %>
-        <div class="field-preview">
-          <label><%= field["label"] %></label>
-          <% case field["rm_type"] %>
-          <% when "DV_QUANTITY" %>
-            <input type="number"
-                   step="any"
-                   <% if field["magnitude_range"] %>
-                     min="<%= field["magnitude_range"][0] %>"
-                     max="<%= field["magnitude_range"][1] %>"
-                   <% end %>
-                   disabled>
-            <span class="units"><%= field["units"] %></span>
-          <% when "DV_CODED_TEXT" %>
-            <select disabled>
-              <% (field["code_list"] || []).each do |code| %>
-                <option><%= field.dig("code_labels", code) || code %></option>
-              <% end %>
-            </select>
-          <% else %>
-            <input type="text" disabled>
-          <% end %>
-        </div>
-      <% end %>
-    </fieldset>
+  <h3>フォームプレビュー</h3>
+  <fieldset>
+    <%= render partial: "templates/field", collection: @template.fields, as: :field, locals: { disabled: true } %>
+  </fieldset>
 
-    <button type="button" data-action="click->dropzone#register">登録</button>
-    <button type="button" data-action="click->dropzone#discard">破棄</button>
-  <% end %>
+  <button type="button" data-action="click->dropzone#register">登録</button>
+  <button type="button" data-action="click->dropzone#discard">破棄</button>
+<% end %>

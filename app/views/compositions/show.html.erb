@@ -1,0 +1,4 @@
+<h1><%= @composition.template.template_id %></h1>
+<p>Registered: <%= @composition.created_at %></p>
+
+<pre><%= JSON.pretty_generate(@composition.rm_composition) %></pre>

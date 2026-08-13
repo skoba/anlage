@@ -71,4 +71,9 @@ RSpec.configure do |config|
   config.filter_rails_from_backtrace!
   # arbitrary gems may also be filtered via:
   # config.filter_gems_from_backtrace("gem name")
+
+  # system specs default to rack_test (no browser needed); opt into a
+  # real headless browser per-example with `js: true`.
+  config.before(:each, type: :system) { driven_by :rack_test }
+  config.before(:each, type: :system, js: true) { driven_by Capybara.javascript_driver }
 end

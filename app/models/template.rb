@@ -21,6 +21,8 @@ class Template < ApplicationRecord
 
   scope :active, -> { where(status: "active") }
 
+  has_many :compositions, dependent: :destroy
+
   # Parses raw OPT XML, and returns a not-yet-persisted Template with
   # template_id/checksum/web_template filled in from the parse. Does not
   # save -- callers decide what to do on checksum collision (see

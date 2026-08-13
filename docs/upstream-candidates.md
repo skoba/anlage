@@ -57,3 +57,25 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 還流先: openehr-rails（`lib/generators/openehr/install/templates/`）。
 - ステータス: 未着手。anlage の Slice 1 で実装した設計が実証できたら
   提案する。
+
+## 4. RM値オブジェクト組み立てヘルパーの共通化
+
+- 背景: `OpenehrRails::Rm::RmObjectBuilder`
+  (`lib/openehr_rails/rm/rm_object_builder.rb`) は `dv_text` /
+  `dv_coded_text` / `code_phrase` / `terminology_id` / `dv_date_time` /
+  `party_self` / `party_identified` という、openEHR RM の値オブジェクト
+  を組み立てる小さなprivateヘルパー群を持つ。これは
+  `openehr_rm_*` グラフ（コード生成・Storable経路）専用に書かれている
+  ため、解釈方式の anlage 側 `Opt::CompositionBuilder`
+  (`app/lib/opt/composition_builder.rb`) では**同じ内容を独自に複製**
+  した（`OpenehrRails.default_language` 等の設定値・
+  `TerminologyService` のバリデーション要件に合わせる必要があり、
+  車輪の再発明を避けるには公開APIとして切り出されている必要があった）。
+- 提案: これらのヘルパーを `OpenehrRails::Rm::ValueBuilders`
+  （仮）のような、グラフに依存しないモジュールとして切り出し、
+  `RmObjectBuilder` 側もそれを `include`/委譲する形にリファクタリング
+  する。そうすれば「コード生成経路」「解釈経路」の両方が同じ実装を
+  使える。
+- 還流先: openehr-rails（`lib/openehr_rails/rm/`）。
+- ステータス: 未着手。anlage の Slice 4 で実装が安定したら、
+  重複している具体的なメソッド一覧とともに提案する。

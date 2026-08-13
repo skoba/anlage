@@ -1,0 +1,13 @@
+<h1>Compositions</h1>
+
+<% if @compositions.empty? %>
+  <p>No compositions yet.</p>
+<% else %>
+  <ul>
+    <% @compositions.each do |composition| %>
+      <li>
+        <%= link_to "#{composition.template.template_id} — #{composition.created_at}", composition_path(composition) %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>

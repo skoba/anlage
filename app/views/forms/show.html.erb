@@ -1,0 +1,12 @@
+<h1><%= @template.web_template["concept"] || @template.template_id %></h1>
+
+<%= form_with url: template_compositions_path(@template.template_id), method: :post, local: true do %>
+  <fieldset>
+    <% @template.fields.each do |field| %>
+      <%= render "templates/field", field: field, disabled: false,
+                 value: @values[field["name"]], error: @errors[field["name"]] %>
+    <% end %>
+  </fieldset>
+
+  <button type="submit">送信</button>
+<% end %>
