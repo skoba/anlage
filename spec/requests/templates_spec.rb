@@ -7,6 +7,16 @@ RSpec.describe "Templates", type: :request do
     Rack::Test::UploadedFile.new(path.to_s, type, false, original_filename: filename)
   end
 
+  # Derives a "changed content, same template_id" fixture from the real
+  # OPT (a targeted label substitution), rather than fabricating one.
+  def upload_mutated(original_path, filename: "mutated.opt")
+    mutated_xml = original_path.read.sub("Systolic", "Systolic Pressure")
+    file = Tempfile.new([ "mutated", ".opt" ])
+    file.write(mutated_xml)
+    file.flush
+    upload(file.path, filename: filename)
+  end
+
   describe "GET /templates" do
     it "renders the (empty) catalog" do
       get templates_path
@@ -97,6 +107,16 @@ RSpec.describe "Templates", type: :request do
         expect(Template.count).to eq(0)
       end
     end
+
+    it "shows a semantic diff when the template_id matches an active template but the content differs" do
+      Template.build_from_opt_xml(opt_path.read).save!
+
+      post templates_preview_path, params: { file: upload_mutated(opt_path) }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("v1.0.1")
+      expect(response.body).to include("Systolic Pressure")
+    end
   end
 
   describe "POST /templates" do
@@ -143,6 +163,27 @@ RSpec.describe "Templates", type: :request do
         expect(response).to have_http_status(:unprocessable_content)
         expect(Template.count).to eq(0)
       end
+    end
+
+    it "registers a new version and supersedes the previous one when content for the same template_id changes" do
+      original = Template.build_from_opt_xml(opt_path.read).tap(&:save!)
+
+      post templates_path(format: :json), params: { file: upload_mutated(opt_path) }
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body["version"]).to eq("1.0.1")
+      expect(Template.count).to eq(2)
+      expect(original.reload.status).to eq("superseded")
+      expect(Template.active.find_by(template_id: original.template_id).version).to eq("1.0.1")
+    end
+
+    it "removes the superseded template's card and appends the new version's card via turbo-stream" do
+      original = Template.build_from_opt_xml(opt_path.read).tap(&:save!)
+
+      post templates_path, params: { file: upload_mutated(opt_path) }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response.body).to include(%(turbo-stream action="remove" target="template_#{original.id}"))
+      expect(response.body).to include('turbo-stream action="append" target="catalog"')
     end
   end
 end

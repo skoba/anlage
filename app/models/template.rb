@@ -2,14 +2,6 @@ require "digest"
 
 class Template < ApplicationRecord
   class InvalidTemplate < StandardError; end
-  class DuplicateTemplate < StandardError
-    attr_reader :template
-
-    def initialize(template)
-      @template = template
-      super("template already registered as #{template.template_id} v#{template.version}")
-    end
-  end
 
   STATUSES = %w[active superseded].freeze
 
@@ -48,6 +40,19 @@ class Template < ApplicationRecord
 
   def self.find_by_checksum(source_xml)
     find_by(checksum: Digest::SHA256.hexdigest(source_xml))
+  end
+
+  # Bumps the patch segment of a dotted version string ("1.0.0" ->
+  # "1.0.1"); used when a dropped OPT shares a template_id with an
+  # already-registered active template but has different content.
+  def self.next_version(version)
+    parts = version.split(".")
+    parts[-1] = (parts.last.to_i + 1).to_s
+    parts.join(".")
+  end
+
+  def supersede!
+    update!(status: "superseded")
   end
 
   def self.build_web_template(opt, extractor)

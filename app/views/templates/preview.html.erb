@@ -14,6 +14,48 @@
       <dt>フィールド数</dt><dd><%= @template.fields.size %></dd>
     </dl>
 
+    <% if @superseding %>
+      <div id="version_diff">
+        <p>
+          <%= @superseding.template_id %> は既に v<%= @superseding.version %> として登録済みです。
+          内容が変更されています。承認すると
+          v<%= ::Template.next_version(@superseding.version) %> として新規登録し、
+          旧バージョンは superseded になります。
+        </p>
+        <% if @diff.any_changes? %>
+          <% if @diff.added.any? %>
+            <h4>追加されたフィールド</h4>
+            <ul>
+              <% @diff.added.each do |field| %>
+                <li class="diff-added"><%= field["path"] %> (<%= field["label"] %>)</li>
+              <% end %>
+            </ul>
+          <% end %>
+          <% if @diff.removed.any? %>
+            <h4>削除されたフィールド</h4>
+            <ul>
+              <% @diff.removed.each do |field| %>
+                <li class="diff-removed"><%= field["path"] %> (<%= field["label"] %>)</li>
+              <% end %>
+            </ul>
+          <% end %>
+          <% if @diff.changed.any? %>
+            <h4>変更されたフィールド</h4>
+            <ul>
+              <% @diff.changed.each do |change| %>
+                <li class="diff-changed">
+                  <%= change["path"] %>:
+                  <%= change["before"].to_json %> → <%= change["after"].to_json %>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+        <% else %>
+          <p>フィールド構成に差分はありません（内容のみ変更）。</p>
+        <% end %>
+      </div>
+    <% end %>
+
     <h3>フォームプレビュー</h3>
     <fieldset>
       <%= render partial: "templates/field", collection: @template.fields, as: :field, locals: { disabled: true } %>

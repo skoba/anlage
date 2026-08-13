@@ -1,4 +1,6 @@
 class TemplatesController < ApplicationController
+  include ActionView::RecordIdentifier
+
   MAX_UPLOAD_SIZE = 5.megabytes
   ALLOWED_EXTENSIONS = /\.(opt|xml)\z/i
 
@@ -14,6 +16,10 @@ class TemplatesController < ApplicationController
     return unless (@template = parse_upload(content))
 
     @existing = Template.find_by_checksum(content)
+    unless @existing
+      @superseding = Template.active.find_by(template_id: @template.template_id)
+      @diff = Opt::TemplateDiff.call(@superseding, @template) if @superseding
+    end
 
     respond_to do |format|
       format.html { render :preview, layout: false }
@@ -23,7 +29,8 @@ class TemplatesController < ApplicationController
           concept: @template.web_template["concept"],
           archetype_count: @template.entries.size,
           field_count: @template.fields.size,
-          already_registered: @existing.present?
+          already_registered: @existing.present?,
+          new_version_of: @superseding&.template_id
         }
       end
     end
@@ -41,15 +48,20 @@ class TemplatesController < ApplicationController
 
     return unless (template = parse_upload(content))
 
+    superseding = Template.active.find_by(template_id: template.template_id)
+    template.version = Template.next_version(superseding.version) if superseding
+
     if template.save
+      superseding&.supersede!
+
       respond_to do |format|
         format.turbo_stream do
-          render turbo_stream: [
-            turbo_stream.remove("empty_notice"),
-            turbo_stream.append("catalog", partial: "templates/template", locals: { template: template })
-          ]
+          streams = [ turbo_stream.append("catalog", partial: "templates/template", locals: { template: template }) ]
+          streams << turbo_stream.remove("empty_notice") unless superseding
+          streams << turbo_stream.remove(dom_id(superseding)) if superseding
+          render turbo_stream: streams
         end
-        format.json { render json: { template_id: template.template_id, name: template.web_template["concept"] }, status: :created }
+        format.json { render json: { template_id: template.template_id, version: template.version, name: template.web_template["concept"] }, status: :created }
       end
     else
       render_upload_error(template.errors.full_messages.join(", "))
