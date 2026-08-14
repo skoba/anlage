@@ -79,3 +79,46 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 還流先: openehr-rails（`lib/openehr_rails/rm/`）。
 - ステータス: 未着手。anlage の Slice 4 で実装が安定したら、
   重複している具体的なメソッド一覧とともに提案する。
+
+## 5. RMJSONSerializer ⇔ CompositionFactory.create_from_json のラウンドトリップが壊れている
+
+- 背景（実際に踏んだバグ）: `OpenEHR::Serializer::RMJSONSerializer`
+  (`lib/openehr/serializer/rm_json_serializer.rb`) は対象オブジェクトの
+  **全 instance variable を機械的にreflectionでシリアライズ**する汎用
+  walkerである。`DvDateTime#value=`
+  (`lib/openehr/rm/data_types/quantity/date_time.rb:213-224`) は
+  `@value` に加えて `@timezone`（ISO8601DateTimeパース結果、
+  `_type => "TIMEZONE"`）等の**派生ivar**もインスタンス変数として保持
+  するため、これも一緒にシリアライズされてしまう。
+- 一方 `OpenEHR::RM::CompositionFactory.create_from_json` →
+  `Factory#params` → `Factory#build` は `_type` ごとに
+  `class_eval("#{type}Factory")` で対応する `<Type>Factory` クラスを
+  動的解決するが（`lib/openehr/rm/factory.rb:34`）、**`TimezoneFactory`
+  というクラスは存在しない**。そのため
+  `RMJSONSerializer` が吐いたJSON（`timezone` キー付き）を
+  `CompositionFactory.create_from_json` に**そのまま**渡すと
+  `NameError: uninitialized constant OpenEHR::RM::Factory::TimezoneFactory`
+  で例外になる。書き込み専用（生成→保存のみ）の用途では気づかないが、
+  保存したJSONを読み戻して再度RMオブジェクト化しようとした瞬間に発覚する。
+- 影響: anlage の `Opt::CompositionReader`
+  (`app/lib/opt/composition_reader.rb`) はこの理由で
+  `CompositionFactory.create_from_json` を使わず、パース済みJSON Hash
+  を直接（`_type`/`archetype_node_id`/`data`/`events`/`items`/`value`
+  という既知の形で）走査する実装にした。
+- 提案（どちらか、または両方）:
+  1. `RMJSONSerializer` 側で、`_type` が無い/`Factory`側で受け皿の無い
+     派生ivar（`timezone`, `year`, `month`, `day`, `hour`, `minute`,
+     `second`, `fractional_second`, `magnitude_status` 等、`value` から
+     再導出可能な内部キャッシュ）を除外する。
+  2. `Factory` 側に `TimezoneFactory`
+     （`OpenEHR::AssumedLibraryTypes::ISO8601DateTime::Timezone` 相当を
+     組み立てる）を追加する。
+  どちらの場合も「RMJSONSerializerで吐いたJSONをcreate_from_jsonで
+  読み戻すラウンドトリップ」を最低1件、gem側のテストに追加すべき
+  （現状これを検証するテストが無いために気づかれていないと見られる）。
+- 還流先: openehr-ruby（`lib/openehr/serializer/rm_json_serializer.rb`
+  と `lib/openehr/rm/factory.rb`）。
+- ステータス: 未着手。まずは上記の再現手順（DvDateTimeを含む
+  Compositionをbuild→RMJSONSerializerでserialize→
+  CompositionFactory.create_from_jsonでparse、の3行で再現する）を
+  Issueとして起票することを推奨。

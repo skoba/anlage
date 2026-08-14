@@ -2,7 +2,10 @@ class TemplatesController < ApplicationController
   include ActionView::RecordIdentifier
 
   MAX_UPLOAD_SIZE = 5.megabytes
-  ALLOWED_EXTENSIONS = /\.(opt|xml)\z/i
+  # .json is accepted here for the polymorphic composition-drop preview
+  # (see #composition_json?); registering one via #create still fails
+  # naturally since it won't parse as an OPT.
+  ALLOWED_EXTENSIONS = /\.(opt|xml|json)\z/i
 
   # CKM (Clinical Knowledge Manager) is the only external source this
   # demo trusts to fetch OPTs from server-side; RemoteFetcher's own
@@ -17,8 +20,18 @@ class TemplatesController < ApplicationController
   # Parses and validates an uploaded OPT without persisting it (the
   # "fitting room"): summary + a live form preview, so the visitor can
   # inspect the template before deciding to register it.
+  #
+  # Polymorphic: the same dropzone also accepts a canonical openEHR RM
+  # Composition (.json, matched against an already-registered template
+  # and shown filled-in) or a bare ADL 1.4 archetype (.adl, which isn't
+  # a template on its own -- just a guidance message).
   def preview
+    file = params[:file]
+    return preview_adl(file) if file && file.original_filename.to_s.match?(/\.adl\z/i)
+
     content = read_validated_content || return
+    return preview_composition(content) if composition_json?(content)
+
     return unless (@template = parse_upload(content))
 
     @existing = Template.find_by_checksum(content)
@@ -75,6 +88,41 @@ class TemplatesController < ApplicationController
   end
 
   private
+
+  def composition_json?(content)
+    parsed = JSON.parse(content)
+    parsed.is_a?(Hash) && parsed["_type"] == "COMPOSITION"
+  rescue JSON::ParserError
+    false
+  end
+
+  def preview_composition(content)
+    parsed = JSON.parse(content)
+    @composition_template = Template.active.find_by(template_id: parsed["archetype_node_id"])
+    unless @composition_template
+      render_upload_error("no registered template matches this composition (template_id=#{parsed['archetype_node_id'].inspect})")
+      return
+    end
+
+    @composition_values = Opt::CompositionReader.call(@composition_template, content)
+    render :composition_preview, layout: false
+  rescue Opt::CompositionReader::InvalidComposition => e
+    render_upload_error(e.message)
+  end
+
+  def preview_adl(file)
+    if file.size > MAX_UPLOAD_SIZE
+      render_upload_error("file exceeds the 5MB limit")
+      return
+    end
+
+    archetype = OpenEHR::Parser::ADLParser.new(file.path).parse
+    @adl_archetype_id = archetype.archetype_id.value
+    @adl_concept = archetype.concept
+    render :preview_adl, layout: false
+  rescue StandardError => e
+    render_upload_error("not a valid ADL archetype: #{e.message}")
+  end
 
   def read_validated_content
     return read_validated_url if params[:url].present?

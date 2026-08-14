@@ -1,0 +1,10 @@
+<h2>記入済みフォーム: <%= @composition_template.web_template["concept"] || @composition_template.template_id %></h2>
+<p>このcompositionは <%= @composition_template.template_id %> (v<%= @composition_template.version %>) のデータです。</p>
+
+<fieldset>
+  <% @composition_template.fields.each do |field| %>
+    <%= render "templates/field", field: field, disabled: true, value: @composition_values[field["name"]] %>
+  <% end %>
+</fieldset>
+
+<button type="button" data-action="click->dropzone#discard">閉じる</button>
