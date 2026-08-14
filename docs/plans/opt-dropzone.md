@@ -303,8 +303,28 @@
 - URLドロップ（`OpenehrRails::Opt::RemoteFetcher` を再利用、
   `ckm.openehr.org` のみのアプリ側ドメイン許可リストを追加）
 
-### Phase 3（未着手）
-FHIR facade 再利用可否の再調査結果を踏まえて計画し直す。
+### Phase 3（完了）
+3項目とも実装済み:
+- **FHIR R5 StructureDefinition生成**: `GET /fhir/r5/StructureDefinition/:id`。
+  `OpenehrRails::Fhir::ProfileGenerator` は解析済みOPTのみに依存し
+  FIELD_MAP/scaffoldedモデル不要なため再利用できた。一方 FHIR REST
+  facade（Observation検索・作成等）は `ResourceRegistry` が
+  scaffoldedモデルのFIELD_MAPに依存しており非対応（対応する場合は
+  別途モデルレス版の再実装が必要）。
+- **compositionドロップ**: `.json`（canonical composition, `"_type":
+  "COMPOSITION"`）をドロップすると該当テンプレートの記入済み・読み取り
+  専用フォームとして表示。`.xml` のcomposition instanceはgemに
+  パーサが無いため非対応。
+- **ADL単体案内**: `.adl` をドロップすると archetype_id を表示して
+  「テンプレート化しますか」と案内するのみ（OPT自動変換は非対応、
+  Phase 3の依頼スコープどおり案内止まり）。
+
+実装中に `OpenEHR::Serializer::RMJSONSerializer` ⇔
+`OpenEHR::RM::CompositionFactory.create_from_json` のラウンドトリップが
+gem側で壊れている（`TimezoneFactory` 不在によるNameError）ことを発見。
+`docs/upstream-candidates.md` #5 に再現手順と改修案を記録し、anlage側は
+`Opt::CompositionReader` でパース済みJSON Hashを直接走査する回避策を
+実装した。
 
 ## 5. 汎用化候補（先出し）
 
