@@ -73,7 +73,7 @@ pathcard:
 1. **bindingsに `kind` 判別子を導入**: 実OPTでバインディングが2形式確認されたため。
    - `code_binding`: `<term_bindings>` によるat-code→外部コードの対応（実例: CardiologyEncounter.opt 1029-1035行、at0004→`[SNOMED-CT(2003)::271649006]`）
    - `value_set_binding`: `C_CODE_REFERENCE` の `referenceSetUri` による値集合参照。**特定コードを持たない**（実例: ProblemList.opt 323-334行、`terminology:http://id.who.int/icd/release/11/mms`）
-2. **bindings空許容の根拠**（WP0 2.7節＋2026-08-22追加確認）: gemパーサはterm_bindingsを読まず、C_CODE_REFERENCEに至っては**パース自体が失敗する**（`docs/upstream-candidates.md` 6項）。人間決定（2026-08-22）により、WP2抽出器は `templates.source_xml` のOPT原文を独自再解析して両形式を補完抽出する。
+2. **bindings空許容の根拠**（WP0 2.7節＋2026-08-22追加確認）: gemパーサはterm_bindingsを読まない（`docs/upstream-candidates.md` 6項、openehr-ruby#31として起票済み・未解消）。C_CODE_REFERENCE自体は**openehr 2.3.1で解消済み**（同6項(a)、正規に`CCodeReference`としてパースされる）だが、term_bindings欠落は残るため、この設計判断（bindings空許容）自体は引き続き有効。人間決定（2026-08-22）により、WP2抽出器は `templates.source_xml` のOPT原文を独自再解析してterm_bindingsを補完抽出する（C_CODE_REFERENCE側はgemの標準パースで取得可能になったため、独自再解析が必要なのはterm_bindings側のみ）。
 3. **labels/descriptionsの未翻訳検出フィールド**: language-policy 3-4節の要件をそのまま組み込んだ。`source_lang` は実観察（`*state structure(en)` / `*Bloeddruk` / `*Appended (en)`）でマーカー末尾の言語表記が任意と判明したためnull許容。
 4. **identity.archetype_idは「直近のC_ARCHETYPE_ROOT」**: 埋め込みCLUSTER配下ノードのat-codeは宿主アーキタイプと衝突し得る（実例: LabResultReport.optのat0001が宿主側「Event Series」と誤解決される。`docs/upstream-candidates.md` 7項）。カードの用語解決は必ず所属アーキタイプのcomponent_terminologyで行う。
 5. **captureは構造のみ定義**: FieldExtractorがprotocol/state配下を対象外とする制約（WP0 2.9節）と整合。初期値は空、10月の帳票パイプラインが埋める。
@@ -237,7 +237,7 @@ pathcard:
 
 ## 3. 未確認事項
 
-1. **ProblemList.optのAnlage実行時動作**: C_CODE_REFERENCE非対応（upstream-candidates 6項）により現gemでパース不能のため、カード1のパスはXML構造からの手作業導出であり抽出器実測ではない。フォーム生成・保存の動作も未確認
+1. **ProblemList.optのAnlage実行時動作**: C_CODE_REFERENCE非対応によるパース不能は**openehr 2.3.1で解消済み**（upstream-candidates 6項(a)）。試着室（プレビュー）まで到達することはPart Bスモークで確認済み（`docs/evidence/2026-08-22--problemlist--c-code-reference-parse-after-openehr-2.3.1.png`）。ただしカード1のパスは依然としてXML構造からの手作業導出のままで、FieldExtractor実測には未更新。登録・保存までの動作も未確認
 2. **`terminology:` URIプレフィクスの出典**: referenceSetUriの `terminology:` スキームがADL/AOM仕様由来かAD独自かは未確認（仕様書の該当箇所を引けていない）
 3. **code_bindingのcode_string分解**: `[SNOMED-CT(2003)::271649006]` を `{system, version, code}` に分解する正規形はWP2実装時に確定する（本カードでは原文のまま保持）
 4. **precision 0..0 の解釈**（小数0桁=整数と推定されるが、仕様確認未了）
