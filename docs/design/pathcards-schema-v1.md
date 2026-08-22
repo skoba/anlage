@@ -78,6 +78,8 @@ pathcard:
 4. **identity.archetype_idは「直近のC_ARCHETYPE_ROOT」**: 埋め込みCLUSTER配下ノードのat-codeは宿主アーキタイプと衝突し得る（実例: LabResultReport.optのat0001が宿主側「Event Series」と誤解決される。`docs/upstream-candidates.md` 7項）。カードの用語解決は必ず所属アーキタイプのcomponent_terminologyで行う。
 5. **captureは構造のみ定義**: FieldExtractorがprotocol/state配下を対象外とする制約（WP0 2.9節）と整合。初期値は空、10月の帳票パイプラインが埋める。
 6. **provenanceのchecksum**: fixtureが流動している実態（language-policy 5節）に対し、カードがどの版のOPTから抽出されたかを機械照合可能にする。
+7. **bindingsのfirewall注記**（承認条件C2）: bindingsに含まれるライセンス用語コード（SNOMED CT等）はCKM公開束縛由来・最小限とする。CLAUDE.md規律6（コンテンツ防火壁）の適用対象であり、WP2のgolden snapshotへ含める場合も件数最小化・出所明記を必須とする（詳細はWP2計画で定める）。
+8. **identity 4つ組の一意性の補足**: 同一template_idの版が共存する場合（テンプレート再登録・supersede運用）、`identity`の4つ組だけでは一意にならないことがあるため、`provenance.source_checksum`を含めて解釈する。
 
 ---
 
@@ -245,5 +247,20 @@ pathcard:
 ## 4. 承認が必要な判断
 
 1. **スキーマv1本体の承認**（本文書1節）。承認後、WP2計画（対象ファイル・テストTODOリスト・コミット分割案）を提示する
-2. ~~C_CODE_REFERENCEパース不能への対処をWP2計画に含めること~~ → **解消（2026-08-22）**: `openehr` gem 2.3.1 bumpで解決した。gem側がC_CODE_REFERENCEを`CCodeReference`（`reference_set_uri`保持）として正規にパースするようになったため、Anlage側`OpenehrRails::Opt::Parser`派生クラスへの`c_code_reference`ハンドラ追加は不要。ProblemList.optは素のgemで試着室まで到達することをスモーク確認済み（`Opt::SafeParser.parse`経由、`reference_set_uri: "terminology:http://id.who.int/icd/release/11/mms"`を検出）。なお`source_xml`再解析によるterm_bindings/referenceSetUri補完抽出（WP2本来のTDD項目）はopenehr-ruby#31の領域として引き続き残置
-3. **カード2の差し替え**: 単位・基準範囲入りOPT更新の到着後、検収（language-policy 5節）→カード2更新、の運用でよいか
+
+**承認: 2026-08-22 条件付き承認（承認者: 人間）。条件は以下**
+
+- **C1**（WP2計画で解決）: pathの正準形方針を確定する。カード2実測パスの
+  `items[at0000]`（埋め込みC_ARCHETYPE_ROOTのnode_id表現）がAQLの
+  archetype述語形式と一致するか実測し、(a) 実測形を正としつつAQL互換
+  パス導出をWP2/WP3の明示課題とする、または (b) 抽出時に正準形へ
+  正規化する、のいずれかをWP2計画に明記する
+- **C2**（schema文書＋WP2計画）: bindingsに含まれるライセンス用語コードは
+  CKM公開束縛由来・最小限とする（本文書1節参照）。WP2のgolden snapshot
+  がSNOMEDコードを含む場合の取り扱い（件数最小化・出所明記）をWP2計画
+  の必須項目とする
+- **C3**: 解消済み（`e1bc037`。`c_code_reference`はopenehr 2.3.1 bumpで
+  解決、Anlage派生クラス案は廃止）
+
+2. ~~C_CODE_REFERENCEパース不能への対処をWP2計画に含めること~~ → **解消（2026-08-22、C3）**: `openehr` gem 2.3.1 bumpで解決した（`e1bc037`）。gem側がC_CODE_REFERENCEを`CCodeReference`（`reference_set_uri`保持）として正規にパースするようになったため、Anlage側`OpenehrRails::Opt::Parser`派生クラスへの`c_code_reference`ハンドラ追加案は廃止。ProblemList.optは素のgemで試着室まで到達することをスモーク確認済み（`Opt::SafeParser.parse`経由、`reference_set_uri: "terminology:http://id.who.int/icd/release/11/mms"`を検出）。なお`source_xml`再解析によるterm_bindings/referenceSetUri補完抽出（WP2本来のTDD項目）はopenehr-ruby#31の領域として引き続き残置
+3. **カード2の差し替え**: **承認**。単位・基準範囲入りOPT更新の到着後、検収（language-policy 5節）→カード2更新、の運用とする
