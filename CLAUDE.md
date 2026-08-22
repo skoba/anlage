@@ -29,7 +29,11 @@ Anlageは、openehr-rails-startupから生成されたopenEHRベースEHRの参�
 
 ## 主要ドキュメント
 
-- `docs/upstream-candidates.md` — gem / startup への上流候補の記録
+- `docs/upstream-candidates.md` — gem / startup への上流候補の記録。**起票前の観察ログ**
+  として運用する: 気づいた時点では自由に書いてよいが、再現手順または実測根拠
+  （file:line・実行結果）が揃うまでは Issue を起票しない。揃った時点で openehr-ruby /
+  openehr-rails 側に Issue として昇格させ、昇格済みの項目には台帳側にその Issue への
+  リンクを残す（例: `2026-08-22` の #6a〜#6b・#5・#1 昇格時のリンク記載が実例）
 - `docs/ideas-2027.md` — スコープ外アイデアの退避先
 - `docs/design/` — 設計文書（各WPの成果物）
 
