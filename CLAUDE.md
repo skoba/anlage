@@ -27,6 +27,24 @@ Anlageは、openehr-rails-startupから生成されたopenEHRベースEHRの参�
 7. **LLM分業原理**: 生成系（LLM）が供給してよいのは対応付けと値の抽出のみ。意味・構造・コード・制約は、常にOPT・CKM・用語マスターから実行時に引く
 8. **スコープ規律**: 指示外の新機能・改善案は実装せず `docs/ideas-2027.md` に記録して先へ進む
 
+## Issue-driven visibility
+
+Anlageでは「1 issue = 1 branch」は要求しない（WP駆動の進行と両立させる）。
+ただし以下は着手前・発覚時にGitHub Issueを立てる:
+
+- **(a) 実装目標**: WP・スライス級の目標。Acceptance criteriaを明記し、
+  関連するplan文書（`docs/design/`）と相互参照する。クローズはcriteria充足時
+  （spec green・デモ経路通過など検証可能な条件）
+- **(b) 課題**: バグ・障害・設計上の未解決。specで閉じられるものは
+  red-green（またはregression pin）で解決する
+- **(c) upstream観察**: 従来どおり `docs/upstream-candidates.md` が一次置き場。
+  根拠が揃ったらgem側リポジトリへ起票する（Anlageには立てない）。台帳に
+  起票先リンクを残す
+
+コミットメッセージ・PRには関連Issueを `Refs #N` で記載する
+（`Fixes #N` はその変更単独でcriteriaを満たす場合のみ）。
+docsのみ・軽微修正はIssue不要（従来どおり）。
+
 ## 主要ドキュメント
 
 - `docs/upstream-candidates.md` — gem / startup への上流候補の記録。**起票前の観察ログ**
