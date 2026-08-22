@@ -47,6 +47,8 @@ WP0-5やSliceの実装計画には載らないが、確認済みで記録して�
 
 ## 2. 診療情報提供書 OPT 入手時の受け入れスモーク
 
+- **Issue化済み**: [skoba/anlage#4](https://github.com/skoba/anlage/issues/4)
+
 - ドロップゾーン通過・埋め込みCLUSTERラベル・FHIR facade出力を確認し
   `docs/evidence/` に証跡追加（デモ本番アーティファクトの新スタック
   初通過の記録）。
