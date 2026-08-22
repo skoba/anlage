@@ -49,6 +49,9 @@ docsのみ・軽微修正はIssue不要（従来どおり）。
 含める。ローカルのみの状態（コミット済みだが未push）で「完了」と報告
 しない。
 
+push報告には `git log --oneline <before>..<after>` によるコミット列
+そのものを含める。「〜を含む」等の要約語だけで複数コミットをまとめない。
+
 ## 主要ドキュメント
 
 - `docs/upstream-candidates.md` — gem / startup への上流候補の記録。**起票前の観察ログ**
