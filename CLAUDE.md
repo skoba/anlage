@@ -45,6 +45,10 @@ Anlageでは「1 issue = 1 branch」は要求しない（WP駆動の進行と両
 （`Fixes #N` はその変更単独でcriteriaを満たす場合のみ）。
 docsのみ・軽微修正はIssue不要（従来どおり）。
 
+タスクの完了報告は origin への push 後に行い、報告に push 済みの SHA を
+含める。ローカルのみの状態（コミット済みだが未push）で「完了」と報告
+しない。
+
 ## 主要ドキュメント
 
 - `docs/upstream-candidates.md` — gem / startup への上流候補の記録。**起票前の観察ログ**
