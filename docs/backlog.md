@@ -44,3 +44,9 @@ WP0-5やSliceの実装計画には載らないが、確認済みで記録して�
   (c) Nokogiri側にも明示的な `NONET`/`NOENT` を渡し二段目を保証させる
   （`docs/upstream/issues/openehr-ruby--xxe-safe-default-parse-options.md`
   参照）などが考えられるが、**いずれも実装は別途承認を得てから**。
+
+## 2. 診療情報提供書 OPT 入手時の受け入れスモーク
+
+- ドロップゾーン通過・埋め込みCLUSTERラベル・FHIR facade出力を確認し
+  `docs/evidence/` に証跡追加（デモ本番アーティファクトの新スタック
+  初通過の記録）。
