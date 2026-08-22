@@ -213,12 +213,50 @@
   Nokogiri/libxml2 の新しめのバージョンは既定で外部実体解決を無効化
   している場合が多いが、**バージョン依存であり保証ではない**。
 - gem 本体を改変しないという指示があるため、anlage 側では
-  **プレビュー/登録エンドポイントに到達する前段で** own の XXE-safe
-  Nokogiri チェック（`NONET | NOENT` を明示的に無効化した設定で一度
-  パースしてみて、DOCTYPE/external entityを検知したら拒否する等）を
+  **プレビュー/登録エンドポイントに到達する前段で** own の XXE防御を
   アダプタとして持たせる。加えて `docs/upstream-candidates.md` に
   「`OpenehrRails::Opt::Parser` に安全なデフォルトの `ParseOptions` を
-  明示すべき」という改善提案を記録する。
+  明示すべき」という改善提案を記録する（起票ドラフト:
+  `docs/upstream/issues/openehr-ruby--xxe-safe-default-parse-options.md`）。
+
+**as-built（Slice 2 実装時に方式変更）**: 当初案の「`NONET | NOENT` を
+無効化したNokogiriで一度パースしてみる」二重パース方式ではなく、
+`Opt::SafeParser`（`app/lib/opt/safe_parser.rb`）は**DOCTYPE宣言の
+正規表現による事前拒否**（`DOCTYPE_PATTERN = /<!DOCTYPE/i`、バイト列を
+`.b`でASCII-8BIT化してからマッチ）を採用した。理由: XXEのエンティティ
+展開はDTD（DOCTYPE）宣言なしには成立しないため、DOCTYPE自体を機械的に
+拒否すれば攻撃の前提条件を断てる。二重パース方式（一度安全設定で
+パース→検証→本パース）よりシンプルで、Nokogiri/libxml2の
+バージョンやParseOptionsの解釈差にも依存しない。正規表現マッチのみで
+XMLパース自体を行わないため、実装・検証コストも小さい。
+- **エンコーディング正規化に関する確認結果（レビューで判明）**:
+  アップロード時点で `file.read.force_encoding(Encoding::UTF_8)`
+  （`app/controllers/templates_controller.rb:148`、URL取込側は
+  `:170`）を通しているが、これは**エンコーディングのラベル貼り替えの
+  みで、実バイト列のトランスコードは行わない**。`DOCTYPE_PATTERN` の
+  マッチも `.b`（ASCII-8BIT化）で行うため、UTF-8・ASCII・Shift_JIS
+  など**DOCTYPE文字列がASCII互換のバイト列として連続するエンコーディ
+  ングでは確実に検知できる**ことを確認した。一方 UTF-16 等、1文字が
+  複数バイトかつASCII文字がヌルバイトを挟んで並ぶエンコーディングで
+  出力されたXMLは、`<!DOCTYPE` のバイト列が連続しないため正規表現に
+  一致せず検知をすり抜け得る（実測: `"<!DOCTYPE template>".encode(
+  "UTF-16LE").b.match?(/<!DOCTYPE/i)` は `false`）。事前の
+  エンコーディング正規化（宣言されたencodingを読んでUTF-8へ実変換
+  する等）は現状行っていない。
+- **上記の隙間に対する下段の防御**: 実運用で解決している `nokogiri`
+  1.19.4 の `Nokogiri::XML::ParseOptions::DEFAULT_XML`
+  （`RECOVER | NONET | BIG_LINES`、`parse_options.rb:151`）は
+  **`NONET` が既定でON**（外部ネットワーク上のエンティティ参照を
+  禁止）かつ **`NOENT` が既定でOFF**（エンティティの実体展開自体を
+  行わない）である。したがって、UTF-16などでDOCTYPE検知をすり抜けた
+  ペイロードが `OpenehrRails::Opt.parse` に到達したとしても、
+  古典的なXXE（外部リソース読み取り・SSRF）はNokogiriの既定動作に
+  よって別途ブロックされる。SafeParserのDOCTYPE事前拒否は「最初の
+  壁」、Nokogiriの既定ParseOptionsは「保証されていないが実際には
+  効いている二段目の壁」という二層防御の構図になっている（二段目を
+  gem側に明示させる提案が上記の起票ドラフト）。一段目のUTF-16
+  すり抜けは `bundle exec rails runner` による実測込みで
+  `docs/backlog.md` #1 に低優先度事項として記録済み（修正は別承認）。
 
 ### 2.8 サンプルOPT（fixture）
 
@@ -270,14 +308,19 @@
   クラスメソッド（`OpenehrRails::Opt.parse` 呼び出し）。
 - model spec。
 
-### Slice 2: XXE安全パース + プレビュー(試着室) (Phase1)
-- anlage側 `Opt::SafeParser`（仮称）アダプタ: NONET/NOENT無効化を明示
-  → `OpenehrRails::Opt.parse` に委譲。
+### Slice 2: XXE安全パース + プレビュー(試着室) (Phase1) — 完了（as-built）
+- anlage側 `Opt::SafeParser` アダプタ（`app/lib/opt/safe_parser.rb`）:
+  DOCTYPE宣言の正規表現による事前拒否（詳細・方式変更の理由は
+  上記 2.7 参照）→ `OpenehrRails::Opt.parse` に委譲。
 - `POST /templates/preview`: サイズ上限5MB・拡張子チェック・XXEチェック
   → `FieldExtractor` でサマリ算出 → Turbo Frame でプレビュー
   （登録はまだしない）。
-- request spec: 正常系 / サイズ超過 / 拡張子不一致 / XXE攻撃ペイロード
-  （DOCTYPE付きXML）で拒否されること。
+- request spec (`spec/requests/templates_spec.rb`): 正常系 / サイズ超過
+  / 拡張子不一致 / XXE攻撃ペイロード（DOCTYPE付きXML）で拒否される
+  ことを検証済み。UTF-16等ASCII非互換エンコーディングでの
+  DOCTYPE検知すり抜けは未テスト（2.7 のエンコーディング正規化の
+  確認結果を参照。Nokogiriの既定ParseOptionsが下段の防御として
+  控えている）。
 
 ### Slice 3: 登録 + カタログ (Phase1)
 - `POST /templates`: checksum重複チェック → 登録 → Turbo Stream で

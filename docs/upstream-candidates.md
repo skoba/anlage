@@ -22,6 +22,13 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   恩恵を受ける。
 - 暫定対応: anlage では独自の安全ラッパーで先にパースを検証してから
   gem の parse を呼ぶ（`docs/plans/opt-dropzone.md` Slice 2 参照）。
+- **ステータス: Issue ドラフト済み**
+  （`docs/upstream/issues/openehr-ruby--xxe-safe-default-parse-options.md`）。
+  ドラフト作成時に実装を再確認したところ、実際の `Opt::SafeParser`
+  (`app/lib/opt/safe_parser.rb`) は Nokogiri ParseOptions ラッパーではなく
+  DOCTYPE宣言の正規表現による事前拒否だった（計画書 Slice 2 の記載とは
+  実装手段が異なる。ドラフト側は実装に合わせて記述済み）。
+  起票後リンク: [skoba/openehr-ruby#33](https://github.com/skoba/openehr-ruby/issues/33)
 
 ## 2. 「解釈方式」フォームレンダラ
 
@@ -40,6 +47,8 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   あるため openehr-ruby ではなくこちら）。
 - ステータス: 未着手。Phase 1 Slice 4 の実装後に汎用化可能かどうか
   判断する。
+- **再評価トリガー**: Slice 4 のレンダラ実装後、制約→HTML属性マッピングの
+  汎用性を判断してから可否決定。
 
 ## 3. テンプレートレジストリの複合ユニーク制約・checksum・versioning
 
@@ -57,6 +66,8 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 還流先: openehr-rails（`lib/generators/openehr/install/templates/`）。
 - ステータス: 未着手。anlage の Slice 1 で実装した設計が実証できたら
   提案する。
+- **再評価トリガー**: Slice 1 の冪等アップロードがデモ準備期間を通じ
+  無事故で運用できたら Issue 化（10月目安）。
 
 ## 4. RM値オブジェクト組み立てヘルパーの共通化
 
@@ -79,6 +90,8 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 還流先: openehr-rails（`lib/openehr_rails/rm/`）。
 - ステータス: 未着手。anlage の Slice 4 で実装が安定したら、
   重複している具体的なメソッド一覧とともに提案する。
+- **再評価トリガー**: Slice 4 安定後、Opt::CompositionBuilder と
+  RmObjectBuilder の重複メソッド一覧を添えて Issue 化。
 
 ## 5. RMJSONSerializer ⇔ CompositionFactory.create_from_json のラウンドトリップが壊れている
 
@@ -122,6 +135,15 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   Compositionをbuild→RMJSONSerializerでserialize→
   CompositionFactory.create_from_jsonでparse、の3行で再現する）を
   Issueとして起票することを推奨。
+- **ステータス: Issue ドラフト済み**
+  （`docs/upstream/issues/openehr-ruby--rmjson-serializer-roundtrip-broken.md`）。
+  再現スクリプトを実際に実行して確認: 落ちるのは `_type` 付きHash値の
+  派生ivar（`timezone` → `TimezoneFactory` 不在で NameError）のみで、
+  スカラーの派生ivar（`year`/`month`/`day`等）はコンストラクタに黙って
+  無視され例外にはならない。上記本文の「一緒にシリアライズされてしまう」
+  という記述は正しいが、「落ちる」原因はtimezoneのようなHash値ivarに
+  限られる点をドラフト側で精密化した。
+  起票後リンク: [skoba/openehr-ruby#32](https://github.com/skoba/openehr-ruby/issues/32)
 
 ## 6. OPTParser が用語バインディングを読まない／C_CODE_REFERENCE でパースが落ちる
 
@@ -151,6 +173,13 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   クラッシュへのAnlage側対処（Parser派生クラスへのハンドラ追加等）はWP2計画で
   TDD項目として提示する。
 - ステータス: 未着手（Issue起票候補）。
+- **ステータス: Issue ドラフト済み（2件に分割）**
+  - (a) C_CODE_REFERENCE クラッシュ（bug）:
+    `docs/upstream/issues/openehr-ruby--opt-parser-crash-on-c-code-reference.md`
+    — 起票後リンク: [skoba/openehr-ruby#30](https://github.com/skoba/openehr-ruby/issues/30)
+  - (b) term_bindings 未読（enhancement）:
+    `docs/upstream/issues/openehr-ruby--opt-parser-ignores-term-bindings.md`
+    — 起票後リンク: [skoba/openehr-ruby#31](https://github.com/skoba/openehr-ruby/issues/31)
 
 ## 7. FieldExtractor が埋め込みCLUSTERノードのラベルを宿主アーキタイプの用語から誤引きする
 
@@ -172,3 +201,23 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   OPT全ノードを自前走査する予定のため、抽出器側では正しいterminology
   スコープ解決を最初から設計に入れる（本件が設計根拠）。
 - ステータス: 未着手。
+- **ステータス: upstream で対応済み（2026-08-22 確認、起票せず）**。
+  `openehr-rails` ローカルチェックアウトのコミット
+  `f9291d4`（"Fix: FieldExtractor resolved terminology labels using
+  the wrong archetype scope", `Fixes #25`）で修正済みと判明した
+  （GitHub `skoba/openehr-rails` Issue #25、バージョン 0.4.0→0.4.1）。
+  起票用に作成していたドラフトはそのまま調査記録として保存:
+  `docs/upstream/issues/openehr-rails--field-extractor-wrong-terminology-scope.md`
+- **Issue / PR リンク**（`gh` で実在確認済み、2026-08-22）:
+  Issue [skoba/openehr-rails#25](https://github.com/skoba/openehr-rails/issues/25)
+  （CLOSED） / PR [skoba/openehr-rails#26](https://github.com/skoba/openehr-rails/pull/26)
+  （MERGED, `31675057590705faea1bbab3917ce1dc3c59ada6`）。
+  修正設計文書は PR 本文が指す `docs/design/fix-terminology-scope-plan.md`
+  （openehr-rails リポジトリ側）。
+- **Anlage側の撤去対象workaroundについて**: 撤去すべきworkaroundは
+  無い。WP2のパスカード抽出器が `FieldExtractor` に依存せず OPT
+  全ノードを自前走査する設計は、本件の回避策としてではなく
+  `term_bindings`/`referenceSetUri` 取得（台帳 #6b）等、
+  `FieldExtractor` では原理的に取得できない情報を得るための独立した
+  設計判断であり、その根拠は本件解消後も残存する。
+  （冒頭に RESOLVED UPSTREAM 注記あり）。
