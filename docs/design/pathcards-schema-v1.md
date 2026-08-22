@@ -245,5 +245,5 @@ pathcard:
 ## 4. 承認が必要な判断
 
 1. **スキーマv1本体の承認**（本文書1節）。承認後、WP2計画（対象ファイル・テストTODOリスト・コミット分割案）を提示する
-2. **C_CODE_REFERENCEパース不能への対処をWP2計画に含めること**: デモ用OPTのProblemListが現状Anlageに投入できない。Anlage側（層規律内）で `OpenehrRails::Opt::Parser` 派生クラスに `c_code_reference` ハンドラを追加する方向をWP2のTDD項目として提案予定
+2. ~~C_CODE_REFERENCEパース不能への対処をWP2計画に含めること~~ → **解消（2026-08-22）**: `openehr` gem 2.3.1 bumpで解決した。gem側がC_CODE_REFERENCEを`CCodeReference`（`reference_set_uri`保持）として正規にパースするようになったため、Anlage側`OpenehrRails::Opt::Parser`派生クラスへの`c_code_reference`ハンドラ追加は不要。ProblemList.optは素のgemで試着室まで到達することをスモーク確認済み（`Opt::SafeParser.parse`経由、`reference_set_uri: "terminology:http://id.who.int/icd/release/11/mms"`を検出）。なお`source_xml`再解析によるterm_bindings/referenceSetUri補完抽出（WP2本来のTDD項目）はopenehr-ruby#31の領域として引き続き残置
 3. **カード2の差し替え**: 単位・基準範囲入りOPT更新の到着後、検収（language-policy 5節）→カード2更新、の運用でよいか

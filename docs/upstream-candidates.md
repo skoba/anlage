@@ -170,13 +170,18 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   `templates.source_xml` に保持しているOPT原文を独自に再解析し、
   `term_bindings`（実例: `spec/fixtures/opt/CardiologyEncounter.opt:1029-1035`
   のSNOMED-CT）と `referenceSetUri` の両形式を取得する。C_CODE_REFERENCE
-  クラッシュへのAnlage側対処（Parser派生クラスへのハンドラ追加等）はWP2計画で
-  TDD項目として提示する。
+  クラッシュへのAnlage側対処（Parser派生クラスへのハンドラ追加等）は
+  **不要になった（2026-08-22、openehr 2.3.1 bumpで解消。上記(a)参照）**。
 - ステータス: 未着手（Issue起票候補）。
 - **ステータス: Issue ドラフト済み（2件に分割）**
   - (a) C_CODE_REFERENCE クラッシュ（bug）:
     `docs/upstream/issues/openehr-ruby--opt-parser-crash-on-c-code-reference.md`
     — 起票後リンク: [skoba/openehr-ruby#30](https://github.com/skoba/openehr-ruby/issues/30)
+    — **解消済み（openehr 2.3.1、2026-08-22）**: `C_CODE_REFERENCE` は
+      `CCodeReference`（`reference_set_uri`保持）として正規にパースされるように
+      なった。未知のxsi:type全般もフォールバック（warn＋C_COMPLEX_OBJECT扱い）で
+      落ちなくなった。Anlage側は`openehr`を2.3.1にbumpして確認済み
+      （`spec/fixtures/opt/ProblemList.opt`が素のgemで試着室まで到達）
   - (b) term_bindings 未読（enhancement）:
     `docs/upstream/issues/openehr-ruby--opt-parser-ignores-term-bindings.md`
     — 起票後リンク: [skoba/openehr-ruby#31](https://github.com/skoba/openehr-ruby/issues/31)

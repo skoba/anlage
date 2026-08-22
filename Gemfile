@@ -62,4 +62,4 @@ group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
 end
-gem "openehr-rails", path: "/home/skoba/src/openehr-rails"
+gem "openehr-rails", "~> 0.4"
