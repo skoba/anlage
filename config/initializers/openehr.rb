@@ -14,9 +14,12 @@ require 'openehr_rails'
 # OpenehrRails.rm_persistence_enabled = true
 
 # openEHR RM Object Builder defaults (injected when building OpenEHR::RM objects):
+# All registered OPTs are authored lang=ja (see
+# docs/design/pathcards-language-policy.md), so saved compositions declare
+# ja/JP rather than the gem defaults (en/US).
+OpenehrRails.default_language = "ja"
+OpenehrRails.default_territory = "JP"
 # OpenehrRails.system_id = 'openehr-rails'
-# OpenehrRails.default_language = 'en'
-# OpenehrRails.default_territory = 'US'
 # OpenehrRails.default_category = %w[433 event]  # [code, value]
 # OpenehrRails.default_composer_name = 'unknown'
 # OpenehrRails.default_encoding = 'UTF-8'
