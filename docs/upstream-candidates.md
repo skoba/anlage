@@ -122,3 +122,53 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   Compositionをbuild→RMJSONSerializerでserialize→
   CompositionFactory.create_from_jsonでparse、の3行で再現する）を
   Issueとして起票することを推奨。
+
+## 6. OPTParser が用語バインディングを読まない／C_CODE_REFERENCE でパースが落ちる
+
+- 背景: パスカードWP0調査（`docs/design/pathcards-wp0-exploration.md` 2.7節）で
+  `OpenEHR::Parser::OPTParser` が `term_bindings` 要素を読まないことを確認済み。
+  さらに2026-08-22、Archetype Designer が DV_CODED_TEXT の defining_code に
+  外部ターミノロジー参照を付けると出力する `<children xsi:type="C_CODE_REFERENCE">`
+  （`referenceSetUri` 保持。実例: `spec/fixtures/opt/ProblemList.opt:323-334` の
+  `terminology:http://id.who.int/icd/release/11/mms`）で、**パース自体が
+  `NoMethodError` で失敗する**ことを実OPTで確認した。
+- 原因: `XMLConstraintParsing#children`
+  (`lib/openehr/parser/xml_constraint_parsing.rb:68`) が
+  `send child.attributes['type'].text.downcase, ...` と xsi:type 名を
+  そのままメソッド名にディスパッチするが、`c_code_reference` ハンドラが
+  存在しない（`c_code_phrase` はある）。
+- 提案: (a) `c_code_reference` ハンドラを追加し referenceSetUri を保持した
+  CCodePhrase相当（またはCCodeReference型）を返す。(b) `term_bindings` の
+  パースを `archetype_terminology` に追加する。少なくとも(a)は未知のxsi:typeで
+  クラッシュしない防御（未知型はC_COMPLEX_OBJECT扱いにフォールバック等）と
+  合わせて入れる価値がある。
+- 還流先: openehr-ruby（`lib/openehr/parser/xml_constraint_parsing.rb` /
+  `opt_parser.rb`）。
+- 暫定対応（Anlage側・2026-08-22人間承認の方針）: パスカード抽出器は
+  `templates.source_xml` に保持しているOPT原文を独自に再解析し、
+  `term_bindings`（実例: `spec/fixtures/opt/CardiologyEncounter.opt:1029-1035`
+  のSNOMED-CT）と `referenceSetUri` の両形式を取得する。C_CODE_REFERENCE
+  クラッシュへのAnlage側対処（Parser派生クラスへのハンドラ追加等）はWP2計画で
+  TDD項目として提示する。
+- ステータス: 未着手（Issue起票候補）。
+
+## 7. FieldExtractor が埋め込みCLUSTERノードのラベルを宿主アーキタイプの用語から誤引きする
+
+- 背景（実OPTで確認・2026-08-22）: `OpenehrRails::Opt::FieldExtractor` の
+  `term_text(archetype_id, code)` はエントリ（宿主アーキタイプ）の
+  component_terminology だけを見るため、エントリ内に埋め込まれた
+  C_ARCHETYPE_ROOT（CLUSTER）配下ノードのat-codeが宿主側の同名codeに衝突
+  すると、**宿主側のラベルを返す**。
+- 実例: `spec/fixtures/opt/LabResultReport.opt` で
+  `CLUSTER.laboratory_test_analyte.v1` の at0001「分析結果」（同OPT 621-623行）が、
+  宿主 `OBSERVATION.laboratory_test_result.v1` の at0001「Event Series」
+  （同 1038-1040行）として抽出される。at0024「分析名」（686-688行）は宿主側に
+  同codeが無いためnil→code文字列にフォールバックする。
+- 提案: フィールドが属する直近の C_ARCHETYPE_ROOT の archetype_id で
+  component_terminology を引く（ノード→所属アーキタイプの対応を抽出時に
+  保持する）。
+- 還流先: openehr-rails（`lib/openehr_rails/opt/field_extractor.rb`）。
+- 影響: Anlage側パスカード抽出器（WP2）は FieldExtractor に依存せず
+  OPT全ノードを自前走査する予定のため、抽出器側では正しいterminology
+  スコープ解決を最初から設計に入れる（本件が設計根拠）。
+- ステータス: 未着手。
