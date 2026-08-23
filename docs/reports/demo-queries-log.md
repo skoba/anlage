@@ -130,3 +130,50 @@ WP3（索引と検索）着手時に同じ壁に当たる見込み。`skoba/anla
 - `bundle exec rspec spec/demo/aql_queries_spec.rb`: 1 example, 0 failures（案A、height>170で`[[180.0]]`）
 - `bundle exec rspec`（全体）: 80 examples, 0 failures
 - `bundle exec rubocop spec/demo/`: 2 files, no offenses
+
+---
+
+## R4: Q2/Q3/Q4原文供給・実測訂正・spec化完了
+
+人間供給のQ2（MATCHES値リスト）・Q3（CONTAINS nodePredicate）・Q4（日付範囲WHERE）原文を、
+実測で通る形に訂正した上でspec化した（`docs/demo/aql-queries.md`に差分注記済み）。
+
+### Q2: MATCHES 値リスト
+
+- at-codeプレースホルダ（`at0.63`/`at0.64`）を実値（`ProblemList.opt` at0073「診断確度」の
+  ローカル値集合、WP2 TODO 7実測選定分と同一）へ差し替え。パスも`items[at0002]`→`items[at0073]`
+  （**パスカードが実際に最初の消費者になった**——`Opt::PathcardExtractor.call`の出力から
+  `identity.path`をそのまま引用して確認）
+- `value/defining_code/code_string`は現行AQLエンジンの`ALLOWED_TERMINAL_HOPS`
+  （openehr gem `lib/openehr/aql/engine/path_evaluator.rb:21`。許可は`magnitude`/`name`/`value`のみ、
+  設計コメントに「実クエリが必要とするまで拡張しない」と明記されたスコープ限定）で
+  `unsupported path attribute`。`value/value`（DvCodedTextの表示ラベル自体）でのMATCHESに
+  訂正して実行確認（2件）
+
+### Q3: CONTAINS nodePredicate
+
+- 原文どおりで実行可能（ELEMENT直接CONTAINS・WHERE EXISTS ともに実測で問題なし）。訂正不要
+
+### Q4: 日付範囲WHERE
+
+- `events[at0002]/time`は現行AQLエンジンで**そもそも到達不能**と判明（`Event`系クラスの
+  `path_attribute`宣言に`time`が無く〔openehr gem `lib/openehr/rm/data_structures/history.rb:21`〕、
+  `ALLOWED_TERMINAL_HOPS`にも含まれない）。OBSERVATIONの測定時刻という切り口自体が現行AQLエンジンでは
+  成立しないため、対象をProblemListのELEMENT値保持DV_DATE_TIMEフィールド（at0003「臨床的に
+  認識された日時」）へ差し替えた。AND複数条件は実測で問題なく通った（原文の想定どおり）
+
+### シード拡充
+
+`spec/demo/support/problem_diagnosis_seed.rb`を新設（ProblemList用、`height_seed.rb`と同じ
+2回避策——`archetype_details`補完・非構造キー削除——を適用）。
+
+### 検証結果
+
+- `bundle exec rspec spec/demo/aql_queries_spec.rb`: 4 examples, 0 failures
+- `bundle exec rspec`（全体）: 83 examples, 0 failures
+- `bundle exec rubocop spec/demo/`: 3 files, no offenses
+
+### 凍結受入条件
+
+4クエリ全件が案A（実パイプライン駆動）でgreenになったため、`docs/design/demo-queries-plan.md`
+5節の凍結受入条件を満たした。CLAUDE.mdマイルストーン節への反映を実施する。

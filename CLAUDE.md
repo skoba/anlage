@@ -95,6 +95,7 @@ push報告には `git log --oneline <before>..<after>` によるコミット列
 
 - **セマンティックパスカード基盤**: `claude-code-prompt_semantic-pathcards.md` — パスカード関連の作業は、必ずこのプロンプトを読んでから着手する（自動読み込みはしない。セッション冒頭で明示的に参照すること）
 - マイルストーン: **2026-11-05 デモビルド凍結 ／ 2026-11-12 デモ本番**（医療情報学連合大会チュートリアル）／ **2026-12 世界公開**（OSS一式・動画・被覆レポート）
+- 11/5凍結の受入条件: `bundle exec rspec spec/demo/` green（デモクエリ全件の期待件数一致。`docs/demo/aql-queries.md`・`docs/design/demo-queries-plan.md` 5節）
 
 ## ビルド・テストコマンド
 
