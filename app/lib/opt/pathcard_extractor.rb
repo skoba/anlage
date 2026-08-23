@@ -113,8 +113,8 @@ module Opt
       end
 
       {
-        "labels" => semantic_entries(text),
-        "descriptions" => semantic_entries(description)
+        "labels" => semantic_entries(text, archetype_id, at_code, "label"),
+        "descriptions" => semantic_entries(description, archetype_id, at_code, "description")
       }
     end
 
@@ -130,14 +130,25 @@ module Opt
       term
     end
 
-    def semantic_entries(text)
+    def semantic_entries(text, archetype_id, at_code, field)
       return [] unless text
+
+      classification = classify_translation(text)
+      if classification.fetch("untranslated_suspect")
+        (@report[:untranslated_suspects] ||= []) << {
+          "archetype_id" => archetype_id,
+          "at_code" => at_code,
+          "field" => field,
+          "text" => text,
+          "evidence" => classification.fetch("untranslated_evidence")
+        }
+      end
 
       [
         {
           "lang" => @opt.original_language.code_string,
           "text" => text
-        }.merge(classify_translation(text))
+        }.merge(classification)
       ]
     end
 

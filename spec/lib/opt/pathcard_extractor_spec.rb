@@ -116,6 +116,23 @@ RSpec.describe Opt::PathcardExtractor do
       ])
     end
 
+    it "reports the fallback-marked analyte description from LabResultReport" do
+      source_xml = Rails.root.join("spec/fixtures/opt/LabResultReport.opt").read
+      template = Template.build_from_opt_xml(source_xml)
+
+      result = described_class.call(template)
+
+      expect(result.report.fetch(:untranslated_suspects)).to include(
+        {
+          "archetype_id" => "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
+          "at_code" => "at0001",
+          "field" => "description",
+          "text" => "*The value of the analyte result. (en)",
+          "evidence" => "fallback_marker"
+        }
+      )
+    end
+
     it "extracts the local code list for diagnostic certainty from ProblemList" do
       source_xml = Rails.root.join("spec/fixtures/opt/ProblemList.opt").read
       template = Template.build_from_opt_xml(source_xml)
