@@ -13,6 +13,7 @@ module Opt
     def call
       opt = Opt::SafeParser.parse(@template.source_xml)
       @report = {}
+      @opt = opt
 
       Result.new(cards: extract_cards(opt), report: @report)
     end
@@ -69,13 +70,79 @@ module Opt
           "path" => "#{path}/value",
           "at_code" => element.node_id
         },
-        "semantics" => {},
+        "semantics" => semantics_for(archetype_id, element.node_id),
         "constraints" => constraints_for(element),
         "bindings" => [],
         "capture" => {},
         "reserved" => {},
         "provenance" => {}
       }
+    end
+
+    def semantics_for(archetype_id, at_code)
+      term = terminology_term(archetype_id, at_code)
+      text = term&.items&.fetch("text", nil)
+      description = term&.items&.fetch("description", nil)
+
+      unless text
+        (@report[:missing_labels] ||= []) << {
+          "archetype_id" => archetype_id,
+          "at_code" => at_code
+        }
+      end
+
+      {
+        "labels" => semantic_entries(text),
+        "descriptions" => semantic_entries(description)
+      }
+    end
+
+    def terminology_term(archetype_id, at_code)
+      terminology = @opt.component_terminologies[archetype_id]
+      return unless terminology
+
+      term = nil
+      terminology.term_definitions.each_value do |terms|
+        term = terms.find { |candidate| candidate.code == at_code }
+        break if term
+      end
+      term
+    end
+
+    def semantic_entries(text)
+      return [] unless text
+
+      [
+        {
+          "lang" => @opt.original_language.code_string,
+          "text" => text
+        }.merge(classify_translation(text))
+      ]
+    end
+
+    def classify_translation(text)
+      fallback_match = text.match(/\A\*(.+?)(?:\(([a-z]{2}(?:-[a-z]{2})?)\))?\z/i)
+      if fallback_match
+        return {
+          "untranslated_suspect" => true,
+          "untranslated_evidence" => "fallback_marker",
+          "source_lang" => fallback_match[2]
+        }
+      end
+
+      if text.match?(/[\p{Hiragana}\p{Katakana}\p{Han}]/)
+        {
+          "untranslated_suspect" => false,
+          "untranslated_evidence" => nil,
+          "source_lang" => nil
+        }
+      else
+        {
+          "untranslated_suspect" => true,
+          "untranslated_evidence" => "no_ja_script",
+          "source_lang" => nil
+        }
+      end
     end
 
     def constraints_for(element)

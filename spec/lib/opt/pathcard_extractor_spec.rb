@@ -73,5 +73,89 @@ RSpec.describe Opt::PathcardExtractor do
         )
       )
     end
+
+    it "extracts the Japanese systolic label from CardiologyEncounter" do
+      source_xml = Rails.root.join("spec/fixtures/opt/CardiologyEncounter.opt").read
+      template = Template.build_from_opt_xml(source_xml)
+
+      result = described_class.call(template)
+      card = result.cards.find do |candidate|
+        candidate.dig("identity", "archetype_id") == "openEHR-EHR-OBSERVATION.blood_pressure.v2" &&
+          candidate.dig("identity", "at_code") == "at0004"
+      end
+
+      expect(card.dig("semantics", "labels")).to eq([
+        {
+          "lang" => "ja",
+          "text" => "収縮期",
+          "untranslated_suspect" => false,
+          "untranslated_evidence" => nil,
+          "source_lang" => nil
+        }
+      ])
+    end
+
+    it "extracts the fallback-marked analyte description from LabResultReport" do
+      source_xml = Rails.root.join("spec/fixtures/opt/LabResultReport.opt").read
+      template = Template.build_from_opt_xml(source_xml)
+
+      result = described_class.call(template)
+      card = result.cards.find do |candidate|
+        candidate.dig("identity", "archetype_id") == "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1" &&
+          candidate.dig("identity", "at_code") == "at0001"
+      end
+
+      expect(card.dig("semantics", "descriptions")).to eq([
+        {
+          "lang" => "ja",
+          "text" => "*The value of the analyte result. (en)",
+          "untranslated_suspect" => true,
+          "untranslated_evidence" => "fallback_marker",
+          "source_lang" => "en"
+        }
+      ])
+    end
+  end
+
+  describe "#classify_translation" do
+    subject(:classification) do
+      described_class.new(nil).send(:classify_translation, text)
+    end
+
+    context "when text has a fallback marker and source language" do
+      let(:text) { "*Foo bar (en)" }
+
+      it do
+        expect(classification).to eq(
+          "untranslated_suspect" => true,
+          "untranslated_evidence" => "fallback_marker",
+          "source_lang" => "en"
+        )
+      end
+    end
+
+    context "when unmarked text contains no Japanese script" do
+      let(:text) { "Foo bar" }
+
+      it do
+        expect(classification).to eq(
+          "untranslated_suspect" => true,
+          "untranslated_evidence" => "no_ja_script",
+          "source_lang" => nil
+        )
+      end
+    end
+
+    context "when text contains Japanese script" do
+      let(:text) { "収縮期" }
+
+      it do
+        expect(classification).to eq(
+          "untranslated_suspect" => false,
+          "untranslated_evidence" => nil,
+          "source_lang" => nil
+        )
+      end
+    end
   end
 end
