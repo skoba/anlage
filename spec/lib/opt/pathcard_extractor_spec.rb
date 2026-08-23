@@ -115,6 +115,25 @@ RSpec.describe Opt::PathcardExtractor do
         }
       ])
     end
+
+    it "extracts the local code list for diagnostic certainty from ProblemList" do
+      source_xml = Rails.root.join("spec/fixtures/opt/ProblemList.opt").read
+      template = Template.build_from_opt_xml(source_xml)
+
+      result = described_class.call(template)
+      card = result.cards.find do |candidate|
+        candidate.dig("identity", "archetype_id") == "openEHR-EHR-EVALUATION.problem_diagnosis.v1" &&
+          candidate.dig("identity", "at_code") == "at0073"
+      end
+
+      expect(card.dig("constraints", "value")).to eq(
+        "code_list" => [
+          { "code" => "at0074", "label" => "疑い" },
+          { "code" => "at0075", "label" => "推定" },
+          { "code" => "at0076", "label" => "確定" }
+        ]
+      )
+    end
   end
 
   describe "#classify_translation" do

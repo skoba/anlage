@@ -71,7 +71,7 @@ module Opt
           "at_code" => element.node_id
         },
         "semantics" => semantics_for(archetype_id, element.node_id),
-        "constraints" => constraints_for(element),
+        "constraints" => constraints_for(element, archetype_id),
         "bindings" => [],
         "capture" => {},
         "reserved" => {},
@@ -145,7 +145,7 @@ module Opt
       end
     end
 
-    def constraints_for(element)
+    def constraints_for(element, archetype_id)
       occurrences = element.occurrences
       value_attribute = (element.attributes || []).find do |attribute|
         attribute.rm_attribute_name == "value"
@@ -157,14 +157,35 @@ module Opt
           "lower" => occurrences&.lower,
           "upper" => occurrences&.upper
         },
-        "value" => quantity_constraints(value_constraint, element.node_id)
+        "value" => value_constraints(value_constraint, element.node_id, archetype_id)
       }
     end
 
-    def quantity_constraints(value_constraint, at_code)
-      quantity_class = OpenEHR::AM::OpenEHRProfile::DataTypes::Quantity::CDvQuantity
-      return {} unless value_constraint.is_a?(quantity_class)
+    def value_constraints(value_constraint, at_code, archetype_id)
+      value_constraint = defining_code_constraint(value_constraint)
 
+      code_reference_class = OpenEHR::AM::OpenEHRProfile::DataTypes::Text::CCodeReference
+      return {} if value_constraint.is_a?(code_reference_class)
+
+      quantity_class = OpenEHR::AM::OpenEHRProfile::DataTypes::Quantity::CDvQuantity
+      return quantity_constraints(value_constraint, at_code) if value_constraint.is_a?(quantity_class)
+
+      code_phrase_class = OpenEHR::AM::OpenEHRProfile::DataTypes::Text::CCodePhrase
+      return code_list_constraints(value_constraint, archetype_id) if value_constraint.is_a?(code_phrase_class)
+
+      {}
+    end
+
+    def defining_code_constraint(value_constraint)
+      return value_constraint unless value_constraint&.rm_type_name == "DV_CODED_TEXT"
+
+      defining_code = (value_constraint.attributes || []).find do |attribute|
+        attribute.rm_attribute_name == "defining_code"
+      end
+      defining_code&.children&.first
+    end
+
+    def quantity_constraints(value_constraint, at_code)
       items = value_constraint.list || []
       (@report[:multi_unit_nodes] ||= []) << at_code if items.many?
       item = items.first
@@ -174,6 +195,15 @@ module Opt
         "units" => item&.units,
         "magnitude_range" => magnitude_range(item&.magnitude),
         "precision_range" => precision_range(item&.precision)
+      }
+    end
+
+    def code_list_constraints(value_constraint, archetype_id)
+      {
+        "code_list" => (value_constraint.code_list || []).map do |code|
+          term = terminology_term(archetype_id, code)
+          { "code" => code, "label" => term&.items&.fetch("text", nil) }
+        end
       }
     end
 
