@@ -12,7 +12,7 @@ RSpec.describe Opt::PathcardExtractor do
       expect(result.cards).not_to be_empty
       expect(result.cards).to all(
         include(
-          "schema_version" => "1.0",
+          "schema_version" => "1.1",
           "identity" => be_a(Hash),
           "semantics" => include(
             "labels" => be_an(Array),
@@ -26,6 +26,11 @@ RSpec.describe Opt::PathcardExtractor do
           "provenance" => be_a(Hash)
         )
       )
+
+      result.cards.each do |card|
+        alternatives = card.dig("semantics", "rm_type_alternatives")
+        expect(alternatives).to include(card.dig("semantics", "rm_type")) if alternatives
+      end
     end
 
     it "extracts the blood pressure systolic identity from CardiologyEncounter" do
@@ -260,7 +265,8 @@ RSpec.describe Opt::PathcardExtractor do
           "at_code" => "at0002"
         },
         semantics: {
-          "rm_type" => "DV_TEXT",
+          "rm_type" => "DV_CODED_TEXT",
+          "rm_type_alternatives" => [ "DV_TEXT", "DV_CODED_TEXT" ],
           "labels" => [ { "lang" => "ja", "text" => "プロブレム・診断名", "untranslated_suspect" => false,
                          "untranslated_evidence" => nil, "source_lang" => nil } ],
           "descriptions" => [ { "lang" => "ja", "text" => "*Identification of the problem or diagnosis, by name. (en)",
@@ -285,7 +291,7 @@ RSpec.describe Opt::PathcardExtractor do
 
         expect(card).not_to be_nil
         expect(card.slice("schema_version", "identity", "semantics", "constraints", "bindings", "capture", "reserved")).to eq(
-          "schema_version" => "1.0",
+          "schema_version" => "1.1",
           "identity" => golden.fetch(:identity),
           "semantics" => golden.fetch(:semantics),
           "constraints" => golden.fetch(:constraints),

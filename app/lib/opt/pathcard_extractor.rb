@@ -69,7 +69,7 @@ module Opt
 
     def card_for(element, path, archetype_id)
       {
-        "schema_version" => "1.0",
+        "schema_version" => "1.1",
         "identity" => {
           "template_id" => @template.template_id,
           "archetype_id" => archetype_id,
@@ -112,18 +112,37 @@ module Opt
         }
       end
 
-      {
+      semantics = {
         "labels" => semantic_entries(text, archetype_id, at_code, "label"),
         "descriptions" => semantic_entries(description, archetype_id, at_code, "description"),
         "rm_type" => rm_type_for(element)
       }
+      alternatives = value_attribute_children(element)
+      if alternatives.size >= 2
+        semantics["rm_type_alternatives"] = alternatives.map(&:rm_type_name)
+      end
+      semantics
     end
 
     def rm_type_for(element)
+      primary_value_alternative(element)&.rm_type_name
+    end
+
+    def value_attribute_children(element)
       value_attribute = (element.attributes || []).find do |attribute|
         attribute.rm_attribute_name == "value"
       end
-      value_attribute&.children&.first&.rm_type_name
+      value_attribute&.children || []
+    end
+
+    def primary_value_alternative(element)
+      children = value_attribute_children(element)
+      return children.first if children.size <= 1
+
+      code_reference_class = OpenEHR::AM::OpenEHRProfile::DataTypes::Text::CCodeReference
+      children.find do |child|
+        defining_code_constraint(child).is_a?(code_reference_class)
+      end || children.first
     end
 
     def terminology_term(archetype_id, at_code)
@@ -187,17 +206,13 @@ module Opt
 
     def constraints_for(element, archetype_id)
       occurrences = element.occurrences
-      value_attribute = (element.attributes || []).find do |attribute|
-        attribute.rm_attribute_name == "value"
-      end
-      value_constraint = value_attribute&.children&.first
 
       {
         "occurrences" => {
           "lower" => occurrences&.lower,
           "upper" => occurrences&.upper
         },
-        "value" => value_constraints(value_constraint, element.node_id, archetype_id)
+        "value" => value_constraints(primary_value_alternative(element), element.node_id, archetype_id)
       }
     end
 
@@ -226,16 +241,10 @@ module Opt
     end
 
     def bindings_for(element, archetype_id)
-      value_attribute = (element.attributes || []).find do |attribute|
-        attribute.rm_attribute_name == "value"
-      end
       code_reference_class = OpenEHR::AM::OpenEHRProfile::DataTypes::Text::CCodeReference
-      value_constraint = (value_attribute&.children || []).filter_map do |child|
-        constraint = defining_code_constraint(child)
-        constraint if constraint.is_a?(code_reference_class)
-      end.first
+      value_constraint = defining_code_constraint(primary_value_alternative(element))
       bindings = []
-      if value_constraint
+      if value_constraint.is_a?(code_reference_class)
         bindings << {
           "kind" => "value_set_binding",
           "system_uri" => value_constraint.reference_set_uri,

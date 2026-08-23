@@ -6,7 +6,7 @@
   },
   "cards": [
     {
-      "schema_version": "1.0",
+      "schema_version": "1.1",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
@@ -14,7 +14,11 @@
         "at_code": "at0002"
       },
       "semantics": {
-        "rm_type": "DV_TEXT",
+        "rm_type": "DV_CODED_TEXT",
+        "rm_type_alternatives": [
+          "DV_TEXT",
+          "DV_CODED_TEXT"
+        ],
         "labels": [
           {
             "lang": "ja",
@@ -53,7 +57,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.0",
+      "schema_version": "1.1",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
@@ -93,7 +97,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.0",
+      "schema_version": "1.1",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
@@ -133,7 +137,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.0",
+      "schema_version": "1.1",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
@@ -173,7 +177,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.0",
+      "schema_version": "1.1",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
@@ -182,6 +186,10 @@
       },
       "semantics": {
         "rm_type": "DV_CODED_TEXT",
+        "rm_type_alternatives": [
+          "DV_CODED_TEXT",
+          "DV_TEXT"
+        ],
         "labels": [
           {
             "lang": "ja",
@@ -228,7 +236,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.0",
+      "schema_version": "1.1",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
