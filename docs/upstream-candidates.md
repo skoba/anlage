@@ -255,3 +255,36 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   と推測される（未確認）。
 - ステータス: 未着手（Issue起票候補）。再現手順の精密化（`node_id=`設定順序の
   実コード確認）が必要。
+
+## 9. `OpenehrRails::Rm::GraphBuilder`がENTRY階層の正当なRM属性（language/encoding/subject等）でクラッシュする
+
+- 背景（2026-08-23、`skoba/anlage#5`のPlan A実装で発見）: `OpenEHR::Serializer::RMJSONSerializer`
+  が生成する正規canonical JSONでは、ENTRY（OBSERVATION等）のhashに
+  `language`/`encoding`/`subject`（RM仕様上ENTRYが正当に持つ属性。
+  `class Entry < CareEntry`の一部）が含まれる。しかし
+  `OpenehrRails::Rm::GraphBuilder::RESERVED_KEYS`
+  （`lib/openehr_rails/rm/graph_builder.rb:9-10`）は
+  `%w[_type archetype_node_id archetype_details name uid feeder_audit links]`
+  のみを構造走査から除外し、`language`/`encoding`/`subject`は含まない。
+  結果、`build_children`（同ファイル63-77行目）がこれらをHash値として
+  誤って子ノードと解釈し、`build_node`→`TypeMap.node_class_for('CODE_PHRASE')`
+  で`ArgumentError: unknown RM node type "CODE_PHRASE"`となり全体が失敗する
+  （`subject`側は`PARTY_SELF`等、同様に失敗し得る）。
+- 再現: `Opt::CompositionBuilder`（Anlage側、`archetype_details`欠落は
+  別件・8項ではなく`skoba/anlage#9`で追跡）の出力を
+  `RMJSONSerializer`でシリアライズし、`OpenehrRails::Rm::CompositionCommitter.commit`
+  へそのまま渡すと再現する（`spec/demo/support/height_seed.rb`が実装した
+  回避策＝該当キーを事前削除、で解消することを実測確認済み）。
+- 影響範囲: `GraphBuilder`は「`Storable#to_rm_composition`が出力する形」を
+  主な入力契約として設計されている（クラスコメント参照）。Storable経由の
+  ENTRYはlanguage/encoding/subjectを設定しない実装（`app/lib/opt/
+  composition_builder.rb`とは異なる作り）である可能性があり、その場合
+  gem内では従来顕在化しなかった可能性がある（未確認）。`RMJSONSerializer`
+  の出力を`GraphBuilder`へ渡す経路（REST API等、`CompositionCommitter`の
+  `owner: nil`分岐が示唆する用途）全般に影響し得る。
+- Anlage側の対応: `spec/demo/support/height_seed.rb`で該当キーを
+  `CompositionCommitter.commit`呼び出し前に削除する回避策を実装済み
+  （`skoba/anlage#5`）。恒久対応はgem側`RESERVED_KEYS`の拡張、または
+  `build_children`をRM属性のホワイトリスト方式に変える設計変更が
+  考えられる。
+- ステータス: 未着手（Issue起票候補）。

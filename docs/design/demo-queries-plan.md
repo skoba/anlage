@@ -20,7 +20,10 @@
 
 `openEHR-EHR-OBSERVATION.height.v2`のOPT fixtureをCKM/Archetype Designer経由で入手し、`spec/fixtures/opt/`へ配置。`Opt::CompositionBuilder`（既存クラス、`app/lib/opt/composition_builder.rb`）を使い、`spec/demo/`のシードで実際にCompositionを構築・保存する。デモの実演そのもの（OPT投入→フォーム入力→保存→クエリ）に最も近い経路になり、Anlageの「クリニカルモデルを置けば動くEHR」という思想とも整合する。
 
-**必要な人間供給物**: height.v2 OPT fixture（CKM公開束縛由来、実物主義）。ゲート報告に依頼として含める。
+**必要な人間供給物**: height.v2 OPT fixture（CKM公開束縛由来、実物主義）。**解消（2026-08-23）**:
+openehr-rails demo_assetsの`bmi_calculation.opt`（実物、lang=en）を先行取り込みして
+AQL用途を満たした（下記「案A移行手順」参照）。専用のja height OPTは引き続き未着手
+だが、#5案Aのブロック要因としては解消済み。
 
 ### 案B: Storable直接定義（gem側テスト方式の流用）
 
@@ -30,38 +33,49 @@
 
 **実装時の補足（2026-08-23、R2で確定）**: 実装した案Bは軽量`Storable`モデルではなく、`OpenehrRails::Rm::CompositionCommitter.commit`（canonical composition hashを直接投入、`owner: nil`）を`spec/demo/support/height_seed_provisional.rb`から呼ぶ形にした。新規ActiveRecordモデル・migrationを追加せずに済み、案A差し替え時に削除するファイルの範囲もこの1ファイル＋specファイルに閉じるため、より軽量な足場になっている。
 
-### 案A移行手順（height.v2 OPT到着後）
+### 案A移行手順（実施済み・2026-08-23）
 
-1. **検収**（`docs/design/pathcards-language-policy.md` 5節の手順に従う）: 届いたOPT fixtureの
-   出所（CKM公開archetype由来）・SHA-256・lang=ja/未翻訳許容の前提を確認する
-2. **fixture配置**: `spec/fixtures/opt/`へ配置し、出所コメント（他fixtureと同様の慣行）を付す
-3. **シード差し替え**: `spec/demo/support/height_seed_provisional.rb`を、`Template.build_from_opt_xml`
-   （または`Opt::CompositionBuilder`直接呼び出し）による実OPT駆動の新シードヘルパーへ置き換える。
-   手作業canonical hashを組む場合（暫定シードと同様の直接投入を続ける場合）は、**R2で判明した
-   以下2点のAPI要件を必ず満たすこと**（`CanonicalSerializer`の出力形と一致させる。gemの正規
-   canonical JSON契約であり、省略するとバリデーションエラーまたは`TypeError`になる）:
-   - ENTRY系ノード（OBSERVATION等）の`archetype_details.archetype_id.value`を、`archetype_node_id`
-     とは別に必ず設定する（`OpenehrRails::Rm::EntryNode`が`archetype_id`のpresenceを検証するため）
-   - `origin`（HISTORY）・`time`（POINT_EVENT等）は`{"value" => "...", "_type" => "DV_DATE_TIME"}`
-     形式のHashで渡す（プレーン文字列不可）
-   - ただし`Opt::CompositionBuilder`経由（Anlageの実フォーム保存経路と同じ）で構築する場合は、
-     これらのAPI要件はビルダー内部で吸収されるため、シード側で意識する必要はない。**案Aの
-     実装では`Opt::CompositionBuilder`経由を優先し、手作業canonical hashは避ける**（実物主義・
-     実パイプライン踏襲の趣旨に沿う）
-4. **案Bファイルの削除**: `spec/demo/support/height_seed_provisional.rb`と、`spec/demo/
-   aql_queries_spec.rb`内の「暫定・実パイプライン非経由」describe/コメントを削除し、案Aの
-   シードを指す形に書き換える（新規specへの全面置換でよい。差分は1コミット）
-5. **`docs/demo/aql-queries.md`更新**: 1節の「シード（案B暫定）」の記載を実OPT駆動の内容に
-   差し替え、冒頭の「案A到着後、シードを差し替える」という前置きを削除する
-6. **凍結受入条件への算入**: 上記1〜5完了後にのみ、height不等号クエリが`CLAUDE.md`
-   マイルストーン節の受入条件（5節）に算入される
+CKM/AD経由の専用height OPT（ja、単位・値域入りlab OPT改訂と同一作業）は依然
+未着手のままだが、それとは別に**openehr-rails demo_assetsの`bmi_calculation.opt`
+（実物・CKM/Ocean Template Designer出力、lang=en）を先行取り込みして案Aへ移行した**
+（`skoba/anlage`タスク「デモOPT整備」）。lang=enはAQLのpath照会という用途上
+本質的でないため、これで#5案Aのブロックは解除されたと判定する。専用のja height
+OPTが別途届いた場合は、`docs/demo/opt-catalog.md`の「改訂待ち」欄に沿って
+差し替えを検討する（現時点では必須ではない）。
 
-**チェックリスト**（案A移行コミットのレビュー観点）:
-- [ ] 検収記録（language-policy 5節）が残っているか
-- [ ] fixtureに出所コメントが付いているか
-- [ ] 案Bのファイル（`height_seed_provisional.rb`等）が削除されているか
-- [ ] `docs/demo/aql-queries.md`の「案B暫定」表記が除去されているか
-- [ ] `bundle exec rspec spec/demo/`がgreenか
+実施した手順（記録）:
+
+1. **検収**（`docs/design/pathcards-language-policy.md` 5節）: lang=enである旨を
+   明記した例外的検収記録として5節へ追記済み（本チェックリストの対象外として
+   意図的に受け入れ）
+2. **fixture配置**: `spec/fixtures/opt/bmi_calculation.opt`、出所コメント付き
+3. **シード実装**: `spec/demo/support/height_seed.rb`。`Opt::CompositionBuilder`
+   （Anlageの実フォーム保存経路と同じRM構築ロジック）→`RMJSONSerializer`→
+   `OpenehrRails::Rm::CompositionCommitter.commit`という実パイプライン準拠の経路
+4. **案Bファイル削除**: `spec/demo/support/height_seed_provisional.rb`削除、
+   `spec/demo/aql_queries_spec.rb`を案A用に全面置換
+5. **`docs/demo/aql-queries.md`更新**: 済み
+6. **凍結受入条件への算入**: 上記完了により算入可能と判定
+
+**当初の想定（`Opt::CompositionBuilder`経由ならAPI要件はビルダー内部で吸収される）
+は部分的に外れた**。実測（R3）で2つの回避策が必要と判明した:
+
+- `Opt::CompositionBuilder`はENTRYへ`archetype_details`を設定しない
+  （Anlage側の欠陥。**Issue化済み: [skoba/anlage#9](https://github.com/skoba/anlage/issues/9)**）
+- `RMJSONSerializer`が出力するENTRY hashの`language`/`encoding`/`subject`を
+  `OpenehrRails::Rm::GraphBuilder`が構造ノードと誤認してクラッシュする
+  （gem側の欠陥。**`docs/upstream-candidates.md` 9項へ観察追記済み**）
+
+`spec/demo/support/height_seed.rb`はこの2点を明示コメント付きで回避している。
+#9解消後、回避コードを削除できる（同ファイルのコメント参照）。
+
+**チェックリスト**（完了確認）:
+- [x] 検収記録（lang=en例外として、language-policy 5節）
+- [x] fixtureに出所コメント
+- [x] 案Bのファイル削除
+- [x] `docs/demo/aql-queries.md`の「案B暫定」表記除去
+- [x] `bundle exec rspec spec/demo/`がgreen（1 example, 0 failures）
+- [ ] 恒久対応（`skoba/anlage#9`解消）後、`height_seed.rb`の回避コード削除（残課題）
 - [ ] `Opt::CompositionBuilder`経由（手作業canonical hashを避けている）か
 
 ## 3. `docs/demo/aql-queries.md`の構成案

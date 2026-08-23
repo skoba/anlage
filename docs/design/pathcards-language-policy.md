@@ -100,6 +100,8 @@
 
 fixtureは日本語訳等を適宜更新予定（2026-08-22 人間申告）のため、上記は同日時点のスナップショット。更新版が届いたら本チェックリストを再適用する。
 
+- [x] **bmi_calculation.opt（2026-08-23、`skoba/anlage#5`用）**: **本チェックリストの対象外として意図的に受け入れる例外**。`<language>`のcode_stringは**en**（jaではない）——CKM/Ocean Template Designer出力のgem側demo_assetsをそのまま取り込んだもので、AD上でのja追加・再エクスポート等の翻訳作業は行っていない。パスカード抽出（未翻訳検出・ラベル取得）の検収対象ではなく、`openEHR-EHR-OBSERVATION.height.v2`の実archetype構造をAQLシード（#5案A）のpath照会用途に使うためだけの取り込みであり、ラベル言語は用途上本質的でない。term_definitions構造（`items id="text"`/`"description"`両存在）は目視確認済み（パース自体は問題なく通ることを`docs/reports/demo-queries-log.md`で実測確認予定）。
+
 ## 6. 抽出時レポート（WP2で実装）
 
 - OPT投入時のカード化サマリに**未翻訳疑いノード一覧**（アーキタイプパス・at-code・テキスト・検出根拠）を含める。

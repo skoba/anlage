@@ -52,3 +52,17 @@ WP0-5やSliceの実装計画には載らないが、確認済みで記録して�
 - ドロップゾーン通過・埋め込みCLUSTERラベル・FHIR facade出力を確認し
   `docs/evidence/` に証跡追加（デモ本番アーティファクトの新スタック
   初通過の記録）。
+- 要件チェックリストの保存先はIssue本体（[skoba/anlage#4](https://github.com/skoba/anlage/issues/4)）とする。相互参照のみ本行に残す。
+
+## 3. bmi_calculation.optのja化（任意・低優先）
+
+- `spec/fixtures/opt/bmi_calculation.opt`（`skoba/anlage#5`用、lang=en）を
+  日本語ラベル付きへ差し替える価値があるかは未確定。AQLのpath照会用途では
+  言語は本質的でないため、現時点では見送る。パスカードのラベル取得実演で
+  height系archetypeが必要になった場合に再検討する。
+
+## 4. rails demo README整備（12月・冬眠中）
+
+- openehr-rails側の`demo_assets/`に対応するREADME/MANIFEST整備は、
+  Anlageの管轄外（層規律）。12月世界公開準備のタイミングまで保留（現在
+  「冬眠中」＝アクティブな作業対象ではない）。

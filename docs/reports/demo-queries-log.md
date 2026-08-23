@@ -79,3 +79,54 @@ end
 - height不等号クエリ以外のデモ使用クエリ原文（AQL新機能候補1本を含む）
 
 到着次第、`docs/design/demo-queries-plan.md`のコミット分割案2以降（案Aへの差し替え、追加クエリのTDD、CLAUDE.mdマイルストーン節への受入条件追記）を進める。
+
+---
+
+## R3: bmi_calculation.opt取り込み・#5案Aブロック解除
+
+タスク「デモOPT整備 — bmiコピーで#5解除+カタログ新設」を実施。
+
+### fixture取り込み
+
+`openehr-rails/demo_assets/templates/bmi_calculation.opt`（commit `0f88392d7c890a39fa82bebf26f42410d5c9b9af`、sha256
+`d72b6d50b33b2a40d22fce2dad0269f84bb348096e0fda2508b122170df8c272`）を`spec/fixtures/opt/bmi_calculation.opt`へ
+出所コメント付きでコピー。lang=en（jaではない）ため、`docs/design/pathcards-language-policy.md` 5節の検収チェックリストは
+「対象外の意図的例外」として記録した（AQLのpath照会用途にはラベル言語が本質的でないため）。
+
+height.v2の実archetype構造（`openehr-rails/spec/generators/templates/bmi_calculation.opt`、別配置の同一archetype）を
+実測して確認: property code=122（openehr）、units=cm、magnitude_range 0.0-1000.0。**当初、property code=124/units=kg
+の別C_ARCHETYPE_ROOTブロック（735行目〜）をheight.v2の定義木と誤認しかけたが、実測（archetype_id宣言の行番号と
+定義木の前後関係）で訂正した——これは実際はbody_weight.v2（archetype_id宣言1142行目）だった**。
+
+### ドロップゾーン実演
+
+`Template.build_from_opt_xml`→`Opt::PathcardExtractor`の直接実行、および実際のドロップゾーン（system spec）経由の
+両方でheight.v2 at0004のpathcard抽出を確認（4カード中1件、`docs/evidence/2026-08-23--bmi_calculation--height-v2-pathcard-after-dropzone.png`）。
+
+### #5案A: 実パイプラインシードへの移行
+
+`Opt::CompositionBuilder`→`RMJSONSerializer`→`OpenehrRails::Rm::CompositionCommitter.commit`という実フォーム保存経路
+準拠のchainを試したところ、2つの構造的ギャップを実測で発見した（いずれも推測せず、エラーから実際に特定）:
+
+1. **`Opt::CompositionBuilder`がENTRYへ`archetype_details`を設定しない**（`archetype_node_id`のみ）。
+   `OpenehrRails::Rm::EntryNode`（`nodes.rb:7`）が`archetype_id`のpresenceを検証するため、
+   `ActiveRecord::RecordInvalid: Archetype can't be blank`で失敗する。Anlage側の欠陥と判定し、
+   **[skoba/anlage#9](https://github.com/skoba/anlage/issues/9)として起票**
+2. **`RMJSONSerializer`が出力するENTRY hashの`language`/`encoding`/`subject`キーを、`OpenehrRails::Rm::GraphBuilder`が
+   構造子ノードと誤認してクラッシュする**（`RESERVED_KEYS`にこれらが含まれないため。`ArgumentError: unknown RM node
+   type "CODE_PHRASE"`）。gem側の欠陥と判定し、**`docs/upstream-candidates.md` 9項へ観察追記**
+
+いずれも実測で確定した後、`spec/demo/support/height_seed.rb`で該当2点を明示コメント付きで回避（archetype_details補完・
+非構造キー削除）し、実パイプライン経由でheight不等号クエリのRed→Greenを達成した。案B（`height_seed_provisional.rb`）は
+裁定どおり削除。
+
+**この発見自体の副次的な重要性**: Anlage独自の`compositions`テーブル（`CompositionsController#create`が保存する経路）は
+`OpenehrRails::Rm::*`のRMグラフテーブルへ一切連携されておらず、**通常のフォーム保存経路で登録されたCompositionは、
+そもそもAQLで照会できない**という構造上の事実が判明した。現状AQLはAnlage内で#5以外に使用箇所が無いため今は無害だが、
+WP3（索引と検索）着手時に同じ壁に当たる見込み。`skoba/anlage#9`のAcceptance criteriaに含めている。
+
+### 検証結果
+
+- `bundle exec rspec spec/demo/aql_queries_spec.rb`: 1 example, 0 failures（案A、height>170で`[[180.0]]`）
+- `bundle exec rspec`（全体）: 80 examples, 0 failures
+- `bundle exec rubocop spec/demo/`: 2 files, no offenses

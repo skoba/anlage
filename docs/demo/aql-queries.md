@@ -2,10 +2,13 @@
 
 各クエリは `spec/demo/aql_queries_spec.rb` で全実行され、期待件数と照合される。
 クエリ本文の変更はこのファイルへの追記・修正を経て行う（壇上での手打ち編集はしない）。
-計画: `docs/design/demo-queries-plan.md`。承認事項1により、現状は案B（暫定シード、
-`OpenehrRails::Rm::CompositionCommitter`直接呼び出し。実パイプライン非経由）で
-実行している。案A（`openEHR-EHR-OBSERVATION.height.v2`のOPT fixture、CKM/AD経由で
-人間依頼中）到着後、シードを差し替える（凍結受入条件に数えられるのは案A差し替え後のみ）。
+計画: `docs/design/demo-queries-plan.md`。**案A（実パイプライン駆動）へ移行済み
+（2026-08-23）**。`spec/fixtures/opt/bmi_calculation.opt`（openehr-rails
+demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixture冒頭
+コメントおよび`docs/demo/opt-catalog.md`参照）の`openEHR-EHR-OBSERVATION.height.v2`
+を使用。`Opt::CompositionBuilder`（フォーム保存経路と同じ構築ロジック）経由で
+シードする。ただし2件の回避策（`skoba/anlage#9`、`docs/upstream-candidates.md`
+9項）付き——恒久解消まではこの依存を残す。
 
 ## 1. height不等号クエリ
 
@@ -18,8 +21,9 @@
   FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.height.v2]
   WHERE o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude > 170
   ```
-- シード（案B暫定）: 身長165.0cm/170.0cm/180.0cmの3件を投入
-- 期待件数: **1件**（180.0cmのみ。170.0cm自体は`> 170`の境界値のため非該当。実測確認済み: `docs/reports/demo-queries-log.md` R2）
+- シード（案A、`spec/demo/support/height_seed.rb`）: 身長165.0cm/170.0cm/180.0cmの3件を投入
+- 期待件数: **1件**（180.0cmのみ。170.0cm自体は`> 170`の境界値のため非該当。実測確認済み: `docs/reports/demo-queries-log.md` R2・R3）
+- **凍結受入条件に算入可能**（案A差し替え完了。`docs/design/demo-queries-plan.md` 5節）
 
 ## 2. MATCHES 値リスト（コード値の複数一致）
 
