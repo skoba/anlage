@@ -1,0 +1,131 @@
+{
+  "_provenance": {
+    "source_fixture": "LabResultReport.opt",
+    "source_sha256": "414bbd49996f5dfd2da5a3374ced6ada7e7fc32405a883d8f51808bb00554743",
+    "binding_origin": "CKM公開束縛由来"
+  },
+  "cards": [
+    {
+      "schema_version": "1.0",
+      "identity": {
+        "template_id": "LabResultReport",
+        "archetype_id": "openEHR-EHR-OBSERVATION.laboratory_test_result.v1",
+        "path": "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[at0005]/value",
+        "at_code": "at0005"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "検査名",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "*Name of the laboratory investigation performed on the specimen(s). (en)",
+            "untranslated_suspect": true,
+            "untranslated_evidence": "fallback_marker",
+            "source_lang": "en"
+          }
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 1,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.0",
+      "identity": {
+        "template_id": "LabResultReport",
+        "archetype_id": "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
+        "path": "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[at0000]/items[at0024]/value",
+        "at_code": "at0024"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "分析名",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "*The name of the analyte result. (en)",
+            "untranslated_suspect": true,
+            "untranslated_evidence": "fallback_marker",
+            "source_lang": "en"
+          }
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.0",
+      "identity": {
+        "template_id": "LabResultReport",
+        "archetype_id": "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
+        "path": "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[at0000]/items[at0001]/value",
+        "at_code": "at0001"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "分析結果",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "*The value of the analyte result. (en)",
+            "untranslated_suspect": true,
+            "untranslated_evidence": "fallback_marker",
+            "source_lang": "en"
+          }
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": null
+        },
+        "value": {
+          "property": null,
+          "units": null,
+          "magnitude_range": null,
+          "precision_range": null
+        }
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    }
+  ]
+}

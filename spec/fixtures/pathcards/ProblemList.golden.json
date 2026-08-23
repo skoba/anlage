@@ -1,0 +1,265 @@
+{
+  "_provenance": {
+    "source_fixture": "ProblemList.opt",
+    "source_sha256": "b821b98beebfba9e758cc0429a91bb98aedb7d50de684424f0eb58d51e4a47c1",
+    "binding_origin": "CKM公開束縛由来"
+  },
+  "cards": [
+    {
+      "schema_version": "1.0",
+      "identity": {
+        "template_id": "ProblemList",
+        "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+        "path": "/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0002]/value",
+        "at_code": "at0002"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "プロブレム・診断名",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "*Identification of the problem or diagnosis, by name. (en)",
+            "untranslated_suspect": true,
+            "untranslated_evidence": "fallback_marker",
+            "source_lang": "en"
+          }
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 1,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [
+        {
+          "kind": "value_set_binding",
+          "system_uri": "terminology:http://id.who.int/icd/release/11/mms",
+          "code": null,
+          "display": null
+        }
+      ],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.0",
+      "identity": {
+        "template_id": "ProblemList",
+        "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+        "path": "/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0077]/value",
+        "at_code": "at0077"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "発症日時",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "*Estimated or actual date/time that signs or symptoms of the problem/diagnosis were first observed. (en)",
+            "untranslated_suspect": true,
+            "untranslated_evidence": "fallback_marker",
+            "source_lang": "en"
+          }
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.0",
+      "identity": {
+        "template_id": "ProblemList",
+        "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+        "path": "/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0003]/value",
+        "at_code": "at0003"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "臨床的に認識された日時",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "*Estimated or actual date/time the diagnosis or problem was recognised by a healthcare professional. (en)",
+            "untranslated_suspect": true,
+            "untranslated_evidence": "fallback_marker",
+            "source_lang": "en"
+          }
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.0",
+      "identity": {
+        "template_id": "ProblemList",
+        "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+        "path": "/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0030]/value",
+        "at_code": "at0030"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "治癒日時",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "*Estimated or actual date/time of resolution or remission for this problem or diagnosis, as determined by a healthcare professional. (en)",
+            "untranslated_suspect": true,
+            "untranslated_evidence": "fallback_marker",
+            "source_lang": "en"
+          }
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.0",
+      "identity": {
+        "template_id": "ProblemList",
+        "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+        "path": "/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0073]/value",
+        "at_code": "at0073"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "診断確度",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "*The level of confidence in the identification of the diagnosis. (en)",
+            "untranslated_suspect": true,
+            "untranslated_evidence": "fallback_marker",
+            "source_lang": "en"
+          }
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {
+          "code_list": [
+            {
+              "code": "at0074",
+              "label": "疑い"
+            },
+            {
+              "code": "at0075",
+              "label": "推定"
+            },
+            {
+              "code": "at0076",
+              "label": "確定"
+            }
+          ]
+        }
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.0",
+      "identity": {
+        "template_id": "ProblemList",
+        "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+        "path": "/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/protocol[at0032]/items[at0070]/value",
+        "at_code": "at0070"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "最終更新日",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "*The date this problem or diagnosis was last updated. (en)",
+            "untranslated_suspect": true,
+            "untranslated_evidence": "fallback_marker",
+            "source_lang": "en"
+          }
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    }
+  ]
+}
