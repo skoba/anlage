@@ -69,3 +69,75 @@ Anlage側にもハードコードする方針とした（承認事項1）。
 計画書は`docs/design/issue9-plan.md`に作成。承認事項4点（rm_versionリテラル化・
 template_id省略・スコープをarchetype_details欠落解消に限定・upstream 9項は独立残置）
 を明記し、ゲート報告で承認を仰ぐ。
+
+---
+
+## R2: A-3実装中に判明した計画前提との齟齬（Codex発見・Claude Code実測で再現確認）
+
+### 発見の経緯
+
+裁定反映後の計画（`archetype_id: ArchetypeID.new(value: entry["archetype_id"])`）で
+Codexに実装させたところ、手順1(Red)・手順2(Green、ユニットspec)までは想定どおり
+成功したが、手順3（`height_seed.rb`/`problem_diagnosis_seed.rb`の回避策撤去→
+`spec/demo/`実行）で`ActiveRecord::RecordInvalid: Validation failed: Archetype
+can't be blank`が再発し、Codexが計画変更の承認が必要と判断して自律停止した。
+
+### Claude Codeによる独立検証（実測、`bundle exec rails runner`）
+
+```ruby
+aid = OpenEHR::RM::Support::Identification::ArchetypeID.new(value: "openEHR-EHR-OBSERVATION.height.v2")
+aid.value          # => "openEHR-EHR-OBSERVATION.height.v2"（Rubyオブジェクトとしては正しい）
+aid.instance_variables
+# => [:@rm_originator, :@rm_name, :@rm_entity, :@concept_name, :@specialisation, :@version_id]
+# ("@value" が無い)
+OpenEHR::Serializer::RMJSONSerializer.new(aid).serialize
+# => {"_type":"ARCHETYPE_ID","rm_originator":"openEHR","rm_name":"EHR","rm_entity":"OBSERVATION","concept_name":"height","version_id":"v2"}
+# ("value" キーが無い)
+```
+
+根本原因（gem`openehr-2.4.1`実測、bump後も同一挙動。`lib/openehr/rm/support/identification.rb:69-93`）:
+`ArchetypeID#value=`は正規表現でドット区切り形式を`rm_originator`/`rm_name`/`rm_entity`/
+`concept_name`/`specialisation`/`version_id`へ分解して格納するのみで、`@value`
+ivarには一切触れない。`ArchetypeID#value`（同`:93-96`）はこれらの構成要素から
+文字列を都度再構築する**計算プロパティ**であり、`ObjectID`の`attr_reader :value`を
+オーバーライドしている。
+
+一方`RMJSONSerializer`（`openehr-2.4.1` `lib/openehr/serializer/rm_json_serializer.rb`）は
+`instance_variables`を機械的にダンプする汎用リフレクション実装であり、メソッド呼び出し
+（`.value`）は経由しない。したがって`ArchetypeID`をシリアライズすると`value`キーが
+存在しない`{rm_originator, rm_name, rm_entity, concept_name, specialisation, version_id}`
+になり、`GraphBuilder#build_node`（`hash.dig('archetype_details', 'archetype_id', 'value')`）
+が`nil`を読み、`EntryNode`の`archetype_id`presence検証で失敗する。
+
+**計画のStep 1調査2（`docs/design/issue9-plan.md`「RM側の型制約」節）は、`ArchetypeID`
+インスタンスを渡す必要があるという結論までは正しかったが、`RMJSONSerializer`との
+組み合わせで`value`キーが失われるという相互作用まで検証していなかった**
+（Ruby API単体の型制約は確認したが、シリアライズ経路の実測が抜けていた）。
+
+### 検討した選択肢
+
+1. **`OpenEHR::RM::Support::Identification::ObjectID.new(value: entry["archetype_id"])`を
+   直接使う**（`ArchetypeID`を経由しない）。`ObjectID#value=`は`@value`をそのまま設定する
+   単純ラッパーであり、実測: `RMJSONSerializer`は`{"_type":"OBJECT_ID","value":"..."}`を
+   出力する（`bundle exec rails runner`で確認済み）。`GraphBuilder`は`value`キーしか
+   読まないため通る。**トレードオフ**: `_type`が`ARCHETYPE_ID`ではなく`OBJECT_ID`になり、
+   canonical openEHR仕様が期待する型タグと一致しない。実測: `openehr-rails`gem内で
+   `.concept_name`（`ArchetypeID`固有メソッド）を呼んでいる箇所は無い
+   （`grep -rn "concept_name" openehr-rails-0.4.1/lib/`が空）ため、この型不一致による
+   実行時エラーは起きない。ただし将来gem側が`_type: "ARCHETYPE_ID"`を前提にした処理を
+   追加した場合に静かに壊れるリスクが残る。
+2. **`RMJSONSerializer`をAnlage側で拡張し、`ArchetypeID`を特別扱いして`value`キーを
+   注入する**。層規律5（gem本体は変更しない）には抵触しないが（Anlage側での対応）、
+   `RMJSONSerializer`は汎用リフレクション実装という設計方針そのものへの局所的な
+   特別扱いになり、保守性・意図の分かりにくさが増す。
+3. **canonical JSON側で後処理**: `height_seed.rb`/`problem_diagnosis_seed.rb`同様、
+   `CompositionBuilder`の出力ハッシュに対してAnlage側で`archetype_id.value`を
+   後から注入する。これは本Issue自体が撤去しようとしていた「手動補完」パターンの
+   再導入であり、Issue #9のAcceptance criteria（手作業補完なしで通ること）に反する。
+
+### Claude Codeの暫定判断（実装は保留、ユーザーの再裁定を待つ）
+
+選択肢1（`ObjectID`直接使用）が最小差分かつAcceptance criteriaを満たす。ただし
+canonical型タグの純度を犠牲にする判断であり、`skoba/anlage#32`（serializerの
+canonical逸脱是正）の座組と同じ問題領域（canonical正確性）に触れるため、
+Claude Code単独での決定ではなくユーザーへの例外報告として提示する。
