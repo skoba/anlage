@@ -6,6 +6,15 @@
 回避策で迂回した構造的ギャップの恒久解消。
 **ログ**: `docs/reports/issue9-log.md`（R1〜。本計画のexplore実測記録）
 
+> **保留中（2026-08-23、R3裁定）**: A-3実装中に`ArchetypeID`が
+> `RMJSONSerializer`経由で`"value"`キーを持たずに往復する構造的不整合が判明
+> （詳細: `docs/reports/issue9-log.md` R2）。シムでの回避は不採用とし、
+> openehr-ruby側で修正・`2.4.2`として出荷する方針
+> （`skoba/openehr-ruby#45`、`docs/upstream-candidates.md`13項）。
+> **本計画（TDD手順・archetype_details供給の骨格）自体は変更不要**——
+> `2.4.2` bump後にそのまま再開する。ブロック解除条件: openehr-ruby`2.4.2`
+> リリース→Anlage側`bundle update openehr`→Step 2 TDD手順の再実行。
+
 ## 解決区分（CLAUDE.md「ticket-driven workflow」）
 
 **(b) enhancement**。既存の`Opt::CompositionBuilder`は「フォーム保存経路」用に

@@ -141,3 +141,29 @@ ivarには一切触れない。`ArchetypeID#value`（同`:93-96`）はこれら�
 canonical型タグの純度を犠牲にする判断であり、`skoba/anlage#32`（serializerの
 canonical逸脱是正）の座組と同じ問題領域（canonical正確性）に触れるため、
 Claude Code単独での決定ではなくユーザーへの例外報告として提示する。
+
+---
+
+## R3: 裁定（2026-08-23）— シム不採用、gem修正待ちで保留継続
+
+選択肢1〜3はいずれも不採用。根本原因はgem側の構造的不整合（`ArchetypeID`の
+内部表現とRMJSONSerializerの汎用リフレクション契約の不一致）であるため、
+Anlage側のシムでは根治にならないと判断。**openehr-ruby側で修正し`2.4.2`として
+出荷する方針を採る**。
+
+- gem側Issue起票済み: `skoba/openehr-ruby#45`
+  （<https://github.com/skoba/openehr-ruby/issues/45>）。root cause・
+  reproduction・proposed fixをissue9-log R2の実測内容から転記。
+- `docs/upstream-candidates.md`13項に観察を記録（`skoba/openehr-ruby#45`への
+  リンク付き）。
+- **#9の実装は`2.4.2` bump後、シム無しで再開する**。Codexが手順1-3で生成した
+  working tree変更（`app/lib/opt/composition_builder.rb`・`spec/demo/support/
+  height_seed.rb`・`problem_diagnosis_seed.rb`・`spec/lib/opt/
+  composition_builder_spec.rb`）は破棄済み（コミットされていなかったため
+  `git checkout --`のみで復元不要）。`docs/design/issue9-plan.md`の
+  TDD手順自体（Red→Green、`archetype_details:`供給の骨格）は`2.4.2`後も
+  そのまま再利用できる見込み（`ArchetypeID`のシリアライズ修正はgem側の
+  内部実装の話であり、Anlage側の呼び出しコード自体は計画どおりで問題ない）。
+- 待機中: `skoba/anlage#9`はopenehr-ruby`2.4.2`リリース待ちのblocked状態として
+  据え置く。ブロック解除条件: openehr-ruby`2.4.2`リリース→Anlage側`bundle
+  update openehr`→#9のRed/Green再実行。

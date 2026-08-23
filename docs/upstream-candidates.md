@@ -375,3 +375,32 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   定数化し、出所コメントを付して使用する（`skoba/anlage#9`）。
 - ステータス: 未着手（Issue起票候補。既存の複数箇所のハードコードを
   gem側の一設定点に統合する提案として起票する場合はenhancement扱いが妥当）。
+
+## 13. `ArchetypeID`が`RMJSONSerializer`経由で`"value"`キーを持たずに往復する
+
+- 背景（2026-08-23、`skoba/anlage#9`実装中にCodexが発見・Claude Codeが
+  独立実測で再現確認。詳細実測ログ: `docs/reports/issue9-log.md` R2）:
+  `ArchetypeID#value=`（gem`openehr-2.4.1`の`lib/openehr/rm/support/identification.rb:70-81`）は
+  ドット区切りのarchetype-id文字列を`rm_originator`/`rm_name`/`rm_entity`/
+  `concept_name`/`specialisation`/`version_id`の6ivarへ分解するのみで、
+  `@value`を一切設定しない。`ArchetypeID#value`（同`:95-98`）はこれらの
+  構成要素から都度文字列を再構築する計算プロパティであり、`ObjectID`の
+  `attr_reader :value`をオーバーライドしている。
+- 一方`RMJSONSerializer`（`lib/openehr/serializer/rm_json_serializer.rb:53-61`）は
+  `instance_variables`を機械的にダンプする汎用リフレクション実装であり、
+  メソッド呼び出し（`.value`）を経由しない。したがって`ArchetypeID`インスタンスを
+  シリアライズすると`{"_type":"ARCHETYPE_ID","rm_originator":"openEHR",...}`と
+  なり`"value"`キーが存在しない（他の`ObjectID`サブクラス、例えば`TemplateID`は
+  `{"_type":"TEMPLATE_ID","value":"..."}`という一貫した形になる。実測確認済み）。
+- 影響: `hash.dig('archetype_id', 'value')`のような読み取り契約を持つ消費側
+  （`OpenehrRails::Rm::GraphBuilder#build_node`が実例）が、正しく構築された
+  `ArchetypeID`から`nil`を読み、下流のバリデーション失敗（`Archetype can't
+  be blank`）を引き起こす。
+- Anlage側の対応: シム（`ObjectID`直接使用等）は不採用と裁定（2026-08-23）。
+  根本原因はgem側の構造的不整合であるため、openehr-ruby側で修正し`2.4.2`として
+  出荷する方針。`skoba/anlage#9`の実装は`2.4.2` bump後、シム無しで再開する
+  （保留中の実装コードは破棄済み）。
+- 起票: **openehr-ruby側で実施済み**。`skoba/openehr-ruby#45`
+  （<https://github.com/skoba/openehr-ruby/issues/45>）。
+- ステータス: 起票済み（openehr-ruby側でのfix待ち。`2.4.2`リリース後に
+  `skoba/anlage#9`を再開する）。
