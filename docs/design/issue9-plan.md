@@ -49,7 +49,7 @@ Phase 1スコープで作られており、`archetype_details`を設定しない
   `archetype_node_id:`に既に使われている値）は元々この正規形式の文字列であることを
   実測確認済み（既存の`archetype_node_id:`呼び出しが成立している時点で形式は保証されている）。
 
-### 3. `rm_version`の値源
+### 3. `rm_version`の値源【裁定反映・A-0-1】
 
 - `web_template`（`Template.build_web_template`、`app/models/template.rb:59-63`）にも
   gem `FieldExtractor`出力（`field_extractor.rb:105-121`のキーは
@@ -59,17 +59,32 @@ Phase 1スコープで作られており、`archetype_details`を設定しない
   （`storable.rb:93,145`、`canonical_serializer.rb:41`のフォールバック、
   `graph_builder.rb:33`の`details['rm_version'] || '1.0.4'`フォールバック、
   `db/schema.rb:51`の`openehr_rm_compositions.rm_version`列デフォルト値も同じ`"1.0.4"`）。
-- **決定（承認事項1）**: `Opt::CompositionBuilder`にも同じ`"1.0.4"`をリテラルで
-  ハードコードする。`OpenehrRails`設定にも`web_template`にも情報源が無い以上、
-  gem全体の既存慣例に合わせるのが妥当。将来複数RMバージョン対応が要る場合は
-  別途Issue化する（スコープ規律）。
+- **裁定: 承認（定数化の条件付き）**。`Opt::CompositionBuilder::RM_VERSION = "1.0.4"`と
+  定数化し、定義箇所に「gem全体の唯一の実測慣例値。OPT・gem設定のいずれにも
+  情報源なし」と出所コメントを付す（マジックリテラルの直書きにしない）。
+  `docs/upstream-candidates.md`に12項として観察を追記する（下記）。
 
-### 4. `template_id`の扱い
+### 4. `template_id`の扱い【裁定反映・A-0-2、当初計画を差し戻し】
 
-- `Archetyped#template_id`は任意（バリデーションなし）。`GraphBuilder`も
-  `archetype_id`しか読まない（調査1で確認済み）ため、AQL経路には不要。
-- **決定（承認事項2）**: 本Issueのスコープでは`template_id`は設定しない（省略）。
-  必要になった時点で別途追加する（YAGNI、CLAUDE.mdの過剰実装禁止規律に従う）。
+- 当初計画（省略・YAGNI）は**不承認**。裁定理由: (a) openEHR canonicalの
+  Composition正規形は`archetype_details`に`template_id`を含む（`skoba/anlage#32`で
+  serializerのcanonical逸脱を是正した座組と同じく、書き込み側で新たな不完全形を
+  作らない） (b) パスカードidentityの第一キーが`template_id`であり、WP3で
+  検索結果→Compositionを結ぶ際に必要になることが既知。
+- 実測: `build_entry`は`Opt::CompositionBuilder`のインスタンスメソッドであり、
+  `@template`（ivar、`composition_builder.rb:27`）に届く。`@template.web_template["template_id"]`
+  は`Composition`トップレベルの`archetype_node_id:`（`composition_builder.rb:33`）に
+  既に使われている値そのもの。**build_entryからtemplate参照が届かない構造ではない**
+  ため、再裁定は不要——供給可能と判定。
+- `Archetyped#template_id`は`attr_accessor`のみで型制約なし（調査2）だが、
+  `ArchetypeID`同様のObjectID系サブクラス`OpenEHR::RM::Support::Identification::TemplateID`
+  （gem `openehr-2.3.1` `identification.rb:213`、`ObjectID`を継承し`value:`のみを
+  取る単純ラッパー。空文字列/nilで`ArgumentError`、`identification.rb:14-17`）が
+  存在するため、`archetype_id`と対称的にこれを使う
+  （`RMJSONSerializer`は任意オブジェクトを`@value`ivarからリフレクションで
+  `{_type, value}`にダンプするため、`ArchetypeID`と同じ扱いで一貫性が保てる）。
+- **決定（承認事項2、更新）**: `template_id: OpenEHR::RM::Support::Identification::TemplateID.new(value: @template.web_template["template_id"])`
+  を`archetype_details`に設定する。
 
 ### 5. 既存データへの影響
 
@@ -87,7 +102,7 @@ Phase 1スコープで作られており、`archetype_details`を設定しない
   呼んでいない）。したがって本Issue修正による**既存データへの後方互換影響は無い**
   （backfillは不要）。
 
-### 6. upstream-candidates.md 9項との関係
+### 6. upstream-candidates.md 9項との関係【裁定反映・A-0-4、承認】
 
 - `docs/upstream-candidates.md:259-290`（9項、`language`/`encoding`/`subject`が
   `GraphBuilder::RESERVED_KEYS`に無くクラッシュする件）は**本Issueとは独立**。
@@ -97,6 +112,10 @@ Phase 1スコープで作られており、`archetype_details`を設定しない
 - したがって`spec/demo/support/height_seed.rb`/`problem_diagnosis_seed.rb`の
   回避策は2つのうち**1つ（archetype_details手動注入）のみ本Issueで撤去可能**。
   もう1つ（`NON_STRUCTURAL_ENTRY_KEYS`削除）は9項がgem側で解消されるまで残置する。
+- **裁定: 承認。ただし残置コードに撤去条件コメントを付す**。
+  `NON_STRUCTURAL_ENTRY_KEYS`の定義箇所（`height_seed.rb`/`problem_diagnosis_seed.rb`
+  双方）に「撤去条件: openehr-rails側`RESERVED_KEYS`拡張（台帳9項のIssue化・解消）後」
+  を明記する（実装コミットに含める）。
 
 ## Step 2 計画
 
@@ -106,11 +125,15 @@ Phase 1スコープで作られており、`archetype_details`を設定しない
    無ければ新設）に、「`build_entry`が生成するENTRYの`archetype_details.archetype_id.value`が
    entryのarchetype_idと一致する」ユニットspecを追加。実行して失敗を確認する。
 2. **Green**: `build_entry`（`composition_builder.rb:50-58`）に最小差分で
-   `archetype_details:`キーワードを追加:
+   `archetype_details:`キーワードを追加（裁定反映済み。`RM_VERSION`定数化・
+   `template_id`供給を含む）:
    ```ruby
+   RM_VERSION = "1.0.4" # gem全体の唯一の実測慣例値。OPT・gem設定のいずれにも情報源なし
+   ...
    archetype_details: OpenEHR::RM::Common::Archetyped::Archetyped.new(
      archetype_id: OpenEHR::RM::Support::Identification::ArchetypeID.new(value: entry["archetype_id"]),
-     rm_version: "1.0.4"
+     template_id: OpenEHR::RM::Support::Identification::TemplateID.new(value: @template.web_template["template_id"]),
+     rm_version: RM_VERSION
    ),
    ```
 3. **統合Red→Green**: `spec/demo/aql_queries_spec.rb`が使う
@@ -118,7 +141,8 @@ Phase 1スコープで作られており、`archetype_details`を設定しない
    （`height_seed.rb:50`の`content_hash["archetype_details"] ||= ...`）を削除し、
    一旦redになることを確認してから、上記Green実装で再度通ることを確認する
    （Issue #9のAcceptance criteria2番目「手作業補完なしで通る」の直接検証）。
-   `problem_diagnosis_seed.rb:37`も同様に修正する。
+   `problem_diagnosis_seed.rb:37`も同様に修正する。同コミットで
+   `NON_STRUCTURAL_ENTRY_KEYS`（残置対象）に撤去条件コメントを付す。
 4. **Refactor**: 変更なし見込み（追加行のみで既存ロジックへの影響なし）。
 
 ### 撤去可能な回避策の反映
@@ -136,18 +160,21 @@ Phase 1スコープで作られており、`archetype_details`を設定しない
   upstreamで受理された場合に別途対応する。台帳のステータス行はそのまま
   「未着手（Issue起票候補）」を維持する。
 
-### 承認が必要な判断
+### 承認が必要な判断（裁定済み・2026-08-23）
 
-1. **rm_versionはリテラル`"1.0.4"`をハードコード**（gem全体の既存慣例に合わせる。
-   情報源が`web_template`にもgem設定にも無いため）
-2. **template_idは本Issueのスコープでは設定しない**（AQL経路に不要、YAGNI）
+1. **rm_versionは`Opt::CompositionBuilder::RM_VERSION = "1.0.4"`として定数化**
+   （出所コメント付き）。**裁定: 承認**
+2. **template_idは`TemplateID.new(value: @template.web_template["template_id"])`で供給する**
+   （canonical正規形整合・WP3のtemplate_idキー参照見込みのため）。**裁定: 不承認 → 設定する**
+   （当初計画のYAGNI判断を差し戻し）
 3. **本Issueは`archetype_details`欠落の解消のみ**を対象とし、「フォーム保存経路が
    `CompositionCommitter`を呼んでいないためAQLに一切ヒットしない」というIssue本文の
    Impact節が示す、より大きな構造的ギャップ（WP3索引・検索の前提）は別Issueとして
-   切り出す（本Issueのacceptance criteriaはarchetype_details欠落解消のみを要求して
-   おり、スコープ規律上ここでは手を広げない）
+   切り出す。**裁定: 条件付き承認 — 実装前にA-1（経路分岐ギャップのproblem Issue）を
+   起票すること**
 4. **upstream-candidates.md 9項は独立問題として残置**（gem側変更が要るため、
-   層規律5によりAnlage側では解消できない）
+   層規律5によりAnlage側では解消できない）。**裁定: 承認 — ただし
+   `NON_STRUCTURAL_ENTRY_KEYS`に撤去条件コメントを付す**
 
 ## Verification（Green確認後）
 
