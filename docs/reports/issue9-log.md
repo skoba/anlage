@@ -167,3 +167,33 @@ Anlage側のシムでは根治にならないと判断。**openehr-ruby側で修
 - 待機中: `skoba/anlage#9`はopenehr-ruby`2.4.2`リリース待ちのblocked状態として
   据え置く。ブロック解除条件: openehr-ruby`2.4.2`リリース→Anlage側`bundle
   update openehr`→#9のRed/Green再実行。
+
+---
+
+## R4: bump retarget（2.4.1→2.4.2）→ブロック解除
+
+`openehr-ruby`側で`skoba/openehr-ruby#45`（初報）→`#46`（修正PR相当のIssue、
+`TerminologyID`も同種の欠落として併せて修正）が解消し、`v2.4.2`タグ・
+`History.txt`「=== 2.4.2」節を実測確認（openehr-ruby側リポジトリで直接確認）。
+
+- Anlage側`bundle update openehr` → `Gemfile.lock`が`openehr (2.4.2)`に解決
+  （`bundle lock --update openehr`で確定。通常の`bundle update`は初回
+  rubygems index cacheのためか2.4.1のまま止まり、`--verbose`付きの
+  再解決で2.4.2を取得できた）。
+- 全suite実測: `bundle exec rspec` → **83 examples, 0 failures**（変化なし）。
+- #38再確認（2.4.1時と同一クエリで再実行）: `WHERE`句にSELECT別名の混入
+  トークンを含むAQLで、引き続き`OpenehrRails::Aql::InvalidQuery`に
+  `note: 'height' is a SELECT alias; aliases cannot be used in WHERE --
+  repeat the identified path`が出ることを確認（2.4.2でも壊れていない）。
+- #46修正の実確認（#9が直接依存する挙動）:
+  ```ruby
+  aid = OpenEHR::RM::Support::Identification::ArchetypeID.new(value: "openEHR-EHR-OBSERVATION.height.v2")
+  OpenEHR::Serializer::RMJSONSerializer.new(aid).serialize
+  # => {"_type":"ARCHETYPE_ID","value":"openEHR-EHR-OBSERVATION.height.v2"}
+  ```
+  R2で確認した`"value"`キー欠落が解消され、正しく出力されることを確認。
+- `docs/upstream-candidates.md`13項のリンクを`#45`（初報）→`#46`（修正、
+  `v2.4.2`でリリース）の系譜が辿れる形に更新。ステータスを「解消済み」に更新。
+
+**ブロック解除。`docs/design/issue9-plan.md`のstatus boxに従い、Step 2の
+TDD手順を再開する。**

@@ -400,7 +400,18 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   根本原因はgem側の構造的不整合であるため、openehr-ruby側で修正し`2.4.2`として
   出荷する方針。`skoba/anlage#9`の実装は`2.4.2` bump後、シム無しで再開する
   （保留中の実装コードは破棄済み）。
-- 起票: **openehr-ruby側で実施済み**。`skoba/openehr-ruby#45`
-  （<https://github.com/skoba/openehr-ruby/issues/45>）。
-- ステータス: 起票済み（openehr-ruby側でのfix待ち。`2.4.2`リリース後に
-  `skoba/anlage#9`を再開する）。
+- 起票: **openehr-ruby側で実施・解消済み**。初報`skoba/openehr-ruby#45`
+  （<https://github.com/skoba/openehr-ruby/issues/45>、クローズ済み）→
+  修正`skoba/openehr-ruby#46`「RMJSONSerializer omits the canonical value
+  key for ArchetypeID and TerminologyID」（クローズ済み、`v2.4.2`でリリース。
+  `History.txt`「=== 2.4.2」節参照。`TerminologyID`も同種の欠落として
+  併せて修正されたことが判明——本13項の指摘範囲を上回る対応）。
+- 実測確認（2026-08-23、Anlage側`openehr 2.4.2`へbump後）:
+  ```ruby
+  aid = OpenEHR::RM::Support::Identification::ArchetypeID.new(value: "openEHR-EHR-OBSERVATION.height.v2")
+  OpenEHR::Serializer::RMJSONSerializer.new(aid).serialize
+  # => {"_type":"ARCHETYPE_ID","value":"openEHR-EHR-OBSERVATION.height.v2"}
+  ```
+  `"value"`キーが正しく出力されることを確認済み（`docs/reports/issue9-log.md` R4）。
+- ステータス: **解消済み**（`openehr 2.4.2`。`skoba/anlage#9`は本項の解消を
+  受けて再開済み）。

@@ -206,7 +206,7 @@ GEM
       racc (~> 1.4)
     nokogiri (1.19.4-x86_64-linux-musl)
       racc (~> 1.4)
-    openehr (2.4.1)
+    openehr (2.4.2)
       activesupport
       builder
       i18n
@@ -530,7 +530,7 @@ CHECKSUMS
   nokogiri (1.19.4-arm-linux-musl) sha256=588923c101bcfa78869734d247d25b598674323e7f22474fc468f6e5647311eb
   nokogiri (1.19.4-x86_64-linux-gnu) sha256=379fae440b28915e3f19d752ce2dcf8465ed2b2fbefd2a7ca0dd497bc981a06a
   nokogiri (1.19.4-x86_64-linux-musl) sha256=17dfb7c1fa194ae02fbf7c51a7afc8d278045ab3fdacfd86f91d02d7b274470b
-  openehr (2.4.1) sha256=70c1949a87beaa4cb8bdfb9bca4a1c2c9af2e93e283c70d9cddbaad8996c8f6c
+  openehr (2.4.2) sha256=91556d3a7f9a105634d981de33f66e1427a2fc9efc4ee4e136d97d19f6586948
   openehr-rails (0.4.1) sha256=d2c7dfd867a55e9cc5b86a24cf9a1f1fe696aa504f12a4e7f32356190aa60edd
   ostruct (0.6.3) sha256=95a2ed4a4bd1d190784e666b47b2d3f078e4a9efda2fccf18f84ddc6538ed912
   parallel (2.1.0) sha256=b35258865c2e31134c5ecb708beaaf6772adf9d5efae28e93e99260877b09356
