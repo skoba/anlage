@@ -27,6 +27,8 @@ RSpec.describe "Templates", type: :request do
 
   describe "POST /templates/preview" do
     it "parses a valid OPT and returns a summary without persisting it" do
+      expect(Opt::PathcardExtractor).not_to receive(:call)
+
       post templates_preview_path(format: :json), params: { file: upload(opt_path) }
 
       expect(response).to have_http_status(:ok)
@@ -170,6 +172,7 @@ RSpec.describe "Templates", type: :request do
       expect(response).to have_http_status(:created)
       expect(response.parsed_body["template_id"]).to be_present
       expect(Template.count).to eq(1)
+      expect(Template.last.pathcards).to be_present
     end
 
     it "renders a turbo-stream that appends a catalog card" do
@@ -183,6 +186,7 @@ RSpec.describe "Templates", type: :request do
 
     it "does not create a duplicate when the same checksum is dropped again" do
       Template.build_from_opt_xml(opt_path.read).save!
+      expect(Opt::PathcardExtractor).not_to receive(:call)
 
       post templates_path(format: :json), params: { file: upload(opt_path) }
 
@@ -218,7 +222,20 @@ RSpec.describe "Templates", type: :request do
       expect(response.parsed_body["version"]).to eq("1.0.1")
       expect(Template.count).to eq(2)
       expect(original.reload.status).to eq("superseded")
-      expect(Template.active.find_by(template_id: original.template_id).version).to eq("1.0.1")
+      replacement = Template.active.find_by(template_id: original.template_id)
+      expect(replacement.version).to eq("1.0.1")
+      expect(replacement.pathcards).to be_present
+    end
+
+    it "registers the template without pathcards when extraction fails" do
+      allow(Opt::PathcardExtractor).to receive(:call).and_raise(StandardError, "extraction failed")
+      allow(Rails.logger).to receive(:warn)
+
+      post templates_path(format: :json), params: { file: upload(opt_path) }
+
+      expect(response).to have_http_status(:created)
+      expect(Template.last.pathcards).to be_nil
+      expect(Rails.logger).to have_received(:warn).with(/extraction failed/)
     end
 
     it "removes the superseded template's card and appends the new version's card via turbo-stream" do

@@ -69,6 +69,11 @@ class TemplatesController < ApplicationController
 
     superseding = Template.active.find_by(template_id: template.template_id)
     template.version = Template.next_version(superseding.version) if superseding
+    begin
+      template.pathcards = Opt::PathcardExtractor.call(template).cards
+    rescue StandardError => e
+      Rails.logger.warn("Pathcard extraction failed: #{e.message}")
+    end
 
     if template.save
       superseding&.supersede!
