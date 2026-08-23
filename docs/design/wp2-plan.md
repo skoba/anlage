@@ -48,6 +48,8 @@ skoba/anlage#7（canonicalデータ混在時のpath不一致、C1の留保事項
 | `CCodePhrase`（DV_CODED_TEXT defining_code） | `code_list: [{code, label}]`。labelは**所属archetype**のcomponent_terminologyから引く（下記1.4節の安全なパターンで） | なし（外部参照が無いため） |
 | その他（DV_TEXT・C_DATE系・CDvOrdinal等） | `{}`（v1スキーマにキー未定義） | なし。ordinal等はreportに「v1未対応制約」として記録（値の捏造・書き換えはしない） |
 
+**constraints.occurrencesの定義（2026-08-23裁定）**: `constraints.occurrences`は**ELEMENT自身**のoccurrences。カードの単位はELEMENT（データ点）であり、identityが指すノードの制約を書くのが一貫性がある。ELEMENTのoccurrencesは親構造内での出現回数（臨床的な必須/任意/反復の意味を運ぶ）。`CDvQuantity`等value制約側のoccurrences（valueという単数属性の内部事情で情報量が乏しい）はv1では採らない（意図的非採用。必要が実証されたらv1.1で`constraints.value`配下への追加を検討する）。
+
 edge case方針: CQuantityItemが複数（複数units）の場合はv1では先頭のみ採用しreportに記録（スキーマはunits単数。v1.1課題として残す）。occurrences欠損（WP0未確認事項3、`pathcards-wp0-exploration.md:770-772` — `numeric_interval`がnilを返し`CObject#occurrences=`が`ArgumentError`を投げる可能性が実データ未検証のまま記録されている）は、TODOリストで実データに対して実測し挙動を固定する。
 
 ### 1.4 labels / descriptions / 未翻訳検出

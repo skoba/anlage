@@ -32,7 +32,7 @@ pathcard:
       - { lang, text, untranslated_suspect, untranslated_evidence, source_lang }
 
   constraints:
-    occurrences: { lower: integer | null, upper: integer | null }  # nullは無制約側
+    occurrences: { lower: integer | null, upper: integer | null }  # ELEMENT自身のoccurrences。nullは無制約側
     value:                     # rm_type別の制約。該当キーのみ持つ（全てoptional）
       # DV_QUANTITY:
       property: { terminology: string, code: string } | null   # 例 openehr::125
@@ -170,7 +170,14 @@ pathcard:
         untranslated_evidence: fallback_marker
         source_lang: en
   constraints:
-    occurrences: { lower: 1, upper: 1 }                     # 同:563-570（C_DV_QUANTITYのoccurrences）
+    occurrences: { lower: 0, upper: null }                  # 同:542-548（ELEMENT at0001自身のoccurrences。
+      # upper_unbounded=trueで<upper>要素なし → upper: null。WP0未確認事項3
+      # （occurrences欠損時の挙動）はこの実データで固定: numeric_intervalは
+      # 例外を投げず、Interval#upperがnilになるだけだった（実測、WP2 TODO 6）。
+      # WP2 TODO 6実装時に判明・訂正（2026-08-23、人間確認済み）: 旧版は同:563-570の
+      # C_DV_QUANTITY（valueの存在制約）のoccurrences {1,1} を誤って引用していた。
+      # 裁定によりconstraints.occurrencesはELEMENT自身のoccurrencesを正とする
+      # （value制約側のoccurrencesはv1では採らない。wp2-plan.md 1.3節参照）
     value:
       property: null                                        # 制約未設定（暫定。差し替え待ち）
       units: null
@@ -214,7 +221,11 @@ pathcard:
         untranslated_evidence: null
         source_lang: null
   constraints:
-    occurrences: { lower: 1, upper: 1 }                     # 同:431-438（C_DV_QUANTITYのoccurrences）
+    occurrences: { lower: 0, upper: 1 }                     # 同:408-417（ELEMENT at0004自身のoccurrences。
+      # WP2 TODO 6実装時に判明・訂正（2026-08-23、人間確認済み）: 旧版は同:431-438の
+      # C_DV_QUANTITY（valueの存在制約）のoccurrences {1,1} を誤って引用していた。
+      # ELEMENT自身のoccurrences（親構造内での出現回数＝フォーム項目の必須/任意を
+      # 決める）の方が実装対象として妥当と判断し、値・引用元とも訂正する
     value:
       property: { terminology: openehr, code: "125" }       # 同:440-445（圧力）
       units: "mm[Hg]"                                       # 同:463

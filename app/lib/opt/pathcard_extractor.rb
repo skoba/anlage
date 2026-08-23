@@ -12,8 +12,9 @@ module Opt
 
     def call
       opt = Opt::SafeParser.parse(@template.source_xml)
+      @report = {}
 
-      Result.new(cards: extract_cards(opt), report: {})
+      Result.new(cards: extract_cards(opt), report: @report)
     end
 
     private
@@ -69,12 +70,70 @@ module Opt
           "at_code" => element.node_id
         },
         "semantics" => {},
-        "constraints" => {},
+        "constraints" => constraints_for(element),
         "bindings" => [],
         "capture" => {},
         "reserved" => {},
         "provenance" => {}
       }
+    end
+
+    def constraints_for(element)
+      occurrences = element.occurrences
+      value_attribute = (element.attributes || []).find do |attribute|
+        attribute.rm_attribute_name == "value"
+      end
+      value_constraint = value_attribute&.children&.first
+
+      {
+        "occurrences" => {
+          "lower" => occurrences&.lower,
+          "upper" => occurrences&.upper
+        },
+        "value" => quantity_constraints(value_constraint, element.node_id)
+      }
+    end
+
+    def quantity_constraints(value_constraint, at_code)
+      quantity_class = OpenEHR::AM::OpenEHRProfile::DataTypes::Quantity::CDvQuantity
+      return {} unless value_constraint.is_a?(quantity_class)
+
+      items = value_constraint.list || []
+      (@report[:multi_unit_nodes] ||= []) << at_code if items.many?
+      item = items.first
+
+      {
+        "property" => property_constraint(value_constraint.property),
+        "units" => item&.units,
+        "magnitude_range" => magnitude_range(item&.magnitude),
+        "precision_range" => precision_range(item&.precision)
+      }
+    end
+
+    def property_constraint(property)
+      return unless property
+
+      {
+        "terminology" => property.terminology_id.value,
+        "code" => property.code_string
+      }
+    end
+
+    def magnitude_range(interval)
+      return unless interval
+
+      {
+        "lower" => interval.lower,
+        "upper" => interval.upper,
+        "lower_included" => interval.lower_included?,
+        "upper_included" => interval.upper_included?
+      }
+    end
+
+    def precision_range(interval)
+      return unless interval
+
+      { "lower" => interval.lower, "upper" => interval.upper }
     end
   end
 end

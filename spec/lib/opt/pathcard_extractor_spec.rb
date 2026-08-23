@@ -37,6 +37,20 @@ RSpec.describe Opt::PathcardExtractor do
             "archetype_id" => "openEHR-EHR-OBSERVATION.blood_pressure.v2",
             "path" => "/content[openEHR-EHR-OBSERVATION.blood_pressure.v2]/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value",
             "at_code" => "at0004"
+          },
+          "constraints" => {
+            "occurrences" => { "lower" => 0, "upper" => 1 },
+            "value" => {
+              "property" => { "terminology" => "openehr", "code" => "125" },
+              "units" => "mm[Hg]",
+              "magnitude_range" => {
+                "lower" => 0.0,
+                "upper" => 1000.0,
+                "lower_included" => true,
+                "upper_included" => false
+              },
+              "precision_range" => { "lower" => 0, "upper" => 0 }
+            }
           }
         )
       )
