@@ -56,3 +56,15 @@ explore→planフェーズの実測記録。R1〜。
 ### Step 2への引き継ぎ
 
 上記4つの重大な発見（pathcards全件NULL＝運用手順の問題／rm_type欠落／lang誤解の危険／reportの事実上破棄）と、検索水準の実測（単純部分一致で単語クエリは実用域、複合語はn-gram必要、真の同義語ギャップはembedding必須）を踏まえ、Phase 1（SQLite内で完結する最小検索）／Phase 2（pgvector/embedding、人間ゲート）の段階設計を`docs/design/wp3-plan.md`に起こす。
+
+---
+
+## R2: Phase 1実装（C1〜C4、TDD）
+
+- C1 Red: shape specが全カードの`semantics.rm_type`欠落で失敗（15 examples, 1 failure）。Green: 抽出器spec 15 examples, 0 failures。golden Redは3 fixtureすべて差分、実OPTから抽出した11カードの値を反映後 3 examples, 0 failures。
+- C1実測型: CardiologyEncounter=`DV_QUANTITY`×2、LabResultReport=`DV_TEXT`×2 + `DV_QUANTITY`、ProblemList=`DV_TEXT` + `DV_DATE_TIME`×4 + `DV_CODED_TEXT`。ProblemList at0002はスキーマ文書の`DV_CODED_TEXT`に対し実OPT抽出値が`DV_TEXT`で不一致。
+- C2 Red: `pathcards:backfill`未定義（2 examples, 2 failures）。Green: nil行だけを抽出・更新し、既設定行は更新時刻を含め不変（2 examples, 0 failures）。
+- C3 Red: `Opt::PathcardSearch`未定義（load error）。Green: 「収縮期」「収縮期血圧」「疑い」「BMI」回帰4例（4 examples, 0 failures）。検索対象は承認済み3フィールドのみ、`lang`フィルタなし。
+- C4 Red: `/pathcards/search`が404（1 example, 1 failure）。基本UI Green後、未翻訳警告のdescription対応を追加Red（2 examples, 1 failure）からGreen（2 examples, 0 failures）。
+- C1〜C4合同確認: 26 examples, 0 failures。
+- 全suite: 93 examples, 6 failures。6件はすべて既存system specで、サンドボックスによる`TCPServer`（`127.0.0.1:0`）生成拒否`Errno::EPERM`。system specを除く全suiteは 86 examples, 0 failures。WP3変更由来のfailureは検出されなかった。

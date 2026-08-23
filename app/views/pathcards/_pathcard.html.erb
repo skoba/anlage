@@ -1,0 +1,18 @@
+<article class="pathcard">
+  <% identity = pathcard.fetch("identity") %>
+  <% label = pathcard.dig("semantics", "labels", 0) %>
+  <% semantic_entries = Array(pathcard.dig("semantics", "labels")) +
+                        Array(pathcard.dig("semantics", "descriptions")) %>
+  <h2><%= label&.fetch("text", nil) || identity.fetch("at_code") %></h2>
+  <dl>
+    <dt>Template</dt>
+    <dd><%= identity.fetch("template_id") %></dd>
+    <dt>Archetype</dt>
+    <dd><%= identity.fetch("archetype_id") %></dd>
+    <dt>Node</dt>
+    <dd><%= identity.fetch("at_code") %></dd>
+  </dl>
+  <% if semantic_entries.any? { |entry| entry["untranslated_suspect"] } %>
+    <p class="pathcard-warning">Untranslated text suspected</p>
+  <% end %>
+</article>

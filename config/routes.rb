@@ -14,6 +14,8 @@ Rails.application.routes.draw do
   post "templates/preview", to: "templates#preview"
   post "templates",         to: "templates#create"
 
+  get "pathcards/search", to: "pathcards#search"
+
   get  "forms/:template_id",        to: "forms#show", as: :form,
        format: false, constraints: { template_id: /[^\/]+/ }
   post "compositions/:template_id", to: "compositions#create", as: :template_compositions,

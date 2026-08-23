@@ -1,0 +1,11 @@
+<h1>Pathcard search</h1>
+
+<%= form_with url: pathcards_search_path, method: :get do |form| %>
+  <%= form.label :q, "Query" %>
+  <%= form.search_field :q, value: @query %>
+  <%= form.submit "Search" %>
+<% end %>
+
+<section id="pathcard-results">
+  <%= render partial: "pathcard", collection: @pathcards %>
+</section>
