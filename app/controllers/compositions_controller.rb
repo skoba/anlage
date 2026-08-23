@@ -18,10 +18,12 @@ class CompositionsController < ApplicationController
       return render "forms/show", status: :unprocessable_content
     end
 
-    rm_composition = Opt::CompositionBuilder.new(@template, values).build
-    json = OpenEHR::Serializer::RMJSONSerializer.new(rm_composition).serialize
+    commit = Opt::RmCompositionCommitter.call(@template, values)
 
-    composition = @template.compositions.create!(rm_composition: JSON.parse(json))
+    composition = @template.compositions.create!(
+      rm_composition: commit.canonical_hash,
+      uid: commit.uid
+    )
     redirect_to composition_path(composition), notice: "登録しました"
   end
 end

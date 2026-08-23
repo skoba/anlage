@@ -10,13 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_23_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_23_000002) do
   create_table "compositions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.json "rm_composition", null: false
     t.integer "template_id", null: false
+    t.string "uid"
     t.datetime "updated_at", null: false
-    t.index [ "template_id" ], name: "index_compositions_on_template_id"
+    t.index ["template_id"], name: "index_compositions_on_template_id"
   end
 
   create_table "openehr_ehrs", force: :cascade do |t|
@@ -30,7 +31,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_000001) do
     t.string "system_id"
     t.datetime "time_created", null: false
     t.datetime "updated_at", null: false
-    t.index [ "ehr_id" ], name: "index_openehr_ehrs_on_ehr_id", unique: true
+    t.index ["ehr_id"], name: "index_openehr_ehrs_on_ehr_id", unique: true
   end
 
   create_table "openehr_rm_compositions", force: :cascade do |t|
@@ -56,11 +57,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_000001) do
     t.string "territory_terminology"
     t.string "uid", null: false
     t.datetime "updated_at", null: false
-    t.index [ "archetype_node_id", "latest_version" ], name: "idx_on_archetype_node_id_latest_version_bd92eb1cac"
-    t.index [ "ehr_id" ], name: "index_openehr_rm_compositions_on_ehr_id"
-    t.index [ "owner_type", "owner_id" ], name: "index_openehr_rm_compositions_on_owner_type_and_owner_id"
-    t.index [ "template_id" ], name: "index_openehr_rm_compositions_on_template_id"
-    t.index [ "uid" ], name: "index_openehr_rm_compositions_on_uid"
+    t.index ["archetype_node_id", "latest_version"], name: "idx_on_archetype_node_id_latest_version_bd92eb1cac"
+    t.index ["ehr_id"], name: "index_openehr_rm_compositions_on_ehr_id"
+    t.index ["owner_type", "owner_id"], name: "index_openehr_rm_compositions_on_owner_type_and_owner_id"
+    t.index ["template_id"], name: "index_openehr_rm_compositions_on_template_id"
+    t.index ["uid"], name: "index_openehr_rm_compositions_on_uid"
   end
 
   create_table "openehr_rm_contributions", force: :cascade do |t|
@@ -74,7 +75,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_000001) do
     t.datetime "time_committed", null: false
     t.string "uid", null: false
     t.datetime "updated_at", null: false
-    t.index [ "ehr_id" ], name: "index_openehr_rm_contributions_on_ehr_id"
+    t.index ["ehr_id"], name: "index_openehr_rm_contributions_on_ehr_id"
   end
 
   create_table "openehr_rm_data_values", force: :cascade do |t|
@@ -106,11 +107,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_000001) do
     t.time "time_value"
     t.string "units"
     t.string "uri_value"
-    t.index [ "composition_id" ], name: "index_openehr_rm_data_values_on_composition_id"
-    t.index [ "node_id" ], name: "index_openehr_rm_data_values_on_node_id"
-    t.index [ "path", "code_string" ], name: "index_openehr_rm_data_values_on_path_and_code_string"
-    t.index [ "path", "magnitude" ], name: "index_openehr_rm_data_values_on_path_and_magnitude"
-    t.index [ "path" ], name: "index_openehr_rm_data_values_on_path"
+    t.index ["composition_id"], name: "index_openehr_rm_data_values_on_composition_id"
+    t.index ["node_id"], name: "index_openehr_rm_data_values_on_node_id"
+    t.index ["path", "code_string"], name: "index_openehr_rm_data_values_on_path_and_code_string"
+    t.index ["path", "magnitude"], name: "index_openehr_rm_data_values_on_path_and_magnitude"
+    t.index ["path"], name: "index_openehr_rm_data_values_on_path"
   end
 
   create_table "openehr_rm_nodes", force: :cascade do |t|
@@ -129,10 +130,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_000001) do
     t.string "rm_attribute_name", null: false
     t.string "rm_type", null: false
     t.string "width"
-    t.index [ "archetype_node_id" ], name: "index_openehr_rm_nodes_on_archetype_node_id"
-    t.index [ "composition_id", "path" ], name: "index_openehr_rm_nodes_on_composition_id_and_path"
-    t.index [ "composition_id" ], name: "index_openehr_rm_nodes_on_composition_id"
-    t.index [ "parent_id" ], name: "index_openehr_rm_nodes_on_parent_id"
+    t.index ["archetype_node_id"], name: "index_openehr_rm_nodes_on_archetype_node_id"
+    t.index ["composition_id", "path"], name: "index_openehr_rm_nodes_on_composition_id_and_path"
+    t.index ["composition_id"], name: "index_openehr_rm_nodes_on_composition_id"
+    t.index ["parent_id"], name: "index_openehr_rm_nodes_on_parent_id"
   end
 
   create_table "openehr_rm_versions", force: :cascade do |t|
@@ -144,9 +145,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_000001) do
     t.datetime "updated_at", null: false
     t.string "version_tree_id", null: false
     t.string "versioned_object_uid", null: false
-    t.index [ "composition_id" ], name: "index_openehr_rm_versions_on_composition_id"
-    t.index [ "contribution_id" ], name: "index_openehr_rm_versions_on_contribution_id"
-    t.index [ "versioned_object_uid", "version_tree_id" ], name: "idx_on_versioned_object_uid_version_tree_id_d798803155", unique: true
+    t.index ["composition_id"], name: "index_openehr_rm_versions_on_composition_id"
+    t.index ["contribution_id"], name: "index_openehr_rm_versions_on_contribution_id"
+    t.index ["versioned_object_uid", "version_tree_id"], name: "idx_on_versioned_object_uid_version_tree_id_d798803155", unique: true
   end
 
   create_table "openehr_templates", force: :cascade do |t|
@@ -157,7 +158,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_000001) do
     t.string "template_type", default: "operational_template", null: false
     t.datetime "updated_at", null: false
     t.string "version"
-    t.index [ "template_id" ], name: "index_openehr_templates_on_template_id", unique: true
+    t.index ["template_id"], name: "index_openehr_templates_on_template_id", unique: true
   end
 
   create_table "templates", force: :cascade do |t|
@@ -172,8 +173,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_000001) do
     t.datetime "updated_at", null: false
     t.string "version", default: "1.0.0", null: false
     t.json "web_template"
-    t.index [ "checksum" ], name: "index_templates_on_checksum", unique: true
-    t.index [ "template_id", "version" ], name: "index_templates_on_template_id_and_version", unique: true
+    t.index ["checksum"], name: "index_templates_on_checksum", unique: true
+    t.index ["template_id", "version"], name: "index_templates_on_template_id_and_version", unique: true
   end
 
   add_foreign_key "compositions", "templates"

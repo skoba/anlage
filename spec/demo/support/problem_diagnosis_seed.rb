@@ -1,13 +1,9 @@
-# 実パイプライン駆動（height_seed.rbと同じ回避策2点を要する。
-# docs/reports/demo-queries-log.md R3・skoba/anlage#9・
-# docs/upstream-candidates.md 9項参照）。
+# 実パイプライン駆動（構築からRMグラフ投入までの詳細は
+# Opt::RmCompositionCommitter を参照）。
 # ProblemList.opt（openEHR-EHR-EVALUATION.problem_diagnosis.v1）のCompositionを
 # Opt::CompositionBuilder経由で構築し、AQLが参照するRMグラフへ投入する。
 module ProblemDiagnosisSeed
   module_function
-
-  # 撤去条件: openehr-rails側 RESERVED_KEYS 拡張（docs/upstream-candidates.md 9項のIssue化・解消）後
-  NON_STRUCTURAL_ENTRY_KEYS = %w[language encoding subject].freeze
 
   def template
     @template ||= begin
@@ -30,13 +26,6 @@ module ProblemDiagnosisSeed
       "problem_diagnosis_at0073" => certainty_code
     }
 
-    rm_composition = Opt::CompositionBuilder.new(template, values).build
-    hash = JSON.parse(OpenEHR::Serializer::RMJSONSerializer.new(rm_composition).serialize)
-
-    hash["content"].each do |content_hash|
-      NON_STRUCTURAL_ENTRY_KEYS.each { |key| content_hash.delete(key) }
-    end
-
-    OpenehrRails::Rm::CompositionCommitter.commit(hash, uid: SecureRandom.uuid, owner: nil)
+    Opt::RmCompositionCommitter.call(template, values).composition
   end
 end

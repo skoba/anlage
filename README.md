@@ -45,21 +45,23 @@ Anlageが実証しようとしているのは、openEHR標準の役割の転換�
 - **パスカード抽出（スキーマv1）**: OPT投入時に全ノードから意味索引カードを
   抽出する（[`docs/design/pathcards-schema-v1.md`](docs/design/pathcards-schema-v1.md)、
   [`docs/demo/opt-catalog.md`](docs/demo/opt-catalog.md)）
-- **AQL照会**: デモ用にシード経路（`OpenehrRails::Rm::CompositionCommitter`
-  直接呼び出し）で投入したCompositionをAQLで照会できる
+- **AQL照会**: シード経路とフォーム保存経路から
+  `OpenehrRails::Rm::CompositionCommitter`経由でRMグラフへ投入したCompositionを
+  AQLで照会できる
   （[`spec/demo/aql_queries_spec.rb`](spec/demo/aql_queries_spec.rb)、
-  [`docs/demo/aql-queries.md`](docs/demo/aql-queries.md)）。既知の到達性の
+  [`spec/requests/compositions_spec.rb`](spec/requests/compositions_spec.rb)、
+  [`docs/demo/aql-queries.md`](docs/demo/aql-queries.md)）。RMグラフがAQLの権威ストアで、
+  Anlageの`compositions`テーブルはarchival・原本表示専用の非権威ストアである。
+  既知の到達性の
   制約（コード値WHERE・イベント時刻WHEREが現行AQLエンジンでは不可）は
   [`docs/upstream-candidates.md`](docs/upstream-candidates.md) 10・11項参照。
-  **フォーム保存経路からAQLへの合流は未対応**
-  （[`skoba/anlage#10`](https://github.com/skoba/anlage/issues/10)で対応中）
 - **デモクエリのspec化**: 会話記録に依存しない、実行可能な形でのデモクエリ4本
   （[`docs/demo/aql-queries.md`](docs/demo/aql-queries.md)）
 
 ## Current focus
 
-保存経路の修復: `skoba/anlage#9`（シード/Committer経路のarchetype_details欠落）は解消済み。
-残るは`skoba/anlage#10`（フォーム保存経路がAQLの照会対象に合流していない）→ 次は検索層（WP3）。
+保存経路の修復: `skoba/anlage#9`（archetype_details欠落）と`skoba/anlage#10`
+（フォーム保存経路のAQL合流）は解消済み。次は検索層（WP3）。
 
 ## 進行の追い方
 

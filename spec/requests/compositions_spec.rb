@@ -55,6 +55,31 @@ RSpec.describe "Forms and Compositions", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("COMPOSITION")
     end
+
+    it "フォームから保存した身長CompositionをAQLのCONTAINSで照会できる" do
+      height_template = Template.build_from_opt_xml(
+        Rails.root.join("spec/fixtures/opt/bmi_calculation.opt").read
+      ).tap(&:save!)
+      values = {
+        "height" => "180.0",
+        "body_weight" => "70.0",
+        "body_mass_index" => "21.6",
+        "body_mass_index_at0013" => "normal"
+      }
+
+      post template_compositions_path(height_template.template_id), params: { values: values }
+
+      query = <<~AQL
+        SELECT o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude AS height
+        FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.height.v2]
+        WHERE o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude > 170
+      AQL
+
+      result = OpenehrRails::Aql::Executor.execute(query)
+
+      expect(result.rows).to eq([ [ 180.0 ] ])
+      expect(Composition.last.uid).to eq(OpenehrRails::Rm::Composition.latest.last.uid)
+    end
   end
 
   describe "GET /compositions" do
