@@ -149,3 +149,59 @@ gem内部の独自uid生成箇所3箇所（`lib/openehr_rails/storable.rb:126`�
 4. 独立レビュー→`Implemented-by: Codex`トレーラーでコミット→`Fixes #10`
 5. README「今どこまで動くか」節・コードコメントで非権威archival地位を明文化
 6. `CLAUDE.md`の#5凍結受入条件行を更新
+
+---
+
+## R3: 実装（Codex納品→独立レビュー→コミット、#10クローズ）
+
+Codexが計画・裁定どおりに実装。新設共有クラス`Opt::RmCompositionCommitter`
+（`app/lib/opt/rm_composition_committer.rb`）が「Builder→Serializer→
+RESERVED_KEYS回避策→Committer.commit」を集約し、uid生成（1回、共有クラス側）
+も担う。archival用`canonical_hash`はCommitter用コピーとは別に`deep_dup`で
+保持し、回避策適用前の原本のまま`compositions.rm_composition`へ保存する
+設計（指示より一段丁寧——showページの原本表示忠実性が回避策の影響を
+受けない）。
+
+### 実行結果（Codex報告→Claude Codeが独立に再実行して検証）
+
+- リファクタ後回帰確認: `spec/demo/` **4 examples, 0 failures**（既存4クエリ
+  の振る舞い不変）
+- Red（`spec/requests/compositions_spec.rb`新規specのみ）: **6 examples,
+  1 failure**（`expected [[180.0]], got []` — controller未変更のため
+  AQLに合流せず、想定どおりの失敗）
+- Green（controller実装後、同ファイル）: **6 examples, 0 failures**
+- 全suite（Codexのsandbox内、Capybaraのlocal TCP socket作成がsandbox
+  制約で拒否されたためsystem spec 6件のみ失敗）: 85 examples, 6 failures
+  （`Errno::EPERM: socket(2) for 127.0.0.1 port 0`、コード起因ではない）。
+  system spec除く79件相当の非system実行: 78 examples, 0 failures
+- **Claude Codeによる独立再実行**（sandbox外、フルスイート）: **85 examples,
+  0 failures**（system spec含め全green。#9実装時と同型のsandbox制約による
+  偽陽性であることを確認）
+
+### diff精査（Claude Code、コミット前）
+
+- `app/lib/opt/rm_composition_committer.rb`: 新規。`Result = Data.define
+  (:uid, :composition, :canonical_hash)`。`NON_STRUCTURAL_ENTRY_KEYS`と
+  撤去条件コメントをここに一本化。
+- `app/controllers/compositions_controller.rb#create`: `Opt::
+  RmCompositionCommitter.call(@template, values)`を呼び、返ってきた
+  `commit.canonical_hash`・`commit.uid`を`compositions.create!`に渡す形に
+  変更。
+- `app/models/composition.rb`: 権威/非権威の役割分担コメントを追加
+  （裁定条件(i)）。
+- `db/migrate/20260823000002_add_uid_to_compositions.rb`: `compositions`に
+  `uid`（string、null許容）を追加。`db/schema.rb`は同migration適用分＋
+  既存の無害な配列ブラケット表記差分（`[ "x" ]`→`["x"]`、過去セッションで
+  既知の書式差分ノイズ）のみ。
+- `spec/demo/support/height_seed.rb`・`problem_diagnosis_seed.rb`: 共有
+  クラス呼び出しへリファクタ。`NON_STRUCTURAL_ENTRY_KEYS`・撤去条件
+  コメントは削除（共有クラスへ参照コメントのみ残す）。
+- `spec/requests/compositions_spec.rb`: フォームPOST→AQL CONTAINS統合
+  spec（Q1相当）を追加。同一uidの検証（`Composition.last.uid == 
+  OpenehrRails::Rm::Composition.latest.last.uid`）も含む。
+- `README.md`・`CLAUDE.md`: Codexが計画書「裁定反映（R2）」節を読んで
+  自発的に更新（本来Claude Code側で行う予定だったが、内容は裁定条件と
+  完全に一致しており、精査の上でそのまま採用した）。
+
+コミット`4296f8b`（`Implemented-by: Codex`、`Fixes skoba/anlage#10`）で
+push、Issue #10は自動クローズ（確認済み）。
