@@ -27,6 +27,18 @@ Anlageは、openehr-rails-startupから生成されたopenEHRベースEHRの参�
 7. **LLM分業原理**: 生成系（LLM）が供給してよいのは対応付けと値の抽出のみ。意味・構造・コード・制約は、常にOPT・CKM・用語マスターから実行時に引く
 8. **スコープ規律**: 指示外の新機能・改善案は実装せず `docs/ideas-2027.md` に記録して先へ進む
 
+## Codexとの分業（openehr-ruby CLAUDE.mdと同旨）
+
+- **Codexはworking treeの納品のみ行う。コミットはしない。** Claude Codeが
+  承認済み計画との差分をレビューした上で、出所を示すtrailer（例:
+  `Implemented-by: Codex`）付きでコミットする
+- **複数著者にまたがるコミットは両方のtrailerを持つ**: Claude Codeが
+  Codexの納品物を再構成・分割する場合（同じ行に乗った無関係な修正を
+  別コミットへ切り出す等、Codexが単体では生成していない中間コード状態を
+  構成する場合）、結果のコミットは `Implemented-by: Codex` と
+  `Restructured-by: Claude Code` の両方を持つ。Codexの納品に無い
+  コード状態を含むコミットにCodex単独のtrailerを付けない
+
 ## Issue-driven visibility
 
 Anlageでは「1 issue = 1 branch」は要求しない（WP駆動の進行と両立させる）。
