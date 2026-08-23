@@ -21,18 +21,32 @@
 - シード（案B暫定）: 身長165.0cm/170.0cm/180.0cmの3件を投入
 - 期待件数: **1件**（180.0cmのみ。170.0cm自体は`> 170`の境界値のため非該当。実測確認済み: `docs/reports/demo-queries-log.md` R2）
 
-## 2. （候補・意図のみ・原文未供給）openehr 2.3.x新機能クエリ
+## 2. MATCHES 値リスト（コード値の複数一致）
 
-11/5凍結までに人間からクエリ原文の供給を受け、供給されたものから順次spec化する。以下は
-候補の意図のみ（Acceptance criteria裁定3節により、AQL新機能〔LIKE/MATCHES/CONTAINS述語/
-混合集計〕から最低1本を含める）:
+- 状態: **意図のみ・原文未供給**
+- 意図: WHERE句でMATCHESにリテラルの値リストを与え、複数コードのいずれかに一致するレコードを
+  検索するデモ（openehr 2.3.0以降で実行可能になったAQL構文、`docs/upstream-candidates.md`等
+  参照。openehr-rails CHANGELOG「MATCHES against a literal value list」）
+- クエリ原文: 人間供給待ち
+- 期待件数: 原文供給後にシード設計とあわせて確定
 
-- **LIKE**: グロブ構文（`*`/`?`、SQLの`%`/`_`ではない）を使った検索クエリ。意図: archetype_id
-  やテキストフィールドの部分一致デモ
-- **MATCHES**（リテラルリスト）: 値集合に対するマッチング。意図: 複数コードのいずれかに
-  一致するレコード検索デモ
-- **CONTAINS**（standardPredicate/nodePredicate付き）: `[at0004]`のようなnode predicate付き
-  containment。意図: 特定archetypeノード配下の絞り込みデモ
-- **混合集計**（集計関数＋非集計列の暗黙GROUP BY）: 意図: 件数・平均値等の集計デモ
+## 3. CONTAINS nodePredicate（`[atNNNN]`型）
 
-原文供給後、本節を書き換えて「供給済み」へ移行し、対応する`it`をspec/demo/へ追加する。
+- 状態: **意図のみ・原文未供給**
+- 意図: CONTAINS句にarchetype述語ではなく`[at0004]`のようなnode predicateを与え、特定の
+  archetypeノード配下に絞り込むデモ（openehr 2.3.0以降で実行可能。openehr-rails CHANGELOG
+  「CONTAINS with a standardPredicate/nodePredicate」）
+- クエリ原文: 人間供給待ち
+- 期待件数: 原文供給後にシード設計とあわせて確定
+
+## 4. 日付範囲WHERE（期間絞り込み）
+
+- 状態: **意図のみ・原文未供給**
+- 意図: WHERE句で日時フィールドに範囲条件（`>=`/`<=`等）を与え、期間で絞り込むデモ
+- クエリ原文: 人間供給待ち
+- 期待件数: 原文供給後にシード設計とあわせて確定
+
+---
+
+原文供給後、該当節を書き換えて「供給済み」へ移行し、対応する`it`を`spec/demo/`へ追加する
+（`docs/design/demo-queries-plan.md` 6節のTDD手順どおり、1クエリ=1コミット）。

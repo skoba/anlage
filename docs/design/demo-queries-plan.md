@@ -28,6 +28,42 @@
 
 **推奨**: 案Aを採用する。ただし人間供給物（height.v2 OPT）の到着待ちで#5全体がブロックされるのを避けるため、**案Bを暫定シードとして先に`spec/demo/`の骨格（構造・実行フロー）を組み、案Aのfixtureが届き次第差し替える**という段階移行を提案する（承認事項1）。
 
+**実装時の補足（2026-08-23、R2で確定）**: 実装した案Bは軽量`Storable`モデルではなく、`OpenehrRails::Rm::CompositionCommitter.commit`（canonical composition hashを直接投入、`owner: nil`）を`spec/demo/support/height_seed_provisional.rb`から呼ぶ形にした。新規ActiveRecordモデル・migrationを追加せずに済み、案A差し替え時に削除するファイルの範囲もこの1ファイル＋specファイルに閉じるため、より軽量な足場になっている。
+
+### 案A移行手順（height.v2 OPT到着後）
+
+1. **検収**（`docs/design/pathcards-language-policy.md` 5節の手順に従う）: 届いたOPT fixtureの
+   出所（CKM公開archetype由来）・SHA-256・lang=ja/未翻訳許容の前提を確認する
+2. **fixture配置**: `spec/fixtures/opt/`へ配置し、出所コメント（他fixtureと同様の慣行）を付す
+3. **シード差し替え**: `spec/demo/support/height_seed_provisional.rb`を、`Template.build_from_opt_xml`
+   （または`Opt::CompositionBuilder`直接呼び出し）による実OPT駆動の新シードヘルパーへ置き換える。
+   手作業canonical hashを組む場合（暫定シードと同様の直接投入を続ける場合）は、**R2で判明した
+   以下2点のAPI要件を必ず満たすこと**（`CanonicalSerializer`の出力形と一致させる。gemの正規
+   canonical JSON契約であり、省略するとバリデーションエラーまたは`TypeError`になる）:
+   - ENTRY系ノード（OBSERVATION等）の`archetype_details.archetype_id.value`を、`archetype_node_id`
+     とは別に必ず設定する（`OpenehrRails::Rm::EntryNode`が`archetype_id`のpresenceを検証するため）
+   - `origin`（HISTORY）・`time`（POINT_EVENT等）は`{"value" => "...", "_type" => "DV_DATE_TIME"}`
+     形式のHashで渡す（プレーン文字列不可）
+   - ただし`Opt::CompositionBuilder`経由（Anlageの実フォーム保存経路と同じ）で構築する場合は、
+     これらのAPI要件はビルダー内部で吸収されるため、シード側で意識する必要はない。**案Aの
+     実装では`Opt::CompositionBuilder`経由を優先し、手作業canonical hashは避ける**（実物主義・
+     実パイプライン踏襲の趣旨に沿う）
+4. **案Bファイルの削除**: `spec/demo/support/height_seed_provisional.rb`と、`spec/demo/
+   aql_queries_spec.rb`内の「暫定・実パイプライン非経由」describe/コメントを削除し、案Aの
+   シードを指す形に書き換える（新規specへの全面置換でよい。差分は1コミット）
+5. **`docs/demo/aql-queries.md`更新**: 1節の「シード（案B暫定）」の記載を実OPT駆動の内容に
+   差し替え、冒頭の「案A到着後、シードを差し替える」という前置きを削除する
+6. **凍結受入条件への算入**: 上記1〜5完了後にのみ、height不等号クエリが`CLAUDE.md`
+   マイルストーン節の受入条件（5節）に算入される
+
+**チェックリスト**（案A移行コミットのレビュー観点）:
+- [ ] 検収記録（language-policy 5節）が残っているか
+- [ ] fixtureに出所コメントが付いているか
+- [ ] 案Bのファイル（`height_seed_provisional.rb`等）が削除されているか
+- [ ] `docs/demo/aql-queries.md`の「案B暫定」表記が除去されているか
+- [ ] `bundle exec rspec spec/demo/`がgreenか
+- [ ] `Opt::CompositionBuilder`経由（手作業canonical hashを避けている）か
+
 ## 3. `docs/demo/aql-queries.md`の構成案
 
 デモ使用クエリ全件を期待件数付きで固定する。1本目はheight不等号クエリ（原文は人間供給、下記4節参照）。
