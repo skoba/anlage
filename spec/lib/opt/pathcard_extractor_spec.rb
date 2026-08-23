@@ -155,6 +155,28 @@ RSpec.describe Opt::PathcardExtractor do
         }
       ])
     end
+
+    it "extracts the scoped SNOMED CT code binding for systolic blood pressure" do
+      source_xml = Rails.root.join("spec/fixtures/opt/CardiologyEncounter.opt").read
+      template = Template.build_from_opt_xml(source_xml)
+
+      result = described_class.call(template)
+      card = result.cards.find do |candidate|
+        candidate.dig("identity", "archetype_id") == "openEHR-EHR-OBSERVATION.blood_pressure.v2" &&
+          candidate.dig("identity", "at_code") == "at0004"
+      end
+
+      expect(card.fetch("bindings")).to eq(
+        [
+          {
+            "kind" => "code_binding",
+            "system_uri" => "SNOMED-CT",
+            "code" => "[SNOMED-CT(2003)::271649006]",
+            "display" => nil
+          }
+        ]
+      )
+    end
   end
 
   describe "#classify_translation" do

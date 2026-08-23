@@ -14,6 +14,8 @@ module Opt
       opt = Opt::SafeParser.parse(@template.source_xml)
       @report = {}
       @opt = opt
+      document = Opt::SafeParser.safe_document(@template.source_xml)
+      @code_bindings = extract_code_bindings(document)
 
       Result.new(cards: extract_cards(opt), report: @report)
     end
@@ -72,7 +74,7 @@ module Opt
         },
         "semantics" => semantics_for(archetype_id, element.node_id),
         "constraints" => constraints_for(element, archetype_id),
-        "bindings" => bindings_for(element),
+        "bindings" => bindings_for(element, archetype_id),
         "capture" => {},
         "reserved" => {},
         "provenance" => {}
@@ -185,7 +187,7 @@ module Opt
       defining_code&.children&.first
     end
 
-    def bindings_for(element)
+    def bindings_for(element, archetype_id)
       value_attribute = (element.attributes || []).find do |attribute|
         attribute.rm_attribute_name == "value"
       end
@@ -194,16 +196,49 @@ module Opt
         constraint = defining_code_constraint(child)
         constraint if constraint.is_a?(code_reference_class)
       end.first
-      return [] unless value_constraint
-
-      [
-        {
+      bindings = []
+      if value_constraint
+        bindings << {
           "kind" => "value_set_binding",
           "system_uri" => value_constraint.reference_set_uri,
           "code" => nil,
           "display" => nil
         }
-      ]
+      end
+
+      bindings.concat(@code_bindings.fetch([ archetype_id, element.node_id ], []))
+    end
+
+    def extract_code_bindings(document)
+      bindings = Hash.new { |hash, key| hash[key] = [] }
+
+      document.xpath("//*[local-name()='term_bindings']").each do |term_binding|
+        archetype_id = nearest_archetype_id(term_binding)
+        next unless archetype_id
+
+        term_binding.xpath("./*[local-name()='items']").each do |item|
+          code = item.at_xpath("./*[local-name()='value']/*[local-name()='code_string']")&.text
+          next unless code
+
+          bindings[[ archetype_id, item["code"] ]] << {
+            "kind" => "code_binding",
+            "system_uri" => term_binding["terminology"],
+            "code" => code,
+            "display" => nil
+          }
+        end
+      end
+
+      bindings
+    end
+
+    def nearest_archetype_id(node)
+      node.ancestors.each do |ancestor|
+        value = ancestor.at_xpath("./*[local-name()='archetype_id']/*[local-name()='value']")
+        return value.text if value
+      end
+
+      nil
     end
 
     def quantity_constraints(value_constraint, at_code)
