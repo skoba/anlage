@@ -2,12 +2,19 @@ require "rails_helper"
 require_relative "support/height_seed"
 require_relative "support/problem_diagnosis_seed"
 
-RSpec.describe "デモクエリ（案A: 実パイプライン駆動シード）", type: :model do
+RSpec.describe "デモクエリ（フォーム保存経路経由）", type: :request do
   describe "1. height不等号クエリ" do
     it "供給済みクエリが期待件数（1件）で実行できる" do
-      HeightSeed.seed!(165.0)
-      HeightSeed.seed!(170.0)
-      HeightSeed.seed!(180.0)
+      [ "165.0", "170.0", "180.0" ].each do |height|
+        post template_compositions_path(HeightSeed.template.template_id), params: {
+          values: {
+            "height" => height,
+            "body_weight" => "70.0",
+            "body_mass_index" => "21.6",
+            "body_mass_index_at0013" => "normal"
+          }
+        }
+      end
 
       query = <<~AQL
         SELECT o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude AS height
@@ -23,9 +30,18 @@ RSpec.describe "デモクエリ（案A: 実パイプライン駆動シード）"
 
   describe "2. MATCHES 値リスト（コード値の複数一致）" do
     it "診断確度が値リストのいずれかに一致するComposition が期待件数（2件）で抽出できる" do
-      ProblemDiagnosisSeed.seed!(certainty_code: "at0074") # 疑い
-      ProblemDiagnosisSeed.seed!(certainty_code: "at0075") # 推定
-      ProblemDiagnosisSeed.seed!(certainty_code: "at0076") # 確定（対象外）
+      [ "at0074", "at0075", "at0076" ].each do |certainty_code|
+        now = Time.current.iso8601
+        post template_compositions_path(ProblemDiagnosisSeed.template.template_id), params: {
+          values: {
+            "problem_diagnosis_at0002" => "Demo diagnosis (#{certainty_code})",
+            "problem_diagnosis_at0077" => now,
+            "problem_diagnosis_at0003" => Time.current.iso8601,
+            "problem_diagnosis_at0030" => now,
+            "problem_diagnosis_at0073" => certainty_code
+          }
+        }
+      end
 
       # 実測により訂正: value/defining_code/code_string は現行AQLエンジンの
       # ALLOWED_TERMINAL_HOPS（openehr gem lib/openehr/aql/engine/path_evaluator.rb）
@@ -53,8 +69,16 @@ RSpec.describe "デモクエリ（案A: 実パイプライン駆動シード）"
 
   describe "3. CONTAINS nodePredicate（[atNNNN]型）" do
     it "身長値ELEMENT（at0004）を含むCompositionが期待件数（2件）で抽出できる" do
-      HeightSeed.seed!(172.0)
-      HeightSeed.seed!(175.0)
+      [ "172.0", "175.0" ].each do |height|
+        post template_compositions_path(HeightSeed.template.template_id), params: {
+          values: {
+            "height" => height,
+            "body_weight" => "70.0",
+            "body_mass_index" => "21.6",
+            "body_mass_index_at0013" => "normal"
+          }
+        }
+      end
 
       query = <<~AQL
         SELECT c/name/value AS composition_name
@@ -84,8 +108,18 @@ RSpec.describe "デモクエリ（案A: 実パイプライン駆動シード）"
       # DV_DATE_TIMEフィールド（ProblemList at0003「臨床的に認識された日時」、
       # .../value経由）で代替した。ISO8601同士の文字列比較（辞書順=時間順）に
       # 依存している点に注意（将来の型付き比較への移行点）。
-      ProblemDiagnosisSeed.seed!(certainty_code: "at0074", recognized_at: "2026-03-15T09:00:00+09:00")
-      ProblemDiagnosisSeed.seed!(certainty_code: "at0074", recognized_at: "2026-09-01T09:00:00+09:00")
+      [ "2026-03-15T09:00:00+09:00", "2026-09-01T09:00:00+09:00" ].each do |recognized_at|
+        now = Time.current.iso8601
+        post template_compositions_path(ProblemDiagnosisSeed.template.template_id), params: {
+          values: {
+            "problem_diagnosis_at0002" => "Demo diagnosis (at0074)",
+            "problem_diagnosis_at0077" => now,
+            "problem_diagnosis_at0003" => recognized_at,
+            "problem_diagnosis_at0030" => now,
+            "problem_diagnosis_at0073" => "at0074"
+          }
+        }
+      end
 
       query = <<~AQL
         SELECT o/data[at0001]/items[at0003]/value/value AS recognized_at

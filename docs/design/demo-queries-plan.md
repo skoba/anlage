@@ -120,6 +120,7 @@ spec/demo/
 
 ```
 - 11/5凍結の受入条件: `bundle exec rspec spec/demo/` green（デモクエリ全件の期待件数一致）
+- 現在はデモクエリ4件全てが実際のフォーム保存経路（`POST /compositions/:template_id`）を経由するspecで検証される
 ```
 
 ## 6. TDD手順・コミット分割案

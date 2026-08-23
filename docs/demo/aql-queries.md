@@ -6,11 +6,8 @@
 （2026-08-23）**。`spec/fixtures/opt/bmi_calculation.opt`（openehr-rails
 demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixture冒頭
 コメントおよび`docs/demo/opt-catalog.md`参照）の`openEHR-EHR-OBSERVATION.height.v2`
-を使用。`Opt::CompositionBuilder`（フォーム保存経路と同じ構築ロジック）経由で
-シードする。ただし2件の回避策（`skoba/anlage#9`、`docs/upstream-candidates.md`
-9項）のうち、`archetype_details`手動注入は`skoba/anlage#9`解消により撤去済み。
-`NON_STRUCTURAL_ENTRY_KEYS`削除はgem側課題である`docs/upstream-candidates.md`
-9項として残置する。
+を使用。4クエリ全てで実際のフォーム保存経路
+（`POST /compositions/:template_id`）からCompositionを保存してAQL照会する。
 
 ## 1. height不等号クエリ
 
@@ -23,7 +20,7 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
   FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.height.v2]
   WHERE o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude > 170
   ```
-- シード（案A、`spec/demo/support/height_seed.rb`）: 身長165.0cm/170.0cm/180.0cmの3件を投入
+- フォームPOST: 身長165.0cm/170.0cm/180.0cmの3件を投入
 - 期待件数: **1件**（180.0cmのみ。170.0cm自体は`> 170`の境界値のため非該当。実測確認済み: `docs/reports/demo-queries-log.md` R2・R3）
 - **凍結受入条件に算入可能**（案A差し替え完了。`docs/design/demo-queries-plan.md` 5節）
 
@@ -50,7 +47,7 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
   WHERE o/data[at0001]/items[at0073]/value/value
         MATCHES {"疑い", "推定"}
   ```
-- シード（`spec/demo/support/problem_diagnosis_seed.rb`）: 診断確度at0074/at0075/at0076の3件を投入
+- フォームPOST: 診断確度at0074/at0075/at0076の3件を投入
 - 期待件数: **2件**（at0074「疑い」・at0075「推定」。at0076「確定」は対象外。実測確認済み: `docs/reports/demo-queries-log.md` R4）
 - **凍結受入条件に算入可能**
 
@@ -70,7 +67,7 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
        CONTAINS ELEMENT el[at0004]
   WHERE EXISTS el/value/magnitude
   ```
-- シード（`spec/demo/support/height_seed.rb`）: 身長172.0cm/175.0cmの2件を投入
+- フォームPOST: 身長172.0cm/175.0cmの2件を投入
 - 期待件数: **2件**（両方ともat0004にmagnitude値を持つため。実測確認済み: `docs/reports/demo-queries-log.md` R4）
 - **凍結受入条件に算入可能**
 
@@ -95,7 +92,7 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
   WHERE o/data[at0001]/items[at0003]/value/value >= "2026-01-01T00:00:00"
     AND o/data[at0001]/items[at0003]/value/value < "2026-07-01T00:00:00"
   ```
-- シード（`spec/demo/support/problem_diagnosis_seed.rb`）: 認識日時2026-03-15（期間内）・2026-09-01（期間外）の2件を投入
+- フォームPOST: 認識日時2026-03-15（期間内）・2026-09-01（期間外）の2件を投入
 - 期待件数: **1件**（期間内の1件のみ。実測確認済み: `docs/reports/demo-queries-log.md` R4）
 - **凍結受入条件に算入可能**
 
