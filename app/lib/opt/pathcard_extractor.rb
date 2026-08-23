@@ -1,5 +1,9 @@
+require "digest"
+
 module Opt
   class PathcardExtractor
+    VERSION = "wp2-0.1.0"
+
     Result = Struct.new(:cards, :report, keyword_init: true)
 
     def self.call(template)
@@ -77,7 +81,22 @@ module Opt
         "bindings" => bindings_for(element, archetype_id),
         "capture" => {},
         "reserved" => {},
-        "provenance" => {}
+        "provenance" => provenance
+      }
+    end
+
+    def provenance
+      checksum = if @template.respond_to?(:checksum)
+                   @template.checksum
+      else
+                   Digest::SHA256.hexdigest(@template.source_xml)
+      end
+
+      {
+        "source_template_id" => @template.template_id,
+        "source_checksum" => checksum,
+        "extracted_at" => Time.current.iso8601,
+        "extractor_version" => VERSION
       }
     end
 

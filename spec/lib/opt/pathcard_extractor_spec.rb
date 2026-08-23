@@ -177,6 +177,106 @@ RSpec.describe Opt::PathcardExtractor do
         ]
       )
     end
+
+    golden_cards = [
+      {
+        fixture: "CardiologyEncounter.opt",
+        identity: {
+          "template_id" => "CardiologyEncounter",
+          "archetype_id" => "openEHR-EHR-OBSERVATION.blood_pressure.v2",
+          "path" => "/content[openEHR-EHR-OBSERVATION.blood_pressure.v2]/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value",
+          "at_code" => "at0004"
+        },
+        semantics: {
+          "labels" => [ { "lang" => "ja", "text" => "収縮期", "untranslated_suspect" => false,
+                         "untranslated_evidence" => nil, "source_lang" => nil } ],
+          "descriptions" => [ { "lang" => "ja", "text" => "全身の動脈血圧での最高値 - 心機図の収縮期で測定される",
+                               "untranslated_suspect" => false, "untranslated_evidence" => nil,
+                               "source_lang" => nil } ]
+        },
+        constraints: {
+          "occurrences" => { "lower" => 0, "upper" => 1 },
+          "value" => {
+            "property" => { "terminology" => "openehr", "code" => "125" },
+            "units" => "mm[Hg]",
+            "magnitude_range" => { "lower" => 0.0, "upper" => 1000.0, "lower_included" => true,
+                                   "upper_included" => false },
+            "precision_range" => { "lower" => 0, "upper" => 0 }
+          }
+        },
+        bindings: [ { "kind" => "code_binding", "system_uri" => "SNOMED-CT",
+                     "code" => "[SNOMED-CT(2003)::271649006]", "display" => nil } ]
+      },
+      {
+        fixture: "LabResultReport.opt",
+        identity: {
+          "template_id" => "LabResultReport",
+          "archetype_id" => "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
+          "path" => "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[at0000]/items[at0001]/value",
+          "at_code" => "at0001"
+        },
+        semantics: {
+          "labels" => [ { "lang" => "ja", "text" => "分析結果", "untranslated_suspect" => false,
+                         "untranslated_evidence" => nil, "source_lang" => nil } ],
+          "descriptions" => [ { "lang" => "ja", "text" => "*The value of the analyte result. (en)",
+                               "untranslated_suspect" => true, "untranslated_evidence" => "fallback_marker",
+                               "source_lang" => "en" } ]
+        },
+        constraints: {
+          "occurrences" => { "lower" => 0, "upper" => nil },
+          "value" => { "property" => nil, "units" => nil, "magnitude_range" => nil, "precision_range" => nil }
+        },
+        bindings: []
+      },
+      {
+        fixture: "ProblemList.opt",
+        identity: {
+          "template_id" => "ProblemList",
+          "archetype_id" => "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+          "path" => "/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0002]/value",
+          "at_code" => "at0002"
+        },
+        semantics: {
+          "labels" => [ { "lang" => "ja", "text" => "プロブレム・診断名", "untranslated_suspect" => false,
+                         "untranslated_evidence" => nil, "source_lang" => nil } ],
+          "descriptions" => [ { "lang" => "ja", "text" => "*Identification of the problem or diagnosis, by name. (en)",
+                               "untranslated_suspect" => true, "untranslated_evidence" => "fallback_marker",
+                               "source_lang" => "en" } ]
+        },
+        constraints: { "occurrences" => { "lower" => 1, "upper" => 1 }, "value" => {} },
+        bindings: [ { "kind" => "value_set_binding",
+                     "system_uri" => "terminology:http://id.who.int/icd/release/11/mms",
+                     "code" => nil, "display" => nil } ]
+      }
+    ]
+
+    golden_cards.each do |golden|
+      it "matches the schema sample card for #{golden.fetch(:fixture)}" do
+        source_xml = Rails.root.join("spec/fixtures/opt", golden.fetch(:fixture)).read
+        template = Template.build_from_opt_xml(source_xml)
+
+        card = described_class.call(template).cards.find do |candidate|
+          candidate.fetch("identity") == golden.fetch(:identity)
+        end
+
+        expect(card).not_to be_nil
+        expect(card.slice("schema_version", "identity", "semantics", "constraints", "bindings", "capture", "reserved")).to eq(
+          "schema_version" => "1.0",
+          "identity" => golden.fetch(:identity),
+          "semantics" => golden.fetch(:semantics),
+          "constraints" => golden.fetch(:constraints),
+          "bindings" => golden.fetch(:bindings),
+          "capture" => {},
+          "reserved" => {}
+        )
+        expect(card.fetch("provenance").except("extracted_at")).to eq(
+          "source_template_id" => template.template_id,
+          "source_checksum" => template.checksum,
+          "extractor_version" => "wp2-0.1.0"
+        )
+        expect { Time.iso8601(card.dig("provenance", "extracted_at")) }.not_to raise_error
+      end
+    end
   end
 
   describe "#classify_translation" do
