@@ -351,3 +351,27 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   ISO8601文字列同士の辞書順比較に依存する点も同節に注記済み。
 - ステータス: 未着手（Issue起票候補。10項より制約が強く——代替ホップが
   存在しない——優先度は10項より高いと判断）。
+
+## 12. `rm_version`の情報源がOPT/gem設定に存在しない
+
+- 背景（2026-08-23、`skoba/anlage#9`実装で発見）: `OpenEHR::RM::Common::Archetyped::Archetyped`
+  （gem`openehr-2.3.1` `lib/openehr/rm/common/archetyped.rb:201-222`）は
+  `rm_version`を必須属性として要求する（nil/空文字で`ArgumentError`）が、
+  OPTのXMLにはRMバージョンを表す要素が無く、`Template#web_template`
+  （Anlage側、`app/models/template.rb`）にもgem`FieldExtractor`出力
+  （`field_extractor.rb:105-121`）にも`rm_version`相当のキーは存在しない
+  （実測確認: `docs/reports/issue9-log.md` R1）。
+- gem全体を横断すると`"1.0.4"`が唯一の実測リテラル値として使われている
+  （`storable.rb:93,145`、`canonical_serializer.rb:41`のフォールバック、
+  `graph_builder.rb:33`の`details['rm_version'] || '1.0.4'`、
+  `db/schema.rb:51`の`openehr_rm_compositions.rm_version`列デフォルト値）。
+  つまりgem側もこの値を「どこかから供給されるもの」としてではなく
+  ハードコードされたデフォルトとして扱っている。
+- 本来はgemがOPT（またはテンプレート設定）からRMバージョンを供給すべき値の
+  可能性がある——現行OPT仕様がRMバージョンを表現しない以上、gem側で
+  「サポート対象RM version」を明示的な設定値として持つ設計の方が、
+  各消費側（Anlage含む）でのリテラル値の重複を避けられる。
+- Anlage側の対応: `Opt::CompositionBuilder::RM_VERSION = "1.0.4"`として
+  定数化し、出所コメントを付して使用する（`skoba/anlage#9`）。
+- ステータス: 未着手（Issue起票候補。既存の複数箇所のハードコードを
+  gem側の一設定点に統合する提案として起票する場合はenhancement扱いが妥当）。
