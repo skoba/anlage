@@ -76,7 +76,7 @@ module Opt
           "path" => "#{path}/value",
           "at_code" => element.node_id
         },
-        "semantics" => semantics_for(archetype_id, element.node_id),
+        "semantics" => semantics_for(archetype_id, element.node_id, element),
         "constraints" => constraints_for(element, archetype_id),
         "bindings" => bindings_for(element, archetype_id),
         "capture" => {},
@@ -100,7 +100,7 @@ module Opt
       }
     end
 
-    def semantics_for(archetype_id, at_code)
+    def semantics_for(archetype_id, at_code, element)
       term = terminology_term(archetype_id, at_code)
       text = term&.items&.fetch("text", nil)
       description = term&.items&.fetch("description", nil)
@@ -114,8 +114,16 @@ module Opt
 
       {
         "labels" => semantic_entries(text, archetype_id, at_code, "label"),
-        "descriptions" => semantic_entries(description, archetype_id, at_code, "description")
+        "descriptions" => semantic_entries(description, archetype_id, at_code, "description"),
+        "rm_type" => rm_type_for(element)
       }
+    end
+
+    def rm_type_for(element)
+      value_attribute = (element.attributes || []).find do |attribute|
+        attribute.rm_attribute_name == "value"
+      end
+      value_attribute&.children&.first&.rm_type_name
     end
 
     def terminology_term(archetype_id, at_code)

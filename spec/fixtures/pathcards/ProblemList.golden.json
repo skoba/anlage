@@ -14,6 +14,7 @@
         "at_code": "at0002"
       },
       "semantics": {
+        "rm_type": "DV_TEXT",
         "labels": [
           {
             "lang": "ja",
@@ -60,6 +61,7 @@
         "at_code": "at0077"
       },
       "semantics": {
+        "rm_type": "DV_DATE_TIME",
         "labels": [
           {
             "lang": "ja",
@@ -99,6 +101,7 @@
         "at_code": "at0003"
       },
       "semantics": {
+        "rm_type": "DV_DATE_TIME",
         "labels": [
           {
             "lang": "ja",
@@ -138,6 +141,7 @@
         "at_code": "at0030"
       },
       "semantics": {
+        "rm_type": "DV_DATE_TIME",
         "labels": [
           {
             "lang": "ja",
@@ -177,6 +181,7 @@
         "at_code": "at0073"
       },
       "semantics": {
+        "rm_type": "DV_CODED_TEXT",
         "labels": [
           {
             "lang": "ja",
@@ -231,6 +236,7 @@
         "at_code": "at0070"
       },
       "semantics": {
+        "rm_type": "DV_DATE_TIME",
         "labels": [
           {
             "lang": "ja",

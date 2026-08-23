@@ -14,7 +14,11 @@ RSpec.describe Opt::PathcardExtractor do
         include(
           "schema_version" => "1.0",
           "identity" => be_a(Hash),
-          "semantics" => be_a(Hash),
+          "semantics" => include(
+            "labels" => be_an(Array),
+            "descriptions" => be_an(Array),
+            "rm_type" => be_a(String)
+          ),
           "constraints" => be_a(Hash),
           "bindings" => be_an(Array),
           "capture" => be_a(Hash),
@@ -205,6 +209,7 @@ RSpec.describe Opt::PathcardExtractor do
           "at_code" => "at0004"
         },
         semantics: {
+          "rm_type" => "DV_QUANTITY",
           "labels" => [ { "lang" => "ja", "text" => "収縮期", "untranslated_suspect" => false,
                          "untranslated_evidence" => nil, "source_lang" => nil } ],
           "descriptions" => [ { "lang" => "ja", "text" => "全身の動脈血圧での最高値 - 心機図の収縮期で測定される",
@@ -233,6 +238,7 @@ RSpec.describe Opt::PathcardExtractor do
           "at_code" => "at0001"
         },
         semantics: {
+          "rm_type" => "DV_QUANTITY",
           "labels" => [ { "lang" => "ja", "text" => "分析結果", "untranslated_suspect" => false,
                          "untranslated_evidence" => nil, "source_lang" => nil } ],
           "descriptions" => [ { "lang" => "ja", "text" => "*The value of the analyte result. (en)",
@@ -254,6 +260,7 @@ RSpec.describe Opt::PathcardExtractor do
           "at_code" => "at0002"
         },
         semantics: {
+          "rm_type" => "DV_TEXT",
           "labels" => [ { "lang" => "ja", "text" => "プロブレム・診断名", "untranslated_suspect" => false,
                          "untranslated_evidence" => nil, "source_lang" => nil } ],
           "descriptions" => [ { "lang" => "ja", "text" => "*Identification of the problem or diagnosis, by name. (en)",

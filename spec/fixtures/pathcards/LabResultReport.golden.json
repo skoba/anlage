@@ -14,6 +14,7 @@
         "at_code": "at0005"
       },
       "semantics": {
+        "rm_type": "DV_TEXT",
         "labels": [
           {
             "lang": "ja",
@@ -53,6 +54,7 @@
         "at_code": "at0024"
       },
       "semantics": {
+        "rm_type": "DV_TEXT",
         "labels": [
           {
             "lang": "ja",
@@ -92,6 +94,7 @@
         "at_code": "at0001"
       },
       "semantics": {
+        "rm_type": "DV_QUANTITY",
         "labels": [
           {
             "lang": "ja",
