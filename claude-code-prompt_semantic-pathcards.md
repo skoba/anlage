@@ -65,7 +65,11 @@ Anlageに「セマンティックパスカード」層を実装する。OPTが�
 - **成果物**: `docs/design/pathcards-schema-v1.md`
 - **提出して停止。承認を待つ**
 
-### WP2: 抽出器
+### WP2: 抽出器 — **完了（2026-08-23）**
+
+計画: `docs/design/wp2-plan.md`（完了記録は同文書10節）。実装Issue:
+[skoba/anlage#8](https://github.com/skoba/anlage/issues/8)（CLOSED）。
+進行ログ: `docs/reports/wp2-log.md`（R1〜R8）。
 
 - OPT→パスカード集合の抽出器を実装し、OPT投入イベントにフックする
 - パスカード抽出器の source_xml 再解析も safe_parser（`Opt::SafeParser`）を経由する

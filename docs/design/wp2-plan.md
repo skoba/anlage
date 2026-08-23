@@ -52,6 +52,8 @@ skoba/anlage#7（canonicalデータ混在時のpath不一致、C1の留保事項
 
 edge case方針: CQuantityItemが複数（複数units）の場合はv1では先頭のみ採用しreportに記録（スキーマはunits単数。v1.1課題として残す）。occurrences欠損（WP0未確認事項3、`pathcards-wp0-exploration.md:770-772` — `numeric_interval`がnilを返し`CObject#occurrences=`が`ArgumentError`を投げる可能性が実データ未検証のまま記録されている）は、TODOリストで実データに対して実測し挙動を固定する。
 
+**as-built（TODO 7実装時に判明）— DV_CODED_TEXTのvalue制約の実構造**: 上表の`CCodePhrase`/`CCodeReference`はELEMENTの`value`属性の子として**直接**現れるのではなく、`rm_type_name: DV_CODED_TEXT`の`C_COMPLEX_OBJECT`にラップされ、その`defining_code`属性（`C_SINGLE_ATTRIBUTE`）の子として現れる（実例: `spec/fixtures/opt/ProblemList.opt:563-575`、at0073の`value`属性→`children xsi:type="C_COMPLEX_OBJECT"`〔`rm_type_name: DV_CODED_TEXT`〕→`attributes xsi:type="C_SINGLE_ATTRIBUTE"`〔`rm_attribute_name: defining_code`〕→本体）。`CDvQuantity`はこのラップを持たず、value属性の直接の子として現れる（実例: 同ファイルat0004、`children xsi:type="C_DV_QUANTITY"`が`value`属性の直下）。抽出器はこの差を`defining_code_constraint`ヘルパー（value_constraintを受け取り、`rm_type_name == "DV_CODED_TEXT"`ならdefining_code配下の実体を返し、それ以外はそのまま返す）で吸収し、`CCodePhrase`/`CCodeReference`両方の判定前に必ずこのヘルパーを通す設計にした（`app/lib/opt/pathcard_extractor.rb`）。
+
 ### 1.4 labels / descriptions / 未翻訳検出
 
 **実装上の制約（WP0未確認事項2への対応）**: labelsとdescriptionsの取得は、`FieldExtractor#term_text`（`field_extractor.rb:258-267`）と同じ「`component_terminologies[archetype_id].term_definitions.each_value { |terms| terms.find { |t| t.code == code } }`」パターンを踏襲する。`ArchetypeOntology#term_definition(lang:, code:)`（`openehr/am/archetype/ontology.rb:70-76`）は**使わない** — この方法は`@term_definitions[lang][code]`という2段Hash索引を前提とするが、OPTParserが構築する`term_definitions`の値は`ArchetypeTerm`の配列であり（`opt_parser.rb:159-168`）、`Array#[](String)`となって`TypeError`になる可能性がWP0で指摘済み・実データ未検証のまま残っている（`pathcards-wp0-exploration.md:764-769`）。実績のある`each_value.find`パターンのみを使うことで、この未検証リスクを踏まない。
@@ -191,3 +193,16 @@ openehr 2.3.1 bump（C3解消、`e1bc037`）により再解析の必要範囲が
 6. **DoD「全ノード」の解釈**: ELEMENTデータ点単位・protocol/state配下も含む（FieldExtractorの上位集合）
 7. **カード1 path差し替え運用**: 抽出器実測がwp1-manual手作業導出と食い違った場合、実測値を正としてschema文書2節を更新する
 8. **Issue起票**: **完了**。(a) canonical混在Issue → [#7](https://github.com/skoba/anlage/issues/7) (b) WP2実装Issue → [#8](https://github.com/skoba/anlage/issues/8)（Acceptance criteria: 本計画TODO 1〜14のspec緑＋デモ経路通過。#3・#7と相互参照）
+
+---
+
+## 10. 完了記録（2026-08-23）
+
+- **完了日**: 2026-08-23
+- **最終SHA**: `1f1c802`（origin/main。進行ログ: `docs/reports/wp2-log.md` R1〜R8）
+- **実測サマリ**: `bundle exec rspec` 79 examples, 0 failures（全suite一括、#3解消後）／`bundle exec rubocop`（実装＋spec関連14ファイル）オフェンスなし／golden回帰網3本（CardiologyEncounter 2カード・LabResultReport 3カード・ProblemList 6カード、C2ルール適用）／TODOリスト14/14完了
+- **[skoba/anlage#8](https://github.com/skoba/anlage/issues/8)**: CLOSED（Fixes #8）。**[#6](https://github.com/skoba/anlage/issues/6)**（旧マイルストーン）も#8への引き継ぎを明記の上CLOSED
+- **WP0未確認事項の消化状況**:
+  - 事項2（`ArchetypeOntology#term_definition`のTypeErrorリスク、`pathcards-wp0-exploration.md:764-769`）: **計画で回避**。実装は`FieldExtractor#term_text`と同じ`each_value.find`パターンを採用し、リスクのあるメソッドを一切呼ばない（本文書1.4節）
+  - 事項3（occurrences欠損時の挙動、`pathcards-wp0-exploration.md:770-772`）: **R系列③（R3、TODO 6）で実データ固定**。LabResultReport at0001の`upper_unbounded`ケースで実測し、例外を投げず`upper: null`になることを確認（`pathcards-schema-v1.md` カード2）
+  - `pathcards-schema-v1.md` 3節-1（ProblemList.optのAnlage実行時動作・登録/保存動作が未確認だった件）: **TODO 12で消化**。実際にドロップゾーンへ投入し登録・`pathcards`保存まで実演済み（`docs/evidence/2026-08-23--problemlist--pathcards-saved-after-wp2-todo12.png`）
