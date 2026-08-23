@@ -27,6 +27,7 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
 
 ## 2. MATCHES 値リスト（コード値の複数一致）
 
+- **質疑応答用1行**: 本来形（`defining_code/code_string`によるコード値WHERE）は現行AQLエンジンの制約で不可。表示ラベル値での暫定形を採用（`docs/upstream-candidates.md` 10項）
 - 状態: **供給済み・実測で訂正のうえ採用**
 - 意図: WHERE句でMATCHESにリテラルの値リストを与え、複数コードのいずれかに一致するレコードを
   検索するデモ（openehr 2.3.0以降で実行可能になったAQL構文、openehr-rails CHANGELOG
@@ -73,6 +74,7 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
 
 ## 4. 日付範囲WHERE（期間絞り込み）
 
+- **質疑応答用1行**: 本来形（OBSERVATIONのイベント時刻`events/time`での期間WHERE）は現行AQLエンジンの制約で不可。ELEMENT値保持フィールドでの暫定形を採用（`docs/upstream-candidates.md` 11項）
 - 状態: **供給済み・実測で訂正のうえ採用**
 - 意図: WHERE句で日時フィールドに範囲条件（`>=`/`<`）を与え、期間で絞り込むデモ
 - **原文からの差分**: `events[at0002]/time`は現行AQLエンジンでPathable宣言されておらず

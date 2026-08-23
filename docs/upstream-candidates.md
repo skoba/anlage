@@ -288,3 +288,66 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   `build_children`をRM属性のホワイトリスト方式に変える設計変更が
   考えられる。
 - ステータス: 未着手（Issue起票候補）。
+
+## 10. AQLパス解決の`ALLOWED_TERMINAL_HOPS`制限により`defining_code`/`code_string`へ到達不能
+
+- 背景（2026-08-23、`skoba/anlage#5` Q2実装で発見）: `openehr` gemのAQLパス評価器
+  （`lib/openehr/aql/engine/path_evaluator.rb:23`）は、Pathable宣言されていない
+  値（DV_CODED_TEXT等）への終端ホップを`ALLOWED_TERMINAL_HOPS = %w[magnitude name value]`
+  （同ファイル23行目）のみに限定している。ファイル冒頭のクラスコメントには
+  「Expand only when a real query needs another one」（実クエリが必要とするまで
+  拡張しない）と明記されており、意図的なスコープ限定と判断できる。
+  この結果、DV_CODED_TEXTの`defining_code`（さらにその`code_string`）へ辿る
+  パスは`navigate_terminal`（同78-84行目）で`unsupported path attribute`の
+  `OpenehrRails::Aql::UnsupportedFeature`になり、**コード値そのものによる
+  WHERE絞り込みができない**（表示ラベル値=`.../value/value`のみ照会可能）。
+- 到達不能だった実クエリ原文（`skoba/anlage#5` Q2、`docs/demo/aql-queries.md`
+  2節参照）:
+  ```
+  SELECT c/uid/value AS composition_uid,
+         o/data[at0001]/items[at0073]/value/defining_code/code_string AS diagnosis_code
+  FROM EHR e CONTAINS COMPOSITION c
+       CONTAINS EVALUATION o[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+  WHERE o/data[at0001]/items[at0073]/value/defining_code/code_string
+        MATCHES {"at0074", "at0075"}
+  ```
+- 実測したエラー: `OpenehrRails::Aql::UnsupportedFeature: unsupported path
+  attribute "defining_code" on a OpenEHR::RM::DataTypes::Text::DvCodedText`
+  （`docs/reports/demo-queries-log.md` R4に実行ログの要約あり）
+- 回避に使った代替パス: `value/defining_code/code_string`→`value/value`
+  （DvCodedTextの表示ラベル自体でのMATCHES。`docs/demo/aql-queries.md` 2節の
+  採用形。コードではなくラベル文字列での一致になる点を明記済み）
+- ステータス: 未着手（Issue起票候補。意図的スコープ限定である可能性が高く、
+  起票する場合はenhancement扱いが妥当）。
+
+## 11. AQLパス解決で`events/time`へ到達不能（イベント時刻での期間WHERE不可）
+
+- 背景（2026-08-23、`skoba/anlage#5` Q4実装で発見）: `openehr` gemの
+  `OpenEHR::RM::DataStructures::History::Event`系クラス
+  （`lib/openehr/rm/data_structures/history.rb:21`）は`path_attribute :events,
+  :summary`のみを宣言しており、`time`はPathable経路として宣言されていない。
+  また`time`は10項の`ALLOWED_TERMINAL_HOPS`（`magnitude`/`name`/`value`）にも
+  含まれないため、`navigate_terminal`でも拒否される。結果、**OBSERVATIONの
+  イベント時刻（測定日時）を使った期間WHERE絞り込みが現行AQLエンジンでは
+  一切実行できない**（10項と異なり、代替の終端ホップも存在しない——`time`
+  自体がPathable/terminal両経路から漏れている）。
+- 到達不能だった実クエリ原文（`skoba/anlage#5` Q4、`docs/demo/aql-queries.md`
+  4節参照）:
+  ```
+  SELECT o/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value/magnitude AS height,
+         o/data[at0001]/events[at0002]/time/value AS measured_at
+  FROM EHR e CONTAINS COMPOSITION c
+       CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.height.v2]
+  WHERE o/data[at0001]/events[at0002]/time/value >= "2026-01-01T00:00:00"
+    AND o/data[at0001]/events[at0002]/time/value < "2026-07-01T00:00:00"
+  ```
+- 実測したエラー: `OpenehrRails::Aql::UnsupportedFeature: unsupported path
+  attribute "time" on a OpenEHR::RM::DataStructures::History::PointEvent`
+  （`docs/reports/demo-queries-log.md` R4に実行ログの要約あり）
+- 回避に使った代替パス: OBSERVATIONのイベント時刻という切り口自体を諦め、
+  `ProblemList.opt`のELEMENT値として保持されるDV_DATE_TIMEフィールド
+  （at0003「臨床的に認識された日時」、`.../value`経由で到達可能）へクエリの
+  対象そのものを差し替えた（`docs/demo/aql-queries.md` 4節の採用形）。
+  ISO8601文字列同士の辞書順比較に依存する点も同節に注記済み。
+- ステータス: 未着手（Issue起票候補。10項より制約が強く——代替ホップが
+  存在しない——優先度は10項より高いと判断）。
