@@ -1,0 +1,227 @@
+# パスカード検索評価ハーネス（WP4）のゴールドスタンダード。
+# skoba/anlage#14 裁定（2026-08-24）に基づく。
+#
+# 各エントリ:
+#   id: 一意識別子
+#   query: 日本語クエリ文字列（一部英語混じりを含む、実際のクエリ想定）
+#   expected_archetype_id: 正解archetype_id（原文プロンプト「正解アーキタイプ」に対応。
+#     単一ラベル評価——このarchetype_idを持つカードが1枚でも結果に含まれれば正解）
+#   expected_at_code: 正解at_code（任意。特定のカード1枚を指したい場合のみ指定。
+#     未指定の場合はarchetype_id一致のみで判定する）
+#   intent_tag: 出題意図タグ（bigram成立想定 / 複合語 / 同義語ギャップ）
+#     - bigram成立想定: クエリがカードのlabel/description/code_list labelと直接的に
+#       bigram一致し、成立が見込まれるもの
+#     - 複合語: クエリがカードの短い抽出ラベルより長い複合語で、単純な文字列完全一致
+#       ではなくbigramのOR一致で救われることを確認する意図のもの
+#     - 同義語ギャップ: 実カードのテキストと字面上の手がかりが無く、Phase 1
+#       （bigram）では原理的に成立しない、失敗を意図的に含めたもの
+#   source: wp3-reused（docs/reports/wp3-log.md R1で個別に実測・記録済みの
+#     クエリを流用） / new（本ハーネスのために新規追加）
+#   notes: 補足（複数archetypeがヒットしうる場合の注記、フィールド経由の注記等）
+#   reviewed_by: 人間レビュー実施者（未レビューは空欄のまま）
+#   reviewed_at: レビュー日（未レビューは空欄のまま）
+#
+# 人間レビューの対象範囲（skoba/anlage#12裁定3）: 各クエリの文言と正解ラベルの
+# 臨床的妥当性のみ。intent_tagの分類自体（bigram成立の技術的成否）はWP3実測に
+# 基づくため、レビュー対象に含めない。失敗想定の同義語ギャップ問題は意図的な
+# 収録であり、削除ではなくクエリ文言・正解ラベルの妥当性確認のみ求める。
+
+- id: q01
+  query: "収縮期"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2
+  expected_at_code: at0004
+  intent_tag: bigram成立想定
+  source: wp3-reused
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
+  reviewed_by:
+  reviewed_at:
+
+- id: q02
+  query: "拡張期"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2
+  expected_at_code: at0005
+  intent_tag: bigram成立想定
+  source: new
+  notes: "収縮期(q01)と対をなす新規問。WP3では収縮期のみ実測、拡張期単独は未実測"
+  reviewed_by:
+  reviewed_at:
+
+- id: q03
+  query: "身長"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.height.v2
+  expected_at_code: at0004
+  intent_tag: bigram成立想定
+  source: wp3-reused
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
+  reviewed_by:
+  reviewed_at:
+
+- id: q04
+  query: "体重"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.body_weight.v2
+  expected_at_code: at0004
+  intent_tag: bigram成立想定
+  source: wp3-reused
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
+  reviewed_by:
+  reviewed_at:
+
+- id: q05
+  query: "診断"
+  expected_archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1
+  expected_at_code: at0002
+  intent_tag: bigram成立想定
+  source: wp3-reused
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
+  reviewed_by:
+  reviewed_at:
+
+- id: q06
+  query: "検査"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.laboratory_test_result.v1
+  expected_at_code: at0005
+  intent_tag: bigram成立想定
+  source: wp3-reused
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
+  reviewed_by:
+  reviewed_at:
+
+- id: q07
+  query: "分析"
+  expected_archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1
+  expected_at_code:
+  intent_tag: bigram成立想定
+  source: wp3-reused
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ。at0024「分析名」・at0001「分析結果」の両方が候補"
+  reviewed_by:
+  reviewed_at:
+
+- id: q08
+  query: "発症"
+  expected_archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1
+  expected_at_code: at0077
+  intent_tag: bigram成立想定
+  source: wp3-reused
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
+  reviewed_by:
+  reviewed_at:
+
+- id: q09
+  query: "判定"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2
+  expected_at_code: at0013
+  intent_tag: bigram成立想定
+  source: wp3-reused
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
+  reviewed_by:
+  reviewed_at:
+
+- id: q10
+  query: "血圧"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2
+  expected_at_code:
+  intent_tag: bigram成立想定
+  source: wp3-reused
+  notes: "labelには現れずdescription経由（at0004の説明文に「動脈血圧」を含む）で成立"
+  reviewed_by:
+  reviewed_at:
+
+- id: q11
+  query: "収縮期血圧"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2
+  expected_at_code: at0004
+  intent_tag: 複合語
+  source: wp3-reused
+  notes: "カード側labelは「収縮期」のみ。bigram「収縮」「縮期」の共有で成立（粒度ギャップ）"
+  reviewed_by:
+  reviewed_at:
+
+- id: q12
+  query: "拡張期血圧"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2
+  expected_at_code: at0005
+  intent_tag: 複合語
+  source: wp3-reused
+  notes: "q11と対称。カード側labelは「拡張期」のみ"
+  reviewed_by:
+  reviewed_at:
+
+- id: q13
+  query: "身長体重"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.height.v2
+  expected_at_code:
+  intent_tag: 複合語
+  source: wp3-reused
+  notes: "body_weight.v2も同時にヒットしうる（bigram「体重」も共有）。単純部分一致では0件だったがbigram OR一致で救われる例"
+  reviewed_by:
+  reviewed_at:
+
+- id: q14
+  query: "血圧測定"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2
+  expected_at_code:
+  intent_tag: 複合語
+  source: new
+  notes: "「血圧」「測定」双方がat0004のdescription（「...測定される」）経由で成立する想定の新規問"
+  reviewed_by:
+  reviewed_at:
+
+- id: q15
+  query: "臨床検査"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.laboratory_test_result.v1
+  expected_at_code:
+  intent_tag: 複合語
+  source: new
+  notes: "「検査」bigramの共有で成立するが、実測ではProblemList(at0003「臨床的に認識された日時」の「臨床」bigramが偶発的に一致)が2位、本来の期待先が1位ではなく2位（top-3では成立、top-1では不成立）。bigram一致の限界を示す実例として意図的に残す"
+  reviewed_by:
+  reviewed_at:
+
+- id: q16
+  query: "BMI"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2
+  expected_at_code: at0004
+  intent_tag: 同義語ギャップ
+  source: wp3-reused
+  notes: "失敗想定。実カードlabelは未翻訳の英語「Body mass index」で字面上の手がかりが無い"
+  reviewed_by:
+  reviewed_at:
+
+- id: q17
+  query: "体格指数"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2
+  expected_at_code: at0004
+  intent_tag: 同義語ギャップ
+  source: wp3-reused
+  notes: "失敗想定。q16と同じ理由（未翻訳英語ラベルとの字面ギャップ）"
+  reviewed_by:
+  reviewed_at:
+
+- id: q18
+  query: "既往"
+  expected_archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1
+  expected_at_code:
+  intent_tag: 同義語ギャップ
+  source: wp3-reused
+  notes: "失敗想定。実ラベルは「プロブレム・診断名」で「既往」という語彙は使われない"
+  reviewed_by:
+  reviewed_at:
+
+- id: q19
+  query: "検体"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.laboratory_test_result.v1
+  expected_at_code:
+  intent_tag: 同義語ギャップ
+  source: new
+  notes: "失敗想定。実ラベルは「検査名」「分析名」「分析結果」で「検体」とは字面上の重なりが無い新規失敗例（BMI系とは異なる語彙クラスタ）"
+  reviewed_by:
+  reviewed_at:
+
+- id: q20
+  query: "疑い"
+  expected_archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1
+  expected_at_code: at0073
+  intent_tag: bigram成立想定
+  source: wp3-reused
+  notes: "semantics.labels/descriptionsには無くconstraints.value.code_list[].label経由でのみ成立"
+  reviewed_by:
+  reviewed_at:
