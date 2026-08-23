@@ -58,7 +58,8 @@ Anlageが実証しようとしているのは、openEHR標準の役割の転換�
 
 ## Current focus
 
-保存経路の修復（`skoba/anlage#9`・`skoba/anlage#10`）→ 次は検索層（WP3）。
+保存経路の修復: `skoba/anlage#9`（シード/Committer経路のarchetype_details欠落）は解消済み。
+残るは`skoba/anlage#10`（フォーム保存経路がAQLの照会対象に合流していない）→ 次は検索層（WP3）。
 
 ## 進行の追い方
 
