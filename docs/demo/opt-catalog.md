@@ -36,3 +36,11 @@ openehr-railsの`demo_assets/templates/problem_list.opt`と、Anlageの
 
 - fixture悉皆・MANIFEST的な確認作業は本カタログの更新で消化する（別文書は作らない）
 - gem側（openehr-rails）自身のdemo_assets MANIFEST整備は、Anlageの管轄外。12月世界公開準備のbacklogへ委ねる（`docs/backlog.md`参照）
+
+## 運用注記: パスカード生成には登録経路が影響する
+
+`Template.build_from_opt_xml(...).save`等の直接model save（`TemplatesController#create`
+を経由しない登録）は、`Opt::PathcardExtractor`のフックが発火しないため`templates.pathcards`
+が未生成のまま残る（`skoba/anlage#12`, WP3 explore実測、`docs/reports/wp3-log.md` R1）。
+実演相当のパスカード生成を確認したい場合は、必ずドロップゾーン経由（`POST /templates`）で
+登録すること。開発DBで生成漏れが見つかった場合は`rake pathcards:backfill`で補完できる。
