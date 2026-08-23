@@ -226,3 +226,32 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   `FieldExtractor` では原理的に取得できない情報を得るための独立した
   設計判断であり、その根拠は本件解消後も残存する。
   （冒頭に RESOLVED UPSTREAM 注記あり）。
+
+## 8. `Archetype::ConstraintModel::CObject#path`が埋め込みC_ARCHETYPE_ROOT自身のnode_idブラケットを欠落させる
+
+- 背景（2026-08-23、WP2 TODO 2着手前の実測で発見）: `spec/fixtures/opt/LabResultReport.opt`
+  をパースし、`each_constraint_node`と同じ走査で全ノードの`.path`を実測すると、
+  埋め込み`CArchetypeRoot`（`laboratory_test_analyte.v1`、node_id=`at0000`）自身の
+  `.path`が`/content/data[at0001]/events[at0002]/data[at0003]/items`（末尾に
+  `[at0000]`ブラケットが無い）となり、以降の子孫ノードすべてがこの欠落した
+  pathを`parent_path`として継承する（実測: `items/items[at0001]`のように、本来
+  `items[at0000]/items[at0001]`になるべき箇所で`[at0000]`が消える）。トップレベルの
+  `/content`セグメントも同様にarchetype_idブラケットを持たない（`/content[archetype_id]`
+  ではなく`/content`）。
+- 原因（推定、未確定）: `CObject#path`（`lib/openehr/am/archetype/constraint_model.rb:126-128`）は
+  `@path || calculate_path`というメモ化パターンで、一度計算されると`@path`に
+  キャッシュされ再計算されない。`calculate_path`（同:158-169）は`node_id`を
+  参照するが、OPTParser側でXML属性の読み込み順序によっては`path`アクセサが
+  `node_id=`設定前に一度呼ばれてキャッシュが確定してしまう可能性がある
+  （実装コード上の確証は未取得。再現手順は上記の実測スクリプトのみ）。
+- 影響範囲: `Archetype#physical_paths`/`#logical_paths`（公開API、
+  `lib/openehr/am/archetype.rb:128-135`）も内部で`node.path`を呼ぶため、
+  同じ欠落を引き継ぐ。
+- Anlage側の対応: WP2パスカード抽出器はこの`.path`を使わず、
+  `openehr-rails/lib/openehr_rails/opt/field_extractor.rb:129-135`と同じ
+  「`rm_attribute_name` + node_idがあれば`[atNNNN]`」を自前で連結する方式を
+  採用する（`docs/design/wp2-plan.md` 1.2節）。FieldExtractorが`.path`を
+  使わず独自にpath構築している理由も、恐らく本件と同種の問題を避けるため
+  と推測される（未確認）。
+- ステータス: 未着手（Issue起票候補）。再現手順の精密化（`node_id=`設定順序の
+  実コード確認）が必要。
