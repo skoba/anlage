@@ -6,8 +6,8 @@
 WP3（索引・検索）着手前の最後の構造的関門。
 **ログ**: `docs/reports/issue10-log.md`（R1〜。本計画のexplore実測記録）
 
-> **本文書はexplore→planのみの成果物**。Issue #10自体の実装（コード変更）は
-> 本タスクでは行わない。承認後、別タスクとして着手する。
+> **裁定済み（2026-08-23）**: 3判断すべて承認。実装（Codex起動）着手可。
+> 条件・詳細は本文書末尾「裁定反映（R2）」節を参照。
 
 ## 解決区分（CLAUDE.md「ticket-driven workflow」）
 
@@ -183,12 +183,67 @@ Ehr/Patientモデルが存在しない現状のAnlageでもAQL可視になるこ
 （既存4クエリのspecはシード経路のまま維持、フォーム経路は新設した1本の統合spec
 でカバーする形）。
 
-### 承認が必要な判断
+### 承認が必要な判断（裁定済み・2026-08-23、詳細は末尾「裁定反映（R2）」参照）
 
 1. 推奨方針（(a)採用、`compositions`テーブルは非権威archivalとして無変更維持、
-   uid列追加、共有クラスへのリファクタ）の採否
+   uid列追加、共有クラスへのリファクタ）の採否 — **裁定: 承認（条件2点付き）**
 2. TDD対象をQ1相当1本に限定し、既存4クエリの完全移行は範囲外とする判断の妥当性
-3. `compositions.uid`列追加（Anlage側migration）の実施
+   — **裁定: 承認（「#5 specのフォーム経路化」は別problem Issueとして起票）**
+3. `compositions.uid`列追加（Anlage側migration）の実施 — **裁定: 承認
+   （uid形式・生成層の指定付き）**
+
+## 裁定反映（R2、2026-08-23）
+
+### 判断1の条件2点
+
+(i) **`compositions`テーブルの「非権威archival」地位の明文化**: 実装時、
+    `app/models/composition.rb`（またはリファクタ後の該当箇所）にコードコメントで
+    「権威ストア=CompositionCommitter経由のRMグラフ（AQL対象）、
+    `compositions`=archival・原本表示専用（AQL非対象）」を明記する。加えて
+    `README.md`の「今どこまで動くか」節（3節、AQL照会の行）を、#10解消後の
+    実態に合わせて更新する（権威/非権威の役割分担を含めた記述に改める）。
+
+(ii) **RESERVED_KEYS回避策の撤去条件コメントを共有クラスに集約**: 現状demo seed
+     2箇所（`height_seed.rb`・`problem_diagnosis_seed.rb`）にある
+     `NON_STRUCTURAL_ENTRY_KEYS`の撤去条件コメント（「openehr-rails側
+     RESERVED_KEYS拡張〔docs/upstream-candidates.md 9項の解消〕後」）を、
+     新設する共有クラス側に一本化して引き継ぐ。demo seed側のコメントは
+     共有クラスへの参照に置き換える（コメント内容の重複を避ける）。
+
+### 判断2: 「#5 specのフォーム経路化」を別problem Issueとして起票
+
+TDD範囲はQ1相当1本に限定（承認どおり）。既存4クエリをフォーム経路相当に
+寄せる作業は、本Issue #10のスコープに含めず、別途problem Issueとして起票する
+（着手時期は起票後に裁定 — 台帳外の宿題を作らないため、本計画には着手時期を
+記載しない）。**起票済み: `skoba/anlage#11`**（相互参照コメントを#10側にも
+記載済み）。
+
+### 判断3: uidの形式・生成層
+
+**実測結果**（詳細: `docs/reports/issue10-log.md` R2）: `OpenEHR::RM::Support::
+Identification::HierObjectID`（gem`openehr-2.4.2` `lib/openehr/rm/support/
+identification.rb:334-336`）は`UIDBasedID`のエイリアス的サブクラスで独自ロジックを
+持たず、`value`は`root[::extension]`という非空文字列であれば形式を問わず受理する
+（UUID形式チェックは無い）。`CompositionCommitter.commit`の`uid:`引数
+（gem`composition_committer.rb:12`）はplain Stringをそのまま`openehr_rm_compositions.uid`
+文字列カラムへ格納するのみで、`.value`抽出等の型変換は行わない
+（spec実測: gem側`composition_committer_spec.rb`が`uid: 'uid-1'`のような任意文字列で
+検証している）。gem内部の独自uid生成箇所3箇所（`storable.rb:126`・
+`contribution.rb:29`・`openehr_api/compositions_controller.rb:31`）はいずれも
+拡張子なしの素の`SecureRandom.uuid`をHIER_OBJECT_ID値として使っている。
+
+**決定**: `SecureRandom.uuid`（拡張子なしの素のUUID文字列）を、HierObjectIDの
+`root`部分の値としてそのまま使う——これは形式要件を満たす最小構成であり、
+gem内部の3箇所と同型のパターン。`HierObjectID`インスタンスとして明示的に
+ラップする実装は採らない（`CompositionCommitter`がplain Stringしか要求せず、
+ラップ→`.value`展開は往復するだけの無駄な間接化になるため）。
+
+**採番層**: 新設する共有クラス側で1回`SecureRandom.uuid`を生成し、
+`compositions.create!(uid: ...)`と`CompositionCommitter.commit(hash, uid: ...)`の
+両方に同一値を渡す。controller側やモデルの`before_create`コールバックでの
+生成は採らない——両方の書き込みが同一uidを共有する必要があり、両方を
+橋渡しする層（共有クラス）が生成の責務を持つのがもっとも凝集度が高いため
+（この根拠は実装コミットのメッセージに1行残す）。
 
 ## Verification（実装着手後）
 

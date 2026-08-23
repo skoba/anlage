@@ -104,3 +104,48 @@ explore→planフェーズの実測記録。R1〜。
 テーブルを非権威archivalとして無変更維持、uid列追加、共有クラスへのリファクタ）
 と、TDD対象をQ1相当1本に限定する判断、承認事項3点を明記し、ゲート報告で
 承認を仰ぐ。
+
+---
+
+## R2: 裁定（2026-08-23）— 3判断すべて承認、uid形式の実測調査
+
+3判断とも承認。判断1に条件2点（非権威archival地位の明文化、RESERVED_KEYS
+撤去条件コメントの共有クラスへの集約）、判断2に付帯決定（「#5 specの
+フォーム経路化」は別problem Issueとして起票）、判断3にuid形式・生成層の
+指定が付いた。詳細は`docs/design/issue10-plan.md`「裁定反映（R2）」節参照。
+
+### uid形式の実測調査（判断3の裏付け）
+
+`OpenEHR::RM::Support::Identification::HierObjectID`（gem`openehr-2.4.2`
+`lib/openehr/rm/support/identification.rb:334-336`）は`UIDBasedID`の
+エイリアス的サブクラスで独自ロジックを持たない。`value`は`root[::extension]`
+形式の非空文字列を受理するのみで、UUID形式チェックは無い（`UIDBasedID#value=`、
+同`:226-235`）。**当初の調査依頼で前提としていた「HIER_OBJECT_IDは
+`root::creating_system_id::version`の3分割拡張形式を許す」は誤りで、それは
+別クラス`ObjectVersionID`（同`:242-294`）の仕様と判明**（実測で訂正）。
+
+`CompositionCommitter.commit`の`uid:`引数（gem`composition_committer.rb:12`）は
+plain Stringをそのまま`openehr_rm_compositions.uid`文字列カラムへ格納するのみ
+（`.value`抽出等の型変換なし。gem側spec`composition_committer_spec.rb`が
+`uid: 'uid-1'`等の任意文字列で検証していることで裏付け）。
+
+gem内部の独自uid生成箇所3箇所（`lib/openehr_rails/storable.rb:126`・
+`lib/openehr_rails/rm/contribution.rb:29`・
+`app/controllers/openehr_rails/openehr_api/compositions_controller.rb:31`）は
+いずれも拡張子なしの素の`SecureRandom.uuid`をHIER_OBJECT_ID値として使う
+（`HierObjectID`インスタンスとして明示的にラップしているのは、DB→RMオブジェクト
+変換方向の`rm_object_builder.rb:39`の1箇所のみで、値生成方向ではない）。
+
+**決定**: `SecureRandom.uuid`をHierObjectIDのroot値としてそのまま使う（明示的な
+`HierObjectID`インスタンス化はしない）。採番は新設共有クラス側で1回行い、
+`compositions`行・Committer呼び出しの両方に同一値を渡す（両者を橋渡しする層が
+生成責務を持つのがもっとも凝集度が高いため）。
+
+### 次のアクション
+
+1. 「#5 specのフォーム経路化」を別problem Issueとして起票、#10側へ相互参照
+2. `docs/design/issue10-plan.md`・本ログを裁定反映してコミット・push
+3. Codex起動（TDD: Red→Green、共有クラス抽出、uid列migration）
+4. 独立レビュー→`Implemented-by: Codex`トレーラーでコミット→`Fixes #10`
+5. README「今どこまで動くか」節・コードコメントで非権威archival地位を明文化
+6. `CLAUDE.md`の#5凍結受入条件行を更新
