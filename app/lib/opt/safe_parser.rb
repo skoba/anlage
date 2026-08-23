@@ -18,5 +18,14 @@ module Opt
 
       OpenehrRails::Opt.parse(source_xml)
     end
+
+    def self.safe_document(source_xml)
+      if source_xml.to_s.b.match?(DOCTYPE_PATTERN)
+        raise UnsafeTemplate, "DOCTYPE declarations are not allowed in OPT uploads"
+      end
+
+      options = Nokogiri::XML::ParseOptions::DEFAULT_XML | Nokogiri::XML::ParseOptions::NONET
+      Nokogiri::XML::Document.parse(source_xml, nil, nil, options)
+    end
   end
 end
