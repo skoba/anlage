@@ -6,7 +6,9 @@
 本計画で解決する。承認後、テストTODOリスト先頭のRedから実装に入る。
 **前提文書**: pathcards-schema-v1.md（スキーマ・サンプルカード3枚）／
 pathcards-language-policy.md（未翻訳2段階検出）／pathcards-wp0-exploration.md（API棚卸し）
-**関連Issue**: skoba/anlage#6（WP2 goal）
+**関連Issue**: skoba/anlage#6（WP2 goal・計画承認までのマイルストーン）／
+skoba/anlage#8（WP2実装本体、TODO 1〜14のAcceptance criteria）／
+skoba/anlage#7（canonicalデータ混在時のpath不一致、C1の留保事項）
 
 ---
 
@@ -77,7 +79,7 @@ term_definitionsの`items`Hash（`'text'`/`'description'`キー）から text/de
 - 埋め込みC_ARCHETYPE_ROOT（`LabResultReport.opt:492`のlaboratory_test_analyte.v1、node_id=at0000）のパスは実測形`items[at0000]`のまま採用する
 - openehr-ruby AQLパーサは at-code述語形式・archetype述語形式の両方を文法上受理し（`lib/openehr/aql/parser.rb:167-190`、NodePredicate / ArchetypePredicate）、実行時マッチングはarchetype_node_idとの**完全文字列一致**のみ。openehr-rails側はFieldExtractorがパスに`child.node_id`を使い（`field_extractor.rb:134-135`）、Storableも RMグラフ格納時にarchetype_node_idへat0000をそのまま設定する（`storable.rb:188`）ため、**Anlage/Storable経路で保存されたデータには実測形パスがそのままAQL一致する**（実測確認済み）
 - **留保＝別課題として切り出し**: canonical openEHR準拠データ（埋め込みルートのarchetype_node_idにarchetype_idを持つ外部由来JSON）には`items[at0000]`が0件になる（実測確認済み）。対応:
-  1. **Anlage側にGitHub Issueを起票**（CLAUDE.md「Issue-driven visibility」(b)課題）: 「canonicalデータ混在時の埋め込みルートパス不一致 — graph_builder経路での正規化変換の要否」。WP2実装Issueから`Refs`で相互参照
+  1. **Anlage側にGitHub Issueを起票済み**（CLAUDE.md「Issue-driven visibility」(b)課題）: [skoba/anlage#7](https://github.com/skoba/anlage/issues/7)「canonicalデータ混在時の埋め込みルートパス不一致 — graph_builder経路での正規化変換の要否」。WP2実装Issue（#8）から`Refs`で相互参照
   2. **`docs/upstream-candidates.md`へ観察を追記**（追記のみ・規律5）: Storableが埋め込みC_ARCHETYPE_ROOTのarchetype_node_idにnode_id（at0000）を設定する挙動とcanonical仕様の食い違い
 - schema文書1節のpath定義への追記（「pathはFieldExtractor実測形を正準とする」）は、本計画承認後の実装コミット列にdocs更新として含める
 
@@ -151,7 +153,7 @@ openehr 2.3.1 bump（C3解消、`e1bc037`）により再解析の必要範囲が
 
 - **ブロックされない**: TODOリスト1〜13の全ユニット/統合サイクルと、3 fixture分のgolden回帰網（TODO 14）。WP2の新規specは現行3 fixtureのみを参照する
 - **ブロックされる（制約を受ける）**:
-  1. 全suite一括緑化（8スペックファイル・36 failuresが参照切れ、skoba/anlage#3）。→ WP2実装IssueのAcceptance criteriaは「**WP2で追加・変更したspecのパス指定実行が緑**」と定義し、全suite緑は#3クローズ後の別条件とする
+  1. 全suite一括緑化（8スペックファイル・36 failuresが参照切れ、skoba/anlage#3）。→ WP2実装Issue（[#8](https://github.com/skoba/anlage/issues/8)）のAcceptance criteriaは「**WP2で追加・変更したspecのパス指定実行が緑**」と定義し、全suite緑は#3クローズ後の別条件とする
   2. patient_blood_pressure.optを**追加golden**（term_bindings 4件・SNOMED 17出現の実測済み素材）として取り込む拡張。→ #3解消後の任意フォローアップとし、C2の件数上限を再承認しない限りリテラルコードは追加しない。同OPTはreferenceSetUri/ICD系を含まない（実測0件）ため、golden対象3点の代表性は#3と無関係に成立している
 - カード2の単位・値域入りOPT更新（AD作業・人間依頼中、schema文書4節-3で承認済みの差し替え運用）も非ブロッカー: 到着後に検収（言語ポリシー5節）→カード2 golden更新、の追加サイクルを積む
 
@@ -159,7 +161,7 @@ openehr 2.3.1 bump（C3解消、`e1bc037`）により再解析の必要範囲が
 
 ## 8. コミット分割案（1コミット＝1サイクル、テスト先行。Codex実装指示の粒度）
 
-各コミットはRed（失敗確認）→Green→（必要ならRefactor）を含み、テストを伴わない実装コミットは作らない。`Refs #<WP2実装Issue>`を付す。
+各コミットはRed（失敗確認）→Green→（必要ならRefactor）を含み、テストを伴わない実装コミットは作らない。`Refs #8`を付す。
 
 1. `spec: PathcardExtractor returns schema-v1 shaped cards (red)` → `feat: minimal Opt::PathcardExtractor returning card skeletons`（TODO 1）
 2. `feat: identity block via self-walked definition tree with archetype-root scoping`（TODO 2＋3。walker実装の本体。Refactorでwalkerをprivate整理）
@@ -186,4 +188,4 @@ openehr 2.3.1 bump（C3解消、`e1bc037`）により再解析の必要範囲が
 5. **code_string原文保持**: `[SNOMED-CT(2003)::271649006]`の分解はWP5境界へ先送り
 6. **DoD「全ノード」の解釈**: ELEMENTデータ点単位・protocol/state配下も含む（FieldExtractorの上位集合）
 7. **カード1 path差し替え運用**: 抽出器実測がwp1-manual手作業導出と食い違った場合、実測値を正としてschema文書2節を更新する
-8. **Issue起票**: (a) WP2実装Issue（Acceptance criteria: 本計画TODO 1〜14のspec緑＋デモ経路通過。#3・canonical Issueと相互参照） (b) canonical混在Issue
+8. **Issue起票**: **完了**。(a) canonical混在Issue → [#7](https://github.com/skoba/anlage/issues/7) (b) WP2実装Issue → [#8](https://github.com/skoba/anlage/issues/8)（Acceptance criteria: 本計画TODO 1〜14のspec緑＋デモ経路通過。#3・#7と相互参照）
