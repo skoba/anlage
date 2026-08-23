@@ -12,7 +12,8 @@
 
 ```yaml
 pathcard:
-  schema_version: "1.0"
+  schema_version: "1.1"        # additive change（v1.0からの追加のみ）。v1.0カードは
+                                # rm_type_alternatives欠落として読める（無ければ代替無し扱い）
 
   identity:                    # ノードの一意識別（この4つ組が実質キー）
     template_id: string        # OPTのtemplate_id
@@ -21,7 +22,10 @@ pathcard:
     at_code: string | null     # ノードのnode_id（構造ノード経由で無い場合null）
 
   semantics:
-    rm_type: string            # 値のRM型（DV_QUANTITY等）。ELEMENT自体でなく値制約の型
+    rm_type: string            # 値のRM型（DV_QUANTITY等）。ELEMENT自体でなく値制約の型。
+                                # 代替が複数ある場合は下記の優先規約（設計判断9）で選ばれた主型
+    rm_type_alternatives: [string]  # 代替型が複数ある場合のみ出現（v1.1追加）。
+                                # value属性の全代替型をXML出現順で列挙。単一代替の場合はキー自体を省略
     labels:                    # 言語別ラベル。ja優先（配列先頭がja）
       - lang: string           # OPT宣言言語（lang=ja前提。language-policy 2節）
         text: string
@@ -80,6 +84,10 @@ pathcard:
 6. **provenanceのchecksum**: fixtureが流動している実態（language-policy 5節）に対し、カードがどの版のOPTから抽出されたかを機械照合可能にする。
 7. **bindingsのfirewall注記**（承認条件C2）: bindingsに含まれるライセンス用語コード（SNOMED CT等）はCKM公開束縛由来・最小限とする。CLAUDE.md規律6（コンテンツ防火壁）の適用対象であり、WP2のgolden snapshotへ含める場合も件数最小化・出所明記を必須とする（詳細はWP2計画で定める）。
 8. **identity 4つ組の一意性の補足**: 同一template_idの版が共存する場合（テンプレート再登録・supersede運用）、`identity`の4つ組だけでは一意にならないことがあるため、`provenance.source_checksum`を含めて解釈する。
+9. **v1.1: rm_type_alternatives追加・代替解決の統一規約**（2026-08-24裁定、WP3 C1実装中に発見）: ELEMENTの`value`属性が複数の代替RM型を持つ場合（実例: ProblemList at0002、`DV_TEXT`と`DV_CODED_TEXT`の両方を許容——カード1参照）、旧実装は`constraints_for`が「XML出現順で最初の代替」を、`bindings_for`が「全代替を走査してコード参照を持つものを優先」という異なる規約で同じノードを別々に解釈しており、`rm_type`だけがどちらとも異なる第三の値（最初の代替）を返し得る状態だった。v1.1で以下に統一する:
+   - **主型（rm_type）の選定規約**: コード化・より特異的な型を優先する（`DV_CODED_TEXT` > `DV_TEXT`等）。具体的には、代替の中に外部コード参照（`CCodeReference`、value_set_binding）を持つものがあればそれを主型とし、無ければXML出現順で最初の代替を主型とする
+   - **不変条件**: 同一ノードについて、`rm_type`（主型選定）・`constraints.value`（値制約抽出）・`bindings`（束縛抽出）の3つが同じ代替を見る（`app/lib/opt/pathcard_extractor.rb`の共有ヘルパーで一本化。実装詳細は`docs/design/wp2-plan.md` 1.3節のas-built追記を参照）
+   - **`constraints.value_alternatives`は v1.1では追加しない**（YAGNI。実需が出た時点でv1.2として検討する）
 
 ---
 
@@ -99,7 +107,7 @@ pathcard:
 
 ```yaml
 pathcard:
-  schema_version: "1.0"
+  schema_version: "1.1"
   identity:
     template_id: ProblemList                                # ProblemList.opt:43-45
     archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1   # 同:223-233（C_ARCHETYPE_ROOT）
@@ -109,7 +117,14 @@ pathcard:
       # ※本OPTは現gemでパース不能のため抽出器実測パスではない（後述の承認事項1）
     at_code: at0002                                         # 同:277
   semantics:
-    rm_type: DV_CODED_TEXT                                  # 同:302（value配下のC_COMPLEX_OBJECT）
+    rm_type: DV_CODED_TEXT                                  # 同:302（value配下のC_COMPLEX_OBJECT）。
+      # at0002のvalue属性はDV_TEXT（同:290）とDV_CODED_TEXT（同:302）の2代替を持つ
+      # （C_SINGLE_ATTRIBUTEの子が2つ）。v1.1裁定（2026-08-24、WP3 C1実装中に発見・
+      # 人間確認済み）により、外部コード参照を持つ代替（本カードのbindings参照）を
+      # 主型とする統一規約を採用——本カードのrm_typeは元々の記載どおりDV_CODED_TEXTで
+      # 正しい（WP2実装の初版は規約統一前の「XML出現順で最初の代替」規約により
+      # 一時的にDV_TEXTを返していたが、v1.1の統一規約適用後にこの記載へ合流した）
+    rm_type_alternatives: [ DV_TEXT, DV_CODED_TEXT ]        # 同:290,302（XML出現順）
     labels:
       - lang: ja
         text: プロブレム・診断名                             # 同:760
@@ -145,7 +160,7 @@ pathcard:
 
 ```yaml
 pathcard:
-  schema_version: "1.0"
+  schema_version: "1.1"
   identity:
     template_id: LabResultReport                            # LabResultReport.opt:41-43
     archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1   # 同:619（直近のC_ARCHETYPE_ROOT。設計判断4）
@@ -197,7 +212,7 @@ pathcard:
 
 ```yaml
 pathcard:
-  schema_version: "1.0"
+  schema_version: "1.1"
   # 本カードは本プロジェクトの記念碑である。かつて記憶からのat-code記載が誤りを生んだ。
   # at-codeは記憶から書かず、実行時にOPTから引く。
   identity:

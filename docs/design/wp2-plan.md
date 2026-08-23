@@ -54,6 +54,13 @@ edge case方針: CQuantityItemが複数（複数units）の場合はv1では先�
 
 **as-built（TODO 7実装時に判明）— DV_CODED_TEXTのvalue制約の実構造**: 上表の`CCodePhrase`/`CCodeReference`はELEMENTの`value`属性の子として**直接**現れるのではなく、`rm_type_name: DV_CODED_TEXT`の`C_COMPLEX_OBJECT`にラップされ、その`defining_code`属性（`C_SINGLE_ATTRIBUTE`）の子として現れる（実例: `spec/fixtures/opt/ProblemList.opt:563-575`、at0073の`value`属性→`children xsi:type="C_COMPLEX_OBJECT"`〔`rm_type_name: DV_CODED_TEXT`〕→`attributes xsi:type="C_SINGLE_ATTRIBUTE"`〔`rm_attribute_name: defining_code`〕→本体）。`CDvQuantity`はこのラップを持たず、value属性の直接の子として現れる（実例: 同ファイルat0004、`children xsi:type="C_DV_QUANTITY"`が`value`属性の直下）。抽出器はこの差を`defining_code_constraint`ヘルパー（value_constraintを受け取り、`rm_type_name == "DV_CODED_TEXT"`ならdefining_code配下の実体を返し、それ以外はそのまま返す）で吸収し、`CCodePhrase`/`CCodeReference`両方の判定前に必ずこのヘルパーを通す設計にした（`app/lib/opt/pathcard_extractor.rb`）。
 
+**as-built（WP3 C1実装時に発見・2026-08-24裁定で統一）— value属性が複数の代替RM型を持つ場合の解決規約**: `value`属性は`C_SINGLE_ATTRIBUTE`の子として複数の代替RM型を持ちうる（実例: `ProblemList.opt`のat0002、`DV_TEXT`〔290行〕と`DV_CODED_TEXT`〔302行〕の2代替。自由記述またはコード化診断名のいずれも許容するOR制約）。WP2実装時点ではこのケースが未検出だったため、`constraints_for`は`value_attribute.children.first`（XML出現順で最初の代替）を無条件に採用する一方、`bindings_for`は`value_attribute.children`全体を走査し外部コード参照（`CCodeReference`）を持つ代替を優先的に探すという、**異なる規約が同居**していた（前者はat0002でDV_TEXTを、後者はDV_CODED_TEXTの束縛を見る、という食い違いを許す設計だった）。WP3でパスカードに`semantics.rm_type`を追加した際、この食い違いが「同一ノードなのにrm_type（第三の値）と実際に使われているbindings/constraintsの解釈が一致しない」という形で顕在化した。
+
+v1.1裁定（2026-08-24、`docs/design/pathcards-schema-v1.md`設計判断9）により、以下へ統一する:
+- 共有ヘルパー（`primary_value_alternative`相当）を新設し、`rm_type_for`・`constraints_for`・`bindings_for`の3関数が同一ノードで必ず同じ代替を見る、という不変条件を導入する
+- 主型選定規約: 外部コード参照（`CCodeReference`）を持つ代替があればそれを優先、無ければXML出現順で最初の代替を採用する（`DV_CODED_TEXT` > `DV_TEXT`という優先はこの規約の具体例）
+- `constraints.value_alternatives`（value制約側の複数代替対応）はv1.1では追加しない（YAGNI。実需が出た時点でv1.2で検討）
+
 ### 1.4 labels / descriptions / 未翻訳検出
 
 **実装上の制約（WP0未確認事項2への対応）**: labelsとdescriptionsの取得は、`FieldExtractor#term_text`（`field_extractor.rb:258-267`）と同じ「`component_terminologies[archetype_id].term_definitions.each_value { |terms| terms.find { |t| t.code == code } }`」パターンを踏襲する。`ArchetypeOntology#term_definition(lang:, code:)`（`openehr/am/archetype/ontology.rb:70-76`）は**使わない** — この方法は`@term_definitions[lang][code]`という2段Hash索引を前提とするが、OPTParserが構築する`term_definitions`の値は`ArchetypeTerm`の配列であり（`opt_parser.rb:159-168`）、`Array#[](String)`となって`TypeError`になる可能性がWP0で指摘済み・実データ未検証のまま残っている（`pathcards-wp0-exploration.md:764-769`）。実績のある`each_value.find`パターンのみを使うことで、この未検証リスクを踏まない。
