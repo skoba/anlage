@@ -72,7 +72,7 @@ module Opt
         },
         "semantics" => semantics_for(archetype_id, element.node_id),
         "constraints" => constraints_for(element, archetype_id),
-        "bindings" => [],
+        "bindings" => bindings_for(element),
         "capture" => {},
         "reserved" => {},
         "provenance" => {}
@@ -183,6 +183,27 @@ module Opt
         attribute.rm_attribute_name == "defining_code"
       end
       defining_code&.children&.first
+    end
+
+    def bindings_for(element)
+      value_attribute = (element.attributes || []).find do |attribute|
+        attribute.rm_attribute_name == "value"
+      end
+      code_reference_class = OpenEHR::AM::OpenEHRProfile::DataTypes::Text::CCodeReference
+      value_constraint = (value_attribute&.children || []).filter_map do |child|
+        constraint = defining_code_constraint(child)
+        constraint if constraint.is_a?(code_reference_class)
+      end.first
+      return [] unless value_constraint
+
+      [
+        {
+          "kind" => "value_set_binding",
+          "system_uri" => value_constraint.reference_set_uri,
+          "code" => nil,
+          "display" => nil
+        }
+      ]
     end
 
     def quantity_constraints(value_constraint, at_code)

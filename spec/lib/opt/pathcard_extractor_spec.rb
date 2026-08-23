@@ -134,6 +134,27 @@ RSpec.describe Opt::PathcardExtractor do
         ]
       )
     end
+
+    it "extracts the value set binding for the problem name from ProblemList" do
+      source_xml = Rails.root.join("spec/fixtures/opt/ProblemList.opt").read
+      template = Template.build_from_opt_xml(source_xml)
+
+      result = described_class.call(template)
+      card = result.cards.find do |candidate|
+        candidate.dig("identity", "archetype_id") == "openEHR-EHR-EVALUATION.problem_diagnosis.v1" &&
+          candidate.dig("identity", "at_code") == "at0002"
+      end
+
+      expect(card.dig("constraints", "value")).to eq({})
+      expect(card.fetch("bindings")).to eq([
+        {
+          "kind" => "value_set_binding",
+          "system_uri" => "terminology:http://id.who.int/icd/release/11/mms",
+          "code" => nil,
+          "display" => nil
+        }
+      ])
+    end
   end
 
   describe "#classify_translation" do
