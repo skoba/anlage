@@ -23,6 +23,7 @@ module HeightSeed
 
   # GraphBuilder::RESERVED_KEYS に含まれないENTRY属性で、AQLクエリが
   # 参照しない（=このデモの範囲では欠落させても実害がない）もの。
+  # 撤去条件: openehr-rails側 RESERVED_KEYS 拡張（docs/upstream-candidates.md 9項のIssue化・解消）後
   NON_STRUCTURAL_ENTRY_KEYS = %w[language encoding subject].freeze
 
   def template
@@ -45,9 +46,7 @@ module HeightSeed
     rm_composition = Opt::CompositionBuilder.new(template, values).build
     hash = JSON.parse(OpenEHR::Serializer::RMJSONSerializer.new(rm_composition).serialize)
 
-    entry_archetype_ids = template.web_template["entries"].map { |entry| entry["archetype_id"] }
-    hash["content"].each_with_index do |content_hash, index|
-      content_hash["archetype_details"] ||= { "archetype_id" => { "value" => entry_archetype_ids[index] } }
+    hash["content"].each do |content_hash|
       NON_STRUCTURAL_ENTRY_KEYS.each { |key| content_hash.delete(key) }
     end
 

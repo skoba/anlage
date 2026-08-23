@@ -8,7 +8,9 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
 コメントおよび`docs/demo/opt-catalog.md`参照）の`openEHR-EHR-OBSERVATION.height.v2`
 を使用。`Opt::CompositionBuilder`（フォーム保存経路と同じ構築ロジック）経由で
 シードする。ただし2件の回避策（`skoba/anlage#9`、`docs/upstream-candidates.md`
-9項）付き——恒久解消まではこの依存を残す。
+9項）のうち、`archetype_details`手動注入は`skoba/anlage#9`解消により撤去済み。
+`NON_STRUCTURAL_ENTRY_KEYS`削除はgem側課題である`docs/upstream-candidates.md`
+9項として残置する。
 
 ## 1. height不等号クエリ
 

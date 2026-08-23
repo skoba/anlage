@@ -34,5 +34,16 @@ RSpec.describe Opt::CompositionBuilder do
     it "CompositionのterritoryはJP (ISO_3166-1) になる" do
       expect(composition.territory.code_string).to eq("JP")
     end
+
+    describe "ENTRYのarchetype_details" do
+      let(:entry) { template.entries.first }
+      let(:built_entry) { composition.content.first }
+
+      it "archetype_id、template_id、RM versionを設定する" do
+        expect(built_entry.archetype_details.archetype_id.value).to eq(entry["archetype_id"])
+        expect(built_entry.archetype_details.template_id.value).to eq(template.web_template["template_id"])
+        expect(built_entry.archetype_details.rm_version).to eq(described_class::RM_VERSION)
+      end
+    end
   end
 end

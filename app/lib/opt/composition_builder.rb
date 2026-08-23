@@ -17,6 +17,9 @@ module Opt
   class CompositionBuilder
     class UnsupportedShape < StandardError; end
 
+    # gem全体の唯一の実測慣例値。OPT・gem設定のいずれにも情報源なし
+    RM_VERSION = "1.0.4"
+
     ENTRY_CLASSES = {
       "OBSERVATION" => OpenEHR::RM::Composition::Content::Entry::Observation,
       "EVALUATION" => OpenEHR::RM::Composition::Content::Entry::Evaluation,
@@ -49,6 +52,13 @@ module Opt
 
       klass.new(
         archetype_node_id: entry["archetype_id"],
+        archetype_details: OpenEHR::RM::Common::Archetyped::Archetyped.new(
+          archetype_id: OpenEHR::RM::Support::Identification::ArchetypeID.new(value: entry["archetype_id"]),
+          template_id: OpenEHR::RM::Support::Identification::TemplateID.new(
+            value: @template.web_template["template_id"]
+          ),
+          rm_version: RM_VERSION
+        ),
         name: dv_text(entry["concept"]),
         language: code_phrase(OpenehrRails.default_language, "ISO_639-1"),
         encoding: code_phrase(OpenehrRails.default_encoding, "IANA_character-sets"),
