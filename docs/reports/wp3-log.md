@@ -68,3 +68,41 @@ explore→planフェーズの実測記録。R1〜。
 - C4 Red: `/pathcards/search`が404（1 example, 1 failure）。基本UI Green後、未翻訳警告のdescription対応を追加Red（2 examples, 1 failure）からGreen（2 examples, 0 failures）。
 - C1〜C4合同確認: 26 examples, 0 failures。
 - 全suite: 93 examples, 6 failures。6件はすべて既存system specで、サンドボックスによる`TCPServer`（`127.0.0.1:0`）生成拒否`Errno::EPERM`。system specを除く全suiteは 86 examples, 0 failures。WP3変更由来のfailureは検出されなかった。
+
+---
+
+## R3: 例外報告→裁定→代替RM型の解決規約統一（2026-08-24）
+
+C1で`rm_type`を追加した際、ProblemList at0002（傷病名）の実測値がスキーマ文書の
+記載（`DV_CODED_TEXT`）と食い違い（実測は`DV_TEXT`）、Claude Codeが例外報告した。
+原因は、at0002の`value`属性が`DV_TEXT`と`DV_CODED_TEXT`の2代替を持つOR制約で
+あり、既存の`constraints_for`（XML出現順で最初の代替を無条件採用）と
+`bindings_for`（全代替を走査し外部コード参照を優先）が異なる規約で同じノードを
+解釈していたため。
+
+裁定（2026-08-24）: スキーマv1.1へ改定（`semantics.rm_type_alternatives`新設、
+`schema_version`は既存カードが「代替欠落」として読める additive change）。
+抽出器全体を「外部コード参照を持つ代替を優先、無ければXML出現順で最初」という
+単一規約に統一（`primary_value_alternative`共有ヘルパー新設）。
+
+**実装中の追加発見**: 統一規約適用前にgolden再生成を試みたところ、当初
+at0002のみと想定していた「複数代替」の実例が、ProblemListのat0073（診断確度）
+にも存在すると判明（XML出現順`["DV_CODED_TEXT","DV_TEXT"]`、at0002とは逆順）。
+Codexが指示どおり安易に握りつぶさず停止・報告。裁定の一般規約（「代替が複数
+ある場合」全般が対象、at0002固有の特別扱いではない）をそのまま適用し、
+at0073にもrm_type_alternativesを追加した（rm_type値自体はDV_CODED_TEXTの
+まま変化なし。この判断はルール自体が既に一般的であり新たな設計判断を要さない
+ため、Claude Codeの判断で続行——再度のユーザー確認は求めなかった）。
+
+golden再生成後の差分（Claude Codeがgit diffで直接確認・検証済み）:
+schema_versionの全11カード一律更新（1.0→1.1）＋ ProblemList at0002・at0073の
+2箇所のみ。他9カードに意図しない差分なし。
+
+全suite独立検証（Claude Code、sandbox外）: 93 examples, 0 failures。
+
+**運用上のインシデント（副次記録）**: Codex再開時、`codex exec resume --last`を
+shell cwdが意図せず`openehr-ruby`に戻っていた状態で実行したため、無関係な
+別リポジトリの過去セッション（#46作業）を誤って再開しかけた（Codex自身が
+作業対象の不在を検知し、何も変更せず安全に停止したため実害なし）。`cd`を
+明示して再実行し解消。本セッションでリポジトリ取り違えが発生した3件目の
+事例（`gh issue edit`の誤操作、`bin/rails`失敗に続く）。
