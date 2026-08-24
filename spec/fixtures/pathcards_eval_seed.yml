@@ -33,8 +33,8 @@
   intent_tag: bigram成立想定
   source: wp3-reused
   notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
-  reviewed_by:
-  reviewed_at:
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q02
   query: "拡張期"
@@ -43,8 +43,8 @@
   intent_tag: bigram成立想定
   source: new
   notes: "収縮期(q01)と対をなす新規問。WP3では収縮期のみ実測、拡張期単独は未実測"
-  reviewed_by:
-  reviewed_at:
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q03
   query: "身長"
@@ -53,8 +53,8 @@
   intent_tag: bigram成立想定
   source: wp3-reused
   notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
-  reviewed_by:
-  reviewed_at:
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q04
   query: "体重"
@@ -63,8 +63,8 @@
   intent_tag: bigram成立想定
   source: wp3-reused
   notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
-  reviewed_by:
-  reviewed_at:
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q05
   query: "診断"
@@ -72,9 +72,9 @@
   expected_at_code: at0002
   intent_tag: bigram成立想定
   source: wp3-reused
-  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
-  reviewed_by:
-  reviewed_at:
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ.小林コメント：容認。「診断」は自然な検索語だが、at0002 の概念は意図的により広い「プロブレム・診断名称」(CKM 翻訳語として登録)であり、診断のみを指す要素ではない。狭いクエリ→広い概念への着地として採点上は正解。ただし本ペアは概念の広さを代表しない。プロブレム/病名/疾患名 等の語彙クラスタから本要素への着地は Phase 2(同義語対応)の検証対象とすべき"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q06
   query: "検査"
@@ -82,19 +82,31 @@
   expected_at_code: at0005
   intent_tag: bigram成立想定
   source: wp3-reused
-  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
-  reviewed_by:
-  reviewed_at:
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ。小林コメント：query を「検査」→「検査名」に修正。
+    at0005 は Test name(検査名)という特定要素であり、広義の「検査」を
+    この一要素に固定するのは恣意的(q05 とは逆向きの、広いクエリ→
+    狭い概念のペア)。意味の幅を一致させた。広義「検査」の評価役割は
+    q15(at 未指定・複合語)が担う"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q07
-  query: "分析"
+  query: "検査結果"
   expected_archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1
-  expected_at_code:
+  expected_at_code: at0001
   intent_tag: bigram成立想定
   source: wp3-reused
-  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ。at0024「分析名」・at0001「分析結果」の両方が候補"
-  reviewed_by:
-  reviewed_at:
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ。
+    小林コメント：query を「分析」→「検査結果」に修正し
+    at0001 に固定。「分析」単独は動詞的(Test method)/名詞的(分析名・
+    分析結果)の多義で正解が文脈依存になるため。本 CLUSTER は
+    laboratory_test_result へのスロットイン前提で設計されており、
+    合成文脈では at0001(分析結果)が臨床語「検査結果」の指す値に合致する。
+    宿主側 Test result 要素は未翻訳(*Test result (en))のため現コーパスでは
+    競合しない。intent_tag は文言変更に伴い要再検証(検査名カードとの
+    bigram 競合により順位変動の可能性あり)"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q08
   query: "発症"

@@ -1,5 +1,3 @@
-inherit_from: .rubocop_todo.yml
-
 # Omakase Ruby styling for Rails
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
@@ -8,3 +6,14 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 # # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
 # Layout/SpaceInsideArrayLiteralBrackets:
 #   Enabled: false
+
+# openehr-railsのlib/generators/openehr/install/templates/migrations/配下の
+# add_index呼び出しはno_space書式（[:a, :b]）で書かれている（gem実測確認、
+# 2026-08-24）。この2ファイルはgemのインストーラテンプレートを素通しでコピーした
+# ものであり、gemのアップグレード・再インストール時に再生成されればこの書式で
+# 上書きされる。Anlage側で手直ししても再発するため、恒久的にExcludeする
+# （.rubocop_todo.ymlの段階的縮小対象ではなく、この2ファイルは意図的に対象外）。
+Layout/SpaceInsideArrayLiteralBrackets:
+  Exclude:
+    - "db/migrate/20260813120002_create_openehr_rm_storage.rb"
+    - "db/migrate/20260813120003_create_openehr_rm_versioning.rb"

@@ -3,7 +3,7 @@
 # Operational templates (.opt) copied by `rails g openehr:scaffold` live in
 # app/templates/operational and are registered in the openehr_templates
 # table via OpenehrTemplate.from_opt_file.
-require 'openehr_rails'
+require "openehr_rails"
 
 # Uncomment to enable runtime scaffolding in non-development environments.
 # OpenehrRails.enable_runtime_scaffolding = true

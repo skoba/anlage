@@ -9,7 +9,7 @@ namespace :pathcards do
 
   desc "Evaluate pathcard search against the WP4 seed questions"
   task eval: :environment do
-    entries = YAML.load_file(Rails.root.join("spec/fixtures/pathcards_eval_seed.yml"))
+    entries = YAML.load_file(Rails.root.join("spec/fixtures/pathcards_eval_seed.yml"), permitted_classes: [ Date ])
     evaluations = entries.map do |entry|
       results = Opt::PathcardSearch.call(entry.fetch("query"))
       rank = results.index do |result|

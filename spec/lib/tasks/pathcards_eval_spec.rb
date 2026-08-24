@@ -6,7 +6,7 @@ Rails.application.load_tasks
 
 RSpec.describe "pathcards:eval" do
   let(:seed_path) { Rails.root.join("spec/fixtures/pathcards_eval_seed.yml") }
-  let(:entries) { YAML.load_file(seed_path) }
+  let(:entries) { YAML.load_file(seed_path, permitted_classes: [ Date ]) }
   let(:report_path) { Rails.root.join("docs/reports/wp4-eval-log.md") }
 
   # テストTODO:
@@ -66,10 +66,10 @@ RSpec.describe "pathcards:eval" do
     it "20問の実測集計値と完全失敗問題を表示する" do
       expect { run_task }.to output(
         a_string_including(
-          "Top-1 accuracy: 15/20 (75.00%)",
+          "Top-1 accuracy: 14/20 (70.00%)",
           "Top-3 accuracy: 16/20 (80.00%)",
           "Complete failure rate: 4/20 (20.00%)",
-          "MRR: 0.7750",
+          "MRR: 0.7500",
           "bigram成立想定: 11/11",
           "複合語: 5/5",
           "同義語ギャップ: 0/4",
@@ -88,10 +88,10 @@ RSpec.describe "pathcards:eval" do
       expect(report).to include(
         "# WP4 パスカード検索評価ログ",
         "検索実装: `phase1-bigram`",
-        "Top-1精度: 15/20 (75.00%)",
+        "Top-1精度: 14/20 (70.00%)",
         "Top-3精度: 16/20 (80.00%)",
         "完全失敗率: 4/20 (20.00%)",
-        "MRR: 0.7750",
+        "MRR: 0.7500",
         "bigram成立想定: 11/11",
         "複合語: 5/5",
         "同義語ギャップ: 0/4"
