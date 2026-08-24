@@ -114,19 +114,19 @@
   expected_at_code: at0077
   intent_tag: bigram成立想定
   source: wp3-reused
-  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
-  reviewed_by:
-  reviewed_at:
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ。小林コメント：容認。「発症」の臨床文脈はおおよそ6〜8割が発症日を指す用法(例:「インフルエンザを8月29日に発症した」)で、残り2〜4割は病名を伴い日付なしの叙述(「インフルエンザを発症した」= プロブレム・診断名称側の文脈)。単一ラベル評価では主文脈(発症日)を採り at0077 を正解とする。少数文脈の存在は本注記で保存 —複数候補提示や Phase 2 のランキング評価時には at0002 を第2候補とすべき順位情報として再利用可"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q09
-  query: "判定"
+  query: "BMI判定"
   expected_archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2
   expected_at_code: at0013
   intent_tag: bigram成立想定
   source: wp3-reused
-  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ"
-  reviewed_by:
-  reviewed_at:
+  notes: "docs/reports/wp3-log.md R1の単純一致8問の1つ。小林コメント：query を「判定」→「BMI判定」に修正。at0013 は BMI の判定要素としては妥当だが、「判定」単独で本要素に至る臨床的検索対応は成立しない(単独語はむしろ診断的判断 = problem/diagnosis at0002 寄りの語感 — 観察として保存、採用せず)。候補「肥満判定」「肥満度判定」は不採用: 肥満は診断概念側、肥満度はBMIと別の算出指標を指すことが多く、隣接概念への誤誘導となるため。「BMI判定」は指示対象が一意。なお q16(BMI 単独・失敗想定)との対照ペアを成す — 同語幹で bigram 経路の成否が分かれる設計""
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q10
   query: "血圧"
@@ -134,9 +134,9 @@
   expected_at_code:
   intent_tag: bigram成立想定
   source: wp3-reused
-  notes: "labelには現れずdescription経由（at0004の説明文に「動脈血圧」を含む）で成立"
-  reviewed_by:
-  reviewed_at:
+  notes: "labelには現れずdescription経由（at0004の説明文に「動脈血圧」を含む）で成立。小林コメント：容認(expected_at_code 未指定のまま)。臨床的に「血圧」は収縮期(at0004)・拡張期(at0005)のペアを連想させる語であり、理想の検索結果は両要素が上位に並ぶこと。単一ラベル評価(WP4 裁定)ではペア正解を採点式に表現できないため、archetype 一致で「どちらに着いても正解」とする現行設計を維持し、ペア要求は本注記で保存する。複数候補提示 UI・Phase 2 のランキング評価・将来の集合ベース評価(v2)に移行する際は、本問を「期待集合 {at0004, at0005}」の第1号として再定義すべき"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q11
   query: "収縮期血圧"
@@ -145,8 +145,8 @@
   intent_tag: 複合語
   source: wp3-reused
   notes: "カード側labelは「収縮期」のみ。bigram「収縮」「縮期」の共有で成立（粒度ギャップ）"
-  reviewed_by:
-  reviewed_at:
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q12
   query: "拡張期血圧"
@@ -155,18 +155,24 @@
   intent_tag: 複合語
   source: wp3-reused
   notes: "q11と対称。カード側labelは「拡張期」のみ"
-  reviewed_by:
-  reviewed_at:
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
-- id: q13
-  query: "身長体重"
-  expected_archetype_id: openEHR-EHR-OBSERVATION.height.v2
-  expected_at_code:
-  intent_tag: 複合語
-  source: wp3-reused
-  notes: "body_weight.v2も同時にヒットしうる（bigram「体重」も共有）。単純部分一致では0件だったがbigram OR一致で救われる例"
-  reviewed_by:
-  reviewed_at:
+# 【人間レビュー 2026-08-25】旧 q13「身長体重」→height は廃止。
+# 「身長体重」は臨床実務で検索語として用いない連結(実務は身長・体重を
+# 別々に使う)であり、複合語枠の検証係として不適格(かつ連結すると
+# 指示対象が height/weight に割れ、単一正解が恣意的になる二重の難)。
+# 身長・体重の到達性は q03/q04 が単純語として測定済みのため補充なし。
+# 複合語枠の検証は q11/q12/q14/q15 の4問(いずれも指示対象一意)で継続
+# - id: q13
+#  query: "身長体重"
+#  expected_archetype_id: openEHR-EHR-OBSERVATION.height.v2
+#  expected_at_code:
+#  intent_tag: 複合語
+#  source: wp3-reused
+#  notes: "body_weight.v2も同時にヒットしうる（bigram「体重」も共有）。単純部分一致では0件だったがbigram OR一致で救われる例"
+#  reviewed_by: Kobayashi, Shinji
+#  reviewed_at: 2026-08-24
 
 - id: q14
   query: "血圧測定"
@@ -174,19 +180,32 @@
   expected_at_code:
   intent_tag: 複合語
   source: new
-  notes: "「血圧」「測定」双方がat0004のdescription（「...測定される」）経由で成立する想定の新規問"
-  reviewed_by:
-  reviewed_at:
+  notes: "「血圧」「測定」双方がat0004のdescription（「...測定される」）経由で成立する想定の新規問。小林コメント：容認。判定は q10 と同一(「血圧測定」も収縮期・拡張期ペアを連想させる語。archetype 一致・at 未指定でどちらへの着地も正解とし、期待集合 {at0004, at0005} の要求はq10 の注記に準ずる)。q10 との違いは測定経路のみ — q10 は単純語の直接 bigram、本問は複合語の部分一致分解(複合語枠)を検証する"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
 - id: q15
-  query: "臨床検査"
+  query: "検体検査"
   expected_archetype_id: openEHR-EHR-OBSERVATION.laboratory_test_result.v1
-  expected_at_code:
+  expected_at_code:      # 未指定のまま
   intent_tag: 複合語
-  source: new
-  notes: "「検査」bigramの共有で成立するが、実測ではProblemList(at0003「臨床的に認識された日時」の「臨床」bigramが偶発的に一致)が2位、本来の期待先が1位ではなく2位（top-3では成立、top-1では不成立）。bigram一致の限界を示す実例として意図的に残す"
-  reviewed_by:
-  reviewed_at:
+  source: wp3-new
+  notes: "(既存の2位問題の記録は保持)。【人間レビュー 2026-08-25】
+    query を「臨床検査」→「検体検査」に修正。「臨床検査」は検体検査に
+    加え生理機能検査(心電図等)を含む上位語であり、laboratory_test_result
+    への単一固定は広→狭の恣意(q06 と同型)。現コーパスに生理検査系が
+    無いため偶然成立していたが、コーパス拡張時に誤った教師信号となる
+    ため予防的に修正。副次効果として旧クエリの「臨床」bigram による
+    ProblemList との偽陽性競合(2位問題)は原因ごと解消 — 偽陽性の
+    観測記録自体は本 notes と wp4-eval-log に保存済み"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
+  補足: 「臨床検査」の意味範囲は制度依存 — 日本の臨床検査室は
+    生理機能検査も行うが、欧米の clinical laboratory は検体検査に
+    限られ、laboratory_test_result(国際 CKM)の概念境界は後者。
+    本修正は日本語の制度的語感と国際アーキタイプの境界のずれを
+    ゴールドに持ち込まないための語選定でもある(用語マッピングの
+    文化差の実例として WP5/voice_aliases 設計時に参照)
 
 - id: q16
   query: "BMI"
@@ -194,19 +213,28 @@
   expected_at_code: at0004
   intent_tag: 同義語ギャップ
   source: wp3-reused
-  notes: "失敗想定。実カードlabelは未翻訳の英語「Body mass index」で字面上の手がかりが無い"
-  reviewed_by:
-  reviewed_at:
+  notes: "小林コメント：容認(失敗想定のまま)。BMI は日本でBody Mass Index の略として臨床定着しており、検索語として最自然。かつ日本語の同義語がほぼ無いため、言い換えによる字面救済の余地がなく、本問を救えるのは意味対応(Phase 2/embedding)のみ —同義語ギャップ枠の物差しとして最も純度の高い1問であることを臨床側から確認。q09「BMI判定」(bigram 経路で成立)との対照ペア"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
-- id: q17
-  query: "体格指数"
-  expected_archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2
-  expected_at_code: at0004
-  intent_tag: 同義語ギャップ
-  source: wp3-reused
-  notes: "失敗想定。q16と同じ理由（未翻訳英語ラベルとの字面ギャップ）"
-  reviewed_by:
-  reviewed_at:
+# 小林コメント：「体格指数」の位置づけを精密化:
+# BMI の訳語として文献・患者説明には存在する(辞書的対応は成立)が、
+# カルテ記載語彙としては不使用(実務観察: カルテでの使用例を見ない)。
+# 廃止理由は「偽同義」から「記録語彙レジスターに不在」へ更新 —
+# 検索評価のゴールドは記録現場の語彙を代表すべきであり、
+# 説明語彙からのクエリは母集団外。
+# 【語彙対応・第1号(レジスター条件付き)】
+#   体格指数 → body_mass_index : 患者説明・文書翻訳の文脈でのみ可。
+#   検索・カルテ記載・音声キャプチャの接地では非対応として扱う
+# - id: q17
+#  query: "体格指数"
+#  expected_archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2
+#  expected_at_code: at0004
+#  intent_tag: 同義語ギャップ
+#  source: wp3-reused
+#  notes: "失敗想定。q16と同じ理由（未翻訳英語ラベルとの字面ギャップ）"
+#  reviewed_by: Kobayashi, Shinji
+#  reviewed_at: 2026-08-24
 
 - id: q18
   query: "既往"
@@ -214,19 +242,30 @@
   expected_at_code:
   intent_tag: 同義語ギャップ
   source: wp3-reused
-  notes: "失敗想定。実ラベルは「プロブレム・診断名」で「既往」という語彙は使われない"
-  reviewed_by:
-  reviewed_at:
+  notes: "失敗想定。実ラベルは「プロブレム・診断名」で「既往」という語彙は使われない。小林コメント：容認(失敗想定のまま)。クエリ「既往」は過去の疾患・プロブレムというエントリ概念を指し、problem_diagnosis のinactive エントリへの着地は臨床的に正当(Phase 2 の救済対応として偽同義ではない)。【隣接語の分布・語彙教師情報】一字違いの「既往歴」は節名概念であり着地が異なる: 約8割 OBSERVATION.story 系(narrative 記述)/約2割problem list(構造化リスト)。story 系は現コーパスに不在。【予測される失敗様式】字面上は 既往歴 ⊃ 既往 のため、bigram 検索は「既往歴」クエリを problem_diagnosis へ誘導するが、それは約2割しか正しくない — 表層の包含が指示対象の包含を意味しない実例として、Phase 2/voice_aliases 設計の負例圏に記録。【時限注記】診療情報提供書 OPT 到着で story 系がコーパス入りした時点で再評価。その際「既往歴→story」を新問候補とする(現時点では正解不在のため出題しない — q19 と同じ基準)"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
 
-- id: q19
-  query: "検体"
-  expected_archetype_id: openEHR-EHR-OBSERVATION.laboratory_test_result.v1
-  expected_at_code:
-  intent_tag: 同義語ギャップ
-  source: new
-  notes: "失敗想定。実ラベルは「検査名」「分析名」「分析結果」で「検体」とは字面上の重なりが無い新規失敗例（BMI系とは異なる語彙クラスタ）"
-  reviewed_by:
-  reviewed_at:
+#- id: q19
+#  query: "検体"
+#  expected_archetype_id: openEHR-EHR-OBSERVATION.laboratory_test_result.v1
+#  expected_at_code:
+#  intent_tag: 同義語ギャップ
+#  source: new
+#  notes: "失敗想定。実ラベルは「検査名」「分析名」「分析結果」で「検体」とは字面上の重なりが無い新規失敗例（BMI系とは異なる語彙クラスタ）"
+#  reviewed_by: Kobayashi, Shinji
+#  reviewed_at: 2026-08-24
+# 【人間レビュー 2026-08-25】旧 q19「検体」→laboratory_test_result は廃止。
+# 検体の正しい対応は CLUSTER.specimen(検体アーキタイプ)であり(臨床判定)、
+# 検査結果 OBSERVATION への着地は入力側実体→出力側記録の隣接概念誤対応
+# (q17 がレジスター違いの偽対応、本問は概念違いの偽対応)。
+# 現コーパスに specimen 系カードは不在のため、正解不在の問として出題しない
+# (q18 注記「既往歴→story」と同じ基準の第1適用)。
+# 【語彙対応・正例(コーパス外)】検体 → openEHR-EHR-CLUSTER.specimen.v1
+# 【一字差ペア第2号】検体/検体検査 — 既往/既往歴と同型の
+# 「表層の包含≠指示対象の包含」。bigram 検索の混同リスク圏として記録
+# 【時限】specimen を含む OPT(LabResultReport 改訂等)のコーパス入りで
+# 「検体→CLUSTER.specimen」問として再出題候補
 
 - id: q20
   query: "疑い"
@@ -234,6 +273,6 @@
   expected_at_code: at0073
   intent_tag: bigram成立想定
   source: wp3-reused
-  notes: "semantics.labels/descriptionsには無くconstraints.value.code_list[].label経由でのみ成立"
-  reviewed_by:
-  reviewed_at:
+  notes: "semantics.labels/descriptionsには無くconstraints.value.code_list[].label経由でのみ成立.小林コメント：容認。expected は at0073(診断確度・ELEMENT)のまま正 — カード単位は ELEMENT であり、「疑い」の正確な指示対象はその値集合内のコード at0074(Suspected)。クエリが code_list の値ラベルに一致して要素カードへ届く「値着地」型の代表例(WP2 の code_list 抽出+WP3 の検索対象化の実証)。【台帳10項への接続】本問の臨床意図の最終形は「診断確度 = at0074 のレコード絞り込み」= コード値 WHERE であり、AQL エンジンの defining_code/code_string 到達不能(台帳10項)の初の具体的実需例。10項の凍結後起票時に本問を Use case として引用可"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-08-24
