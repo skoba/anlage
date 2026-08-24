@@ -415,3 +415,22 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   `"value"`キーが正しく出力されることを確認済み（`docs/reports/issue9-log.md` R4）。
 - ステータス: **解消済み**（`openehr 2.4.2`。`skoba/anlage#9`は本項の解消を
   受けて再開済み）。
+
+## 14. openehr-railsインストーラテンプレート2ファイルがno_space配列書式でrubocop-rails-omakase（space）違反
+
+- 背景（2026-08-24、`skoba/anlage#16`のCI修復作業中に発見）: gem`openehr-rails`の
+  `lib/generators/openehr/install/templates/migrations/create_openehr_rm_storage.rb`・
+  `create_openehr_rm_versioning.rb`は、`add_index`の配列引数をno_space書式
+  （`[:a, :b]`）で記述している。一方`rubocop-rails-omakase`の
+  `Layout/SpaceInsideArrayLiteralBrackets`は`EnforcedStyle: space`（スペース必須）
+  がデフォルトであり、これらのテンプレートが利用者リポジトリへ素通しコピーされると
+  lint違反を誘発する（実測: `docs/reports/ci-fix-log.md` R3）。
+- 影響: Anlageで実際に12件のオフェンスとして顕在化し、CIのlintジョブが常時failure
+  になっていた。Anlage側で該当ファイルを手直ししても、gemの再インストール・
+  アップグレード時に同テンプレートが再生成されれば同じ書式で上書きされ再発する。
+- Anlage側の対応: `.rubocop.yml`本体へ理由コメント付きの恒久Excludeを設定
+  （`.rubocop_todo.yml`の段階的縮小対象ではなく、意図的な永続除外）。
+- 恒久解消策: gem側でインストーラテンプレートの配列書式を`rubocop-rails-omakase`
+  準拠（space書式）に修正すれば、下流（Anlage含む）でのExcludeが不要になる。
+- 起票: 未着手（openehr-rails第2巡で起票予定）。
+- ステータス: 未着手（Issue起票候補）。

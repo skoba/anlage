@@ -13,6 +13,7 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 # ものであり、gemのアップグレード・再インストール時に再生成されればこの書式で
 # 上書きされる。Anlage側で手直ししても再発するため、恒久的にExcludeする
 # （.rubocop_todo.ymlの段階的縮小対象ではなく、この2ファイルは意図的に対象外）。
+# 撤去条件: docs/upstream-candidates.md 14項（gem側テンプレートのspace書式化）解消後。
 Layout/SpaceInsideArrayLiteralBrackets:
   Exclude:
     - "db/migrate/20260813120002_create_openehr_rm_storage.rb"
