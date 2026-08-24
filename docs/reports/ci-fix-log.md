@@ -88,3 +88,31 @@ todoベースライン化・直接修正いずれも実施コストは小さい�
 
 凍結受入条件「デモクエリ spec green」が、push ごとに機械検証される状態になった
 （受入条件の実効化）。
+
+---
+
+## R3: rubocop設定の環境整合（追補、コミット`92ec864`）
+
+R2記載の構造的要因（`Layout/SpaceInsideArrayLiteralBrackets`のRails生成書式との
+食い違い）を実測で確定させた。**R2時点の記録は誤りだった**: `bin/rubocop
+--show-cops`で確認した結果、`rubocop-rails-omakase`の`EnforcedStyle`は
+**`space`**（スペース必須）であり「スペース無し必須」ではなかった。真の原因は、
+gem`openehr-rails`のインストーラテンプレート原本
+（`lib/generators/openehr/install/templates/migrations/create_openehr_rm_storage.rb`等、
+gem実測確認）自体が`add_index`の配列引数をno_space書式で書いていること。
+
+対応: 該当2ファイルを`.rubocop_todo.yml`の段階的縮小対象から外し、`.rubocop.yml`
+本体へ理由コメント付きの恒久Excludeとして移した（gem再インストール時に上書き
+されるため、Anlage側での手直しは再発を招くのみと判断）。`Style/StringLiterals`
+2件は手動修正。`.rubocop_todo.yml`は0件化し削除。
+
+副次的に、`spec/fixtures/pathcards_eval_seed.yml`の人間レビュー作業と並行して
+2つの実行時不具合が判明・修正: (1) `reviewed_at`列への日付リテラル追加により
+`YAML.load_file`のデフォルト安全ロードが`Date`クラスを拒否（`permitted_classes:
+[Date]`追加で解消）、(2) q07のクエリ文言変更に伴いtop-1精度が15/20→14/20・
+MRRが0.7750→0.7500に変化（spec期待値を実測へ追従、`wp4-eval-log.md`に新規
+記録）。
+
+検証: push後の実CI run **`32689247483`、全4ジョブgreen**
+（`conclusion: success`、`headSha`がコミット`92ec864`と一致）。
+`docs/backlog.md`の該当項を「裁定済み・対応完了」に更新済み。

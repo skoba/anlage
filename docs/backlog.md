@@ -20,22 +20,25 @@ WP0-5やSliceの実装計画には載らないが、確認済みで記録して�
   この開発機固有の制約であり、GitHub Actions runnerには再現しなかった。
 - `lint`ジョブは`.rubocop_todo.yml`で既存14件をベースライン化してgreen化した。
 
-**`.rubocop_todo.yml`の運用方針**: `openehr-ruby`のrubocop-rspec todoファイル運用
-（1cop単位で段階的に縮小、一括修正はしない）に倣う。ベースライン化した14件
-（`Layout/SpaceInsideArrayLiteralBrackets`×12・`Style/StringLiterals`×2）の
-実際の解消は、本項目とは別に着手時期を判断する。
+**裁定済み・対応完了（2026-08-24、コミット`92ec864`）**: `.rubocop_todo.yml`は
+**0件化**し削除済み。`bin/rubocop -f github`はexit=0。push後の実CI run `32689247483`
+（全4ジョブ）greenを確認済み（`gh run view`で`conclusion: success`・`headSha`が
+コミット`92ec864`と一致）。
 
-**構造的要因（未解決、要判断）**: `Layout/SpaceInsideArrayLiteralBrackets`の12件中
-大半は`db/migrate/`配下のマイグレーションファイルに集中している。本セッション中の
-複数の過去作業で、`bin/rails db:migrate`実行のたびに`db/schema.rb`の配列表記が
-`[ "x" ]`（スペース入り）⇔`["x"]`（スペース無し）で無害に書式変動することを
-繰り返し観測してきた——これは、このRails環境が生成する既定の配列書式が
-`rubocop-rails-omakase`既定の`Layout/SpaceInsideArrayLiteralBrackets`有効設定
-（スペース無し必須）と食い違っていることを示唆する。`.rubocop.yml`自体に
-「このcopを無効化する」設定例がコメントとして既に用意されている。この食い違いは
-今後もマイグレーション・スキーマ再生成のたびに再発しうる。対応方針（(a) 今回の
-12件を手動修正して以後は書式を統一する (b) copを無効化しRails生成コードの実態に
-合わせる (c) 現状のtodoベースラインのまま据え置く）は未判断——別途裁定が必要。
+対応内容:
+- `Style/StringLiterals`2件（`config/routes.rb`・`config/initializers/openehr.rb`）は
+  手動修正（シングル→ダブルクォート）。Anlage自身がauthorした設定ファイルであり
+  除外の正当化理由が無いため
+- `Layout/SpaceInsideArrayLiteralBrackets`12件は`.rubocop.yml`本体へ理由コメント付きの
+  **恒久Exclude**として移した（`.rubocop_todo.yml`の段階的縮小対象ではない）。実測訂正:
+  当初「Rails生成の既定書式がスペース無し」と記録したのは誤りで、実際は
+  `rubocop-rails-omakase`の`EnforcedStyle`が**`space`**（スペース必須）。原因は
+  gem`openehr-rails`のインストーラテンプレート原本
+  （`lib/generators/openehr/install/templates/migrations/`）自体が`add_index`の配列引数を
+  no_space書式（`[:a, :b]`）で書いていること（gem実測確認）。この2つのmigrationファイルは
+  gemのテンプレートを素通しでコピーした生成物であり、Anlage側で手直ししてもgem再
+  インストール時に上書きされ再発するため、恒久Excludeが正しい対応と判断した。
+
 
 ## 1. `Opt::SafeParser` の DOCTYPE 検知が UTF-16 入力で素通りする
 
