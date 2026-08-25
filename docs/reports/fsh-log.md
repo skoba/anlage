@@ -217,3 +217,12 @@ explore→planに委ねる形で記載。
 `docs/design/fsh-plan.md`に裁定反映節（4判断）・v1規模上限
 （`mml_referral`級はv1検証対象外）・Sushi rakeタスクのみ・
 `rake fsh:export`をv1・コミット分割の前段/後段2区分を追記した。
+
+### 追記1: 構造条項（2026-08-26）
+
+FHIR橋渡し層の恒久配置は衛星gem`openehr-fhirbridge`への分離と方針
+確定（`docs/backlog.md` 5項）。移行条件が満たされるまではAnlage内
+（openehr-rails gem）で実装するが、`FshGenerator`は`FieldExtractor#entries`
+のみを入力に取る純Rubyモジュール＋薄Railsアダプタの構造を守り、
+将来の移設可能性を保つ設計条項を`docs/design/fsh-plan.md`「追記1」
+節へ記録した。

@@ -103,7 +103,22 @@ WP0-5やSliceの実装計画には載らないが、確認済みで記録して�
   Anlageの管轄外（層規律）。12月世界公開準備のタイミングまで保留（現在
   「冬眠中」＝アクティブな作業対象ではない）。
 
-## 5. `skoba/mml` — 将来のコーパス拡張候補（出所記録、2026-08-26人間報告）
+## 5. FHIR橋渡し層の恒久配置 — 方針確定（2026-08-26）
+
+衛星gem`openehr-fhirbridge`として分離する。収容対象: FSHエミッタ・
+StructureDefinition生成（現facadeの導出部）・将来のFHIRリソース
+インスタンス変換。依存方向: `openehr`のみに依存（Rails非依存）。
+スコープ原則: `openehr-ruby`はopenEHR仕様定義物のみ、他規格への写像は
+橋gemに置く。
+
+移行条件（いずれか）: Anlage外の第二消費者の出現／12月公開
+パッケージング。前提作業: OPT平坦化（`FieldExtractor`相当）の
+非Rails化（gem再編・第2巡以降）。
+
+それまで実装はAnlage内で、純Rubyモジュール＋薄アダプタの構造条項
+（`docs/design/fsh-plan.md`追記1）により移設可能性を保つ。
+
+## 6. `skoba/mml` — 将来のコーパス拡張候補（出所記録、2026-08-26人間報告）
 
 - `skoba/mml`（`openEHR/`配下）は522 ADL・31テンプレート（`.oet`/`.opt`対）
   の資産庫であり、`mml_referral`（`docs/design/fsh-plan.md`のv1規模上限

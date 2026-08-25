@@ -191,6 +191,31 @@ openehr-rails側の前提修正完了がFSH実装のbinding部のブロッカー
 非binding部（Profile/cardinality/型/単位）は前提修正を待たず先行
 着手可——本文書「コミット分割」節を前段/後段の2段に分けた。
 
+### 追記1（2026-08-26）: 構造条項——将来のgem分離に備えた実装形
+
+FHIR橋渡し層（FSHエミッタ・StructureDefinition生成・将来のFHIR
+リソースインスタンス変換）の恒久配置は**衛星gem`openehr-fhirbridge`
+として分離する方針を確定**した（`docs/backlog.md` 5項「FHIR橋渡し層の
+恒久配置」参照）。依存方向は`openehr`のみ（Rails非依存）。スコープ
+原則: `openehr-ruby`はopenEHR仕様定義物のみを扱い、他規格（FHIR等）
+への写像は橋gem側に置く。
+
+移行条件（いずれか）: Anlage外の第二消費者の出現／12月世界公開
+パッケージング。前提作業: OPT平坦化（`FieldExtractor`相当）の
+非Rails化（gem再編・第2巡以降）。
+
+**それまでの実装規律**: `FshGenerator`本体・binding写像ロジックは、
+現時点でopenehr-rails gem内に置く（Step 2「源の確定」節どおり）が、
+**純Rubyモジュール＋薄いRailsアダプタ**の構造を守る——`FshGenerator`
+自体は`FieldExtractor#entries`（Hash配列、Rails/ActiveRecordに非依存な
+データ形）のみを入力に取り、Railsのモデル・コントローラ層には一切
+触れない形で実装する。これにより、移行条件が満たされた時点で
+`FshGenerator`本体を`openehr-fhirbridge`へそのまま移設でき、
+呼び出し側（`ProfilesController`・rakeタスク）だけを薄いアダプタとして
+差し替えれば済む。実装フェーズのコミットでこの境界を意識した設計
+（`FshGenerator`が`ActiveRecord::Base`や`Rails`名前空間へ依存しないこと）
+をレビュー観点に加える。
+
 ## Verification（実装着手後）
 
 - `bundle exec rspec`（gem・anlage双方の新規specファイル含む）が全件green
