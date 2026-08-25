@@ -77,7 +77,7 @@
   reviewed_at: 2026-08-24
 
 - id: q06
-  query: "検査"
+  query: "検査名"
   expected_archetype_id: openEHR-EHR-OBSERVATION.laboratory_test_result.v1
   expected_at_code: at0005
   intent_tag: bigram成立想定
@@ -86,7 +86,7 @@
     at0005 は Test name(検査名)という特定要素であり、広義の「検査」を
     この一要素に固定するのは恣意的(q05 とは逆向きの、広いクエリ→
     狭い概念のペア)。意味の幅を一致させた。広義「検査」の評価役割は
-    q15(at 未指定・複合語)が担う"
+    q15(at 未指定・複合語)が担う。フィールド反映 2026-08-26・委任による"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-08-24
 
