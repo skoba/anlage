@@ -32,3 +32,78 @@ explore→planフェーズの実測記録。R1〜。
 ### Step 2への引き継ぎ
 
 上記5点（原文との解釈のずれ・CI実行実態・母数7archetype・WP3クエリの部分再利用性・出力形・rakeタスク先例）を踏まえ、評価データ形式・指標・実行方式・Phase 2比較設計・承認事項を`docs/design/wp4-plan.md`に起こす。
+
+---
+
+## R2: 人間レビュー完了・17問体制への再実行（2026-08-25）
+
+### 評価データの反映
+
+`spec/fixtures/pathcards_eval_seed.yml`の人間レビュー（`skoba/anlage#14`裁定3）が完了。
+反映内容: 修正4問（q06「検査」→「検査名」修正意図の記載＝下記の食い違い参照／q07
+「分析」→「検査結果」／q09「判定」→「BMI判定」／q15「臨床検査」→「検体検査」）・
+廃止3問（q13「身長体重」・q17「体格指数」・q19「検体」、いずれも正解不在または
+検証係として不適格と判定され削除）。分母は20→17。
+
+**発見（YAML構文エラー、Claude Codeが修正）**: q09の`notes`末尾に`""`（二重引用符の
+誤り）があり`YAML.load_file`が構文エラーで全体失敗する状態だった。ゴールド本体の
+「内容」ではなく構文エラーの機械的修正のため、末尾の余分な`"`1字を除去して修正
+（内容は変更していない）。
+
+**発見（未解消の食い違い、要人間判断）**: q06の`notes`は「query を「検査」→「検査名」に
+修正」と記載しているが、実際の`query`フィールドは「検査」のまま（修正が未適用）。
+Claude Codeはゴールド本体（`query`）を推測で書き換えず、この食い違いをそのまま
+本ログに記録するに留めた。実測では現行の`query: "検査"`のままintent_tag「bigram成立
+想定」どおりrank=0（top-1的中）で成立している。noteどおり`query`を「検査名」へ
+実際に修正するか、noteの記述を「検討したが不採用」に訂正するかは人間の判断を要する。
+
+### intent_tag再検証（文言変更4問）
+
+実際に索引済み4テンプレート（`CardiologyEncounter`・`LabResultReport`・`ProblemList`・
+`bmi_calculation`）に対し`Opt::PathcardSearch.call`を実行し、17問全問のrankを実測:
+
+- q06「検査」: rank=0（top-1的中）。intent_tagどおり成立
+- q07「検査結果」: rank=1（top-3的中・top-1不成立）。q06が索引する`検査名`カードと
+  bigram「検査」を共有し1位を占めるため2位着地——`notes`記載の予測（「検査名カードとの
+  bigram競合により順位変動の可能性あり」）が的中。機序は直接bigram一致であり複合語の
+  部分語分解とは異なるため、intent_tag「bigram成立想定」は維持（「成立が見込まれる」の
+  定義はヒット可否を指しランクは問わない、ファイル冒頭凡例）
+- q09「BMI判定」: rank=0（top-1的中）。intent_tagどおり成立
+- q15「検体検査」: rank=0（top-1的中）。旧クエリ「臨床検査」にあったProblemListとの
+  偽陽性競合（2位問題）が解消されたことを確認（top-3内にProblemListは出現しない）
+
+### 17問体制での実測結果
+
+`bundle exec rake pathcards:eval`実行（`docs/reports/wp4-eval-log.md`
+`2026-08-24T23:57:03Z`エントリに記録済み）:
+
+- Top-1精度: 14/17 (82.35%)
+- Top-3精度: 15/17 (88.24%)
+- 完全失敗率: 2/17 (11.76%)
+- MRR: 0.8529
+- intent_tag別内訳: bigram成立想定 11/11・複合語 4/4・同義語ギャップ 0/2
+- 完全失敗: q16「BMI」・q18「既往」（いずれも意図的収録、`notes`参照）
+
+`spec/lib/tasks/pathcards_eval_spec.rb`の期待値を上記実測へ更新（20問時代の
+`q17`/`q19`失敗一覧記載も削除）。`bundle exec rspec`全件（97 examples, 0 failures）・
+`bin/rubocop -f github`（exit 0）で確認済み。
+
+### 同梱4件（docs反映）
+
+1. `docs/design/wp3-plan.md`: 「BMI対体格指数」の例示を「BMI対英語ラベル
+   (Body mass index)」に訂正（4箇所）。当初例示の「体格指数」はq17廃止判断
+   （記録語彙レジスターに不在）により偽同義の例だったと判明したため。
+   embedding必須の結論（Phase 2の存在理由）自体は変更なし
+2. `docs/demo/opt-catalog.md`: `bmi_calculation.opt`の言語欄に脚注を追加
+   （宣言はenだが`at0013`のみjaラベル「判定」混在、実測`bmi_calculation.opt:1678`）
+3. `docs/design/wp4-plan.md`: 将来課題節を新設し、Phase 2起動時の評価v2設計
+   （期待集合オプション・負例セット・保留問2件の出題化）を1項目として記録
+4. 同節に語彙レジスター観察を追記（記録語彙/説明語彙・節名/モデリング語彙の
+   2軸、一字差ペア2組「既往/既往歴」「検体/検体検査」、分布定量2件——WP5/
+   voice_aliases設計への入力として横断集約）
+
+### 規約反映
+
+`CLAUDE.md`に「評価データの人間レビュー中の編集範囲」節を新設。ゴールド本体
+（`query`/`expected_archetype_id`/`expected_at_code`/`notes`）は人間レビュー進行中は
+人間の専有領域とし、エージェントは読み込み系・spec側のみ変更可と明文化。

@@ -24,7 +24,9 @@ openehr-railsの`demo_assets/templates/problem_list.opt`と、Anlageの
 | `LabResultReport.opt` | `414bbd49996f5dfd2da5a3374ced6ada7e7fc32405a883d8f51808bb00554743` | ja | WP1/WP2 サンプルカード2（検査値、埋め込みCLUSTER実例）。DV_QUANTITY制約は暫定（単位・値域なし） | 改訂待ち（単位・値域入り版を人間へ依頼中、`pathcards-schema-v1.md` 4節-3） | CKM公開archetype、AD経由で人間作成（2026-08-22） |
 | `ProblemList.opt` | `b821b98beebfba9e758cc0429a91bb98aedb7d50de684424f0eb58d51e4a47c1` | ja | WP1/WP2 サンプルカード1（傷病名、C_CODE_REFERENCE/value_set_binding実例）。ローカルcode_list実例（at0073） | 凍結 | CKM公開archetype、AD経由で人間作成（2026-08-22） |
 | `patient_blood_pressure.opt` | `9f1f679fcf9d2737d9f537b3e256f42c97e875c3fef9e835a54e9c1d415826e4` | en | 全spec一括緑化用fixture（`skoba/anlage#3`解消）。term_bindings（SNOMED-CT）4件・血圧archetype | 凍結 | openehr-rails demo_assets（commit `0028e0c32fc4331f51565d708f6e9f485ea315a3`、2026-07-29）からコピー |
-| `bmi_calculation.opt` | `d80e2ea6bab02fef0d34035cae507887ee1fc21b0a304e1a7175324118c9baea` | en | `skoba/anlage#5`案Aシード用途（`openEHR-EHR-OBSERVATION.height.v2`実archetype構造）。LOINC code_binding実例 | 凍結（AQLのpath照会用途限定。ラベル翻訳検証には未使用） | openehr-rails demo_assets（commit `0f88392d7c890a39fa82bebf26f42410d5c9b9af`、2026-06-26）からコピー |
+| `bmi_calculation.opt` | `d80e2ea6bab02fef0d34035cae507887ee1fc21b0a304e1a7175324118c9baea` | en※ | `skoba/anlage#5`案Aシード用途（`openEHR-EHR-OBSERVATION.height.v2`実archetype構造）。LOINC code_binding実例 | 凍結（AQLのpath照会用途限定。ラベル翻訳検証には未使用） | openehr-rails demo_assets（commit `0f88392d7c890a39fa82bebf26f42410d5c9b9af`、2026-06-26）からコピー |
+
+※ `bmi_calculation.opt`は言語宣言（archetypeレベル）はenだが、`at0013`（判定）のterm_definitionsのみja訳が混在している（`spec/fixtures/opt/bmi_calculation.opt:1678`実測。WP4評価データq09「BMI判定」がこのjaラベル経由で成立することを確認、`docs/reports/wp4-log.md`参照）。
 
 ## 状態の凡例
 

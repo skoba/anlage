@@ -63,20 +63,18 @@ RSpec.describe "pathcards:eval" do
       Rake::Task["pathcards:eval"].invoke
     end
 
-    it "20問の実測集計値と完全失敗問題を表示する" do
+    it "17問の実測集計値と完全失敗問題を表示する" do
       expect { run_task }.to output(
         a_string_including(
-          "Top-1 accuracy: 14/20 (70.00%)",
-          "Top-3 accuracy: 16/20 (80.00%)",
-          "Complete failure rate: 4/20 (20.00%)",
-          "MRR: 0.7500",
+          "Top-1 accuracy: 14/17 (82.35%)",
+          "Top-3 accuracy: 15/17 (88.24%)",
+          "Complete failure rate: 2/17 (11.76%)",
+          "MRR: 0.8529",
           "bigram成立想定: 11/11",
-          "複合語: 5/5",
-          "同義語ギャップ: 0/4",
+          "複合語: 4/4",
+          "同義語ギャップ: 0/2",
           "q16: BMI",
-          "q17: 体格指数",
-          "q18: 既往",
-          "q19: 検体"
+          "q18: 既往"
         )
       ).to_stdout
     end
@@ -88,13 +86,13 @@ RSpec.describe "pathcards:eval" do
       expect(report).to include(
         "# WP4 パスカード検索評価ログ",
         "検索実装: `phase1-bigram`",
-        "Top-1精度: 14/20 (70.00%)",
-        "Top-3精度: 16/20 (80.00%)",
-        "完全失敗率: 4/20 (20.00%)",
-        "MRR: 0.7500",
+        "Top-1精度: 14/17 (82.35%)",
+        "Top-3精度: 15/17 (88.24%)",
+        "完全失敗率: 2/17 (11.76%)",
+        "MRR: 0.8529",
         "bigram成立想定: 11/11",
-        "複合語: 5/5",
-        "同義語ギャップ: 0/4"
+        "複合語: 4/4",
+        "同義語ギャップ: 0/2"
       )
     end
   end
