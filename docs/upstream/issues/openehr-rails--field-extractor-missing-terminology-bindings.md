@@ -9,6 +9,34 @@ FHIR StructureDefinitionの`DV_CODED_TEXT`要素は`binding: {strength:
 機能（`skoba/anlage#17`）が外部語彙bindingを表現する上でのブロッカー
 にもなっている。
 
+> **RESOLVED UPSTREAM（2026-08-26確認）** — このドラフトを人間中継で
+> 送付する前に、openehr-rails側で**同一内容のIssueが独立に起票・実装・
+> リリース済み**であることが判明した。`skoba/openehr-rails#30`
+> （同名タイトル）としてCLOSED、`openehr-rails` 0.5.0（2026-08-25
+> rubygems公開）に同梱。実装経路: `c586a8c`起票→`5470d29`設計
+> （`docs/design/binding-extraction-plan.md`）→`c571bf5`（openehr依存
+> フロア`>= 2.3.1`引き上げ）→`0bbbc47`（`problem_list.opt`fixture、
+> anlageの`ProblemList.opt`を出所明記の上でコピー）→`6efc161`
+> （`FieldExtractor`/`ProfileGenerator`実装、Codex）→`7e7e2f0`
+> （PR・merge）→`7c2d4d8`（`skoba/openehr-ruby#31`へのupstreamコメント）
+> →`69db63f`（0.5.0リリース）。
+>
+> 実装形は本ドラフトの提案と概ね一致するが1点差分がある:
+> `code_binding`の投入経路は`FieldExtractor`自身への直接移植ではなく、
+> `OpenehrRails::Opt::Parser#parse`の`populate_term_bindings!`
+> （parse時のenrichment、`lib/openehr_rails/opt/parser.rb:24,43-60`）が
+> OPT文書のterm_bindings XMLを独自に再パースし、上流
+> `ArchetypeOntology#term_bindings`（既存だが従来nilだったslot）へ
+> 投入する形。`skoba/openehr-ruby#31`解消後にメソッド2つの削除で
+> 撤去できる設計（撤去条件コメントが`parser.rb`に明記済み）。
+> `FieldExtractor#build_field`は常に`value_set_uri`（nilあり）・
+> `code_bindings`（`[{system_uri:, code:}]`、空配列あり）を持つ。
+>
+> **本ファイルは起票せず、調査時点の要求仕様・実測根拠の記録として
+> 保存する**（`openehr-ruby--field-extractor-wrong-terminology-scope.md`
+> の前例と同型の扱い）。詳細は`docs/reports/fsh-log.md` R3参照。
+> 以下は起票用に準備していた原文のまま。
+
 **起票: 人間中継でopenehr-railsへ提出予定（本ファイルはその下書き。
 `skoba/anlage#17`「FSHエクスポート」裁定2026-08-26で承認済み、
 Anlage側での起票が下記の段取りで許可されている）**

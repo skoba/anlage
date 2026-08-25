@@ -14,6 +14,12 @@ anlage`の`Fhir::ProfilesController`、gem`openehr-rails`の
 > 着手可（前段のみ。後段はopenehr-rails側前提修正待ち）。詳細は本文書
 > 末尾「裁定反映」節を参照。前提修正のIssueドラフト:
 > `docs/upstream/issues/openehr-rails--field-extractor-missing-terminology-bindings.md`。
+>
+> **前提修正、解決済み（2026-08-26確認）**: 人間中継を待つ前に、
+> openehr-rails側で同一Issueが独立に起票・実装され、0.5.0
+> （2026-08-25 rubygems公開）としてリリース済みであることが判明した
+> （`skoba/openehr-rails#30`）。後段（binding写像）はブロッカー解消
+> 済み、着手可。詳細は`docs/reports/fsh-log.md` R3。
 
 ## Step 1 explore実測結果（要約。詳細は`docs/reports/fsh-log.md` R1）
 
@@ -52,33 +58,33 @@ anlage`の`Fhir::ProfilesController`、gem`openehr-rails`の
 code_list・required等の判定）はどちらも`FieldExtractor`一箇所に一本化
 されたまま——二重導出は生じない。
 
-### 前提修正: `FieldExtractor`へのbinding抽出追加（gemレベル、独立コミット）
+### 前提修正: 解決済み（`openehr-rails` 0.5.0、2026-08-25公開）
 
-`coded_text_constraints`（`field_extractor.rb:191-203`）の隣に、
-anlageの`Opt::PathcardExtractor#bindings_for`/`#extract_code_bindings`
-（`app/lib/opt/pathcard_extractor.rb:243-280`）と同型のロジックを
-gem側へ移植する形で追加する:
+`skoba/openehr-rails#30`として独立に起票・実装・リリース済み
+（詳細は`docs/reports/fsh-log.md` R3）。`FieldExtractor#build_field`は
+常に以下を持つ:
 
-- `value_set_binding`: `defining_code`が`C_CODE_REFERENCE`の場合、
-  `reference_set_uri`を`field[:value_set_uri]`として追加
-- `code_binding`: OPT文書の`term_bindings/items`から該当ELEMENTの
-  `(system_uri, code)`を`field[:code_bindings]`（配列、複数terminology
-  対応）として追加
+- `value_set_uri`: `C_CODE_REFERENCE`の`reference_set_uri`（nilあり）
+- `code_bindings`: `[{system_uri:, code:}]`（配列、空配列あり。
+  `DV_CODED_TEXT`に限定されない——BMIのLOINC bindingは`DV_QUANTITY`
+  要素上にある）
 
-この拡張により`ProfileGenerator#apply_value_constraints`
-（`profile_generator.rb:125-129`）の既存`valueSet`欠落も副次的に
-解消できる（`element[:binding][:valueSet] = field[:value_set_uri]`を
-追加する1行修正）。**この前提修正はFSH機能に先行する独立コミットとし、
-既存JSON回帰網（`spec/openehr_rails/fhir/profile_generator_spec.rb`
-ほか）を通しつつ追加する。gemの公開API・実行時挙動に触れるため、
-CLAUDE.md（openehr-rails）のticket-driven workflowに従い専用Issueを
-要する（本Issueに従属する形での起票を承認事項1で提案）**。
+実装形はAnlageの`Opt::PathcardExtractor`の移植ではなく、
+`OpenehrRails::Opt::Parser#parse`が`populate_term_bindings!`で
+OPT文書のterm_bindings XMLを独自に再パースし、上流
+`ArchetypeOntology#term_bindings`（既存だが従来nilだったslot）へ
+enrichmentする形（`skoba/openehr-ruby#31`解消後に撤去可能な暫定実装、
+撤去条件コメント付き）。`ProfileGenerator#apply_value_constraints`の
+`valueSet`欠落も同時に解消済み（`element[:binding][:valueSet] =
+field[:value_set_uri]`）。anlageは`bundle lock --update openehr-rails`
+で0.5.0へ更新済み（Part 1、2026-08-26）。
 
 ### v1範囲（表、詳細は`docs/reports/fsh-log.md` R1）
 
 Profile/Parent/Id/Title・code要素のpatternCodeableConcept・単一leaf
 value[x]・複数leaf componentスライシング・DV_QUANTITYのunit・
-DV_CODED_TEXTのbinding（前提修正後）。`magnitude_range`（min/max
+DV_CODED_TEXTのbinding（前提修正済み、`value_set_uri`/`code_bindings`
+利用可）。`magnitude_range`（min/max
 Quantity制約）はJSON側が現状未出力のため対象外——JSON側の対応が
 先決（本plan外の別判断）。
 
@@ -89,13 +95,8 @@ Quantity制約）はJSON側が現状未出力のため対象外——JSON側の�
 
 ### TDD方針（実装着手後、t-wada方式）
 
-1. **前提修正（`FieldExtractor`拡張）**: Red — 既存golden fixture
-   （`spec/fixtures/opt/bmi_calculation.opt`ほかgem内蔵fixture）に対し
-   `entries[].fields[].value_set_uri`/`code_bindings`が抽出されることを
-   検証する新規spec。Green — 抽出ロジック追加。既存
-   `profile_generator_spec.rb`の`valueSet`欠落も同時に埋める1行修正を
-   同コミットに含める（原因が同一のため分離不要、コミットメッセージに
-   「binding抽出追加に伴う既存欠落の同時解消」と明記）
+1. ~~前提修正（`FieldExtractor`拡張）~~ — 解決済み（`skoba/
+   openehr-rails#30`、0.5.0）。anlage側での実装は不要
 2. **`FshGenerator`本体**: Red — `bmi_calculation.opt`（BMI・単一leaf・
    DV_QUANTITY）を既知の入力として、期待するFSH文字列（Profile/Parent/
    value[x]骨格）を固定するspec。Green — 実装
@@ -130,22 +131,20 @@ Quantity制約）はJSON側が現状未出力のため対象外——JSON側の�
 endpoint（`GET /fhir/profiles/:id.fsh`）・ファサード隣接ルートへの
 フォーマット追加はv1.1へ。
 
-### コミット分割（実装フェーズ、Codex起動時の目安。2段構成）
+### コミット分割（実装フェーズ、Codex起動時の目安）
 
-**前段（rails待ちの間に先行着手可、binding非依存）**:
+前提修正が解決済み（`skoba/openehr-rails#30`、0.5.0）となったため、
+前段/後段の分離は不要——通しで着手できる:
 
 1. `FshGenerator`本体（gem、v1範囲のうちbinding以外: メタデータ・
    単一leaf `value[x]`・複数leaf `component`スライシング・
    `DV_QUANTITY`の`patternQuantity`）
-2. Sushi検証rakeタスク（anlage側、非binding部のFSHで動作確認）
-3. `rake fsh:export`（anlage側、出力提供形v1）
-
-**後段（openehr-rails側の前提修正完了がブロッカー）**:
-
-4. binding写像（gem、`FshGenerator`への統合。`FieldExtractor`が
-   `value_set_uri`/`code_bindings`を持つようになった後に着手）
-5. binding込みgolden fixture更新・Sushi実コンパイル確認（SNOMEDリテラル
+2. binding写像（gem、`FshGenerator`への統合。`field[:value_set_uri]`/
+   `field[:code_bindings]`を消費）
+3. Sushi検証rakeタスク（anlage側、binding込みのFSHで動作確認）
+4. binding込みgolden fixture更新・Sushi実コンパイル確認（SNOMEDリテラル
    予算を遵守、`at0004`/`271649006`のみ再利用）
+5. `rake fsh:export`（anlage側、出力提供形v1）
 
 ## 裁定反映（2026-08-26）
 
@@ -187,9 +186,9 @@ HTTPルートはv1.1へ（本文書「出力の提供形」節に明記済み）
 
 ### 実装順序
 
-openehr-rails側の前提修正完了がFSH実装のbinding部のブロッカー。
-非binding部（Profile/cardinality/型/単位）は前提修正を待たず先行
-着手可——本文書「コミット分割」節を前段/後段の2段に分けた。
+**解決済み（2026-08-26確認）**: openehr-rails側の前提修正は`skoba/
+openehr-rails#30`として独立に解決され0.5.0で公開済みのため、当初
+想定していた前段/後段の分離は不要になった。「コミット分割」節参照。
 
 ### 追記1（2026-08-26）: 構造条項——将来のgem分離に備えた実装形
 

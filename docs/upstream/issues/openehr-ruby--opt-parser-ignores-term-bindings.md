@@ -118,3 +118,29 @@ A parser spec asserting that parsing an OPT fixture containing a `<term_bindings
 ## Workaround
 
 Anlage's semantic-pathcard extractor (in development) re-parses the OPT's stored source XML itself (`templates.source_xml`) rather than relying on `OPTParser`'s ontology output, specifically to recover both `term_bindings` and `referenceSetUri` forms. This is a deliberate, human-approved design decision (2026-08-22) tracked in this repository's own planning documents, not a landed workaround file — implementation is scheduled as a WP2 TDD item.
+
+## Priority note (2026-08-26 update, not posted to the live issue)
+
+A second, independent workaround has since landed: `openehr-rails`
+`OpenehrRails::Opt::Parser#populate_term_bindings!`
+(`lib/openehr_rails/opt/parser.rb:43-60`, shipped in `openehr-rails`
+0.5.0, `skoba/openehr-rails#30`) does the same raw-XML re-parse
+Anlage's `Opt::PathcardExtractor` does, but inside the gem's own parser
+subclass, and enriches the upstream `ArchetypeOntology#term_bindings`
+slot directly. It is explicitly nil-guarded and documented as a
+two-method deletion once this issue (`#31`) lands upstream (removal-
+condition comment in the source).
+
+Net effect: there are now **two independent bypass implementations**
+of the same upstream gap (Anlage's `PathcardExtractor` and
+`openehr-rails`' `Parser`), both re-parsing the same OPT XML shape by
+hand. Verified byte-identical output between the two
+(`docs/reports/fsh-log.md` R4, 2026-08-26): same `code_string` format
+(versioned `[SNOMED-CT(2003)::...]`), same `reference_set_uri`
+strings. This does not lower the value of fixing `#31` upstream — if
+anything it raises it, since a single upstream fix would let both
+downstream bypasses be deleted rather than just one. It does mean
+neither downstream repo is currently blocked waiting on `#31`, so
+there is no urgency pressure from either consumer; this is offered as
+context for whoever next triages `#31`'s priority, not a request to
+re-prioritize it now.

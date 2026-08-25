@@ -226,3 +226,106 @@ FHIR橋渡し層の恒久配置は衛星gem`openehr-fhirbridge`への分離と�
 のみを入力に取る純Rubyモジュール＋薄Railsアダプタの構造を守り、
 将来の移設可能性を保つ設計条項を`docs/design/fsh-plan.md`「追記1」
 節へ記録した。
+
+---
+
+## R3: openehr-rails 0.5.0 bump（Part 1、2026-08-26）
+
+### 前提の直接検証
+
+「人間報告を待って着手」の前提を、待つのではなく`rubygems.org`の
+公開APIで直接検証した（`curl -s https://rubygems.org/api/v1/versions/
+openehr-rails.json`）: `0.5.0`が`created_at: 2026-08-25T09:26:15Z`で
+実在。人間報告を待つより確実な検証手段のため、これをもって着手条件
+充足と判断した。
+
+### 前提修正Issueの実際の解決経路（ドラフトからの乖離）
+
+`docs/upstream/issues/openehr-rails--field-extractor-missing-terminology-bindings.md`
+を人間中継で送付する段取りだったが、実際にはopenehr-rails側で
+**同一内容のIssue `skoba/openehr-rails#30`が独立に起票・実装・
+0.5.0としてリリース済み**であることが確認できた（`git log`実測、
+`c586a8c`起票→`5470d29`設計→`c571bf5`/`0bbbc47`/`6efc161`実装
+（Codex）→`7e7e2f0`PR/merge→`7c2d4d8`upstream#31へのコメント→
+`69db63f`0.5.0リリース）。ドラフトファイルは実際の起票経路の記録
+としてこのまま保存する（`openehr-ruby--field-extractor-wrong-
+terminology-scope.md`のRESOLVED UPSTREAM前例と同型の扱い）。
+
+### API実測（enrichment実装の実際の形、ドラフトからの主要な差分）
+
+- `FieldExtractor#build_field`は常に`value_set_uri`（nilあり）・
+  `code_bindings`（`[{system_uri:, code:}]`、空配列あり）を持つ
+  （`openehr-rails` `lib/openehr_rails/opt/field_extractor.rb:169-170,224-234`）
+- **term_bindingsの投入経路はgem（openehr-ruby）側の修正ではなく、
+  `OpenehrRails::Opt::Parser#parse`の`populate_term_bindings!`による
+  parse時のenrichment**（`lib/openehr_rails/opt/parser.rb:24,43-60`）。
+  OPT文書のterm_bindings XMLを独自に再パースし、上流
+  `ArchetypeOntology#term_bindings`（既存だが従来常にnilだったslot）
+  へ投入する。nilガード付きの暫定バイパスで、`skoba/openehr-ruby#31`
+  解消後にメソッド2つの削除で撤去できる設計（撤去条件コメント
+  `parser.rb:43-46`に明記済み）
+- `code_bindings`は`DV_CODED_TEXT`に限定されない（BMIのLOINC
+  bindingは`DV_QUANTITY`要素上にある、`CHANGELOG.md` 0.5.0節に明記）
+- 実測確認（`bin/rails runner`、`CardiologyEncounter.opt`）:
+  `component_terminologies['...blood_pressure.v2'].term_bindings`が
+  `{"SNOMED-CT"=>{"at0004"=>[CodePhrase(...271649006...)],
+  "at0005"=>[CodePhrase(...271650006...)], ...}}`の形で実際に
+  取得できることを確認——FSH後段（Part 2）が依存する挙動が実在する
+
+### 全suite実測
+
+`bundle lock --update openehr-rails`（2.4.2時の手法を踏襲）→
+`openehr-rails 0.5.0`・`openehr 2.4.2`（変更なし）に解決。
+`bundle exec rspec`全97件green・`bin/rubocop -f github` exit 0を確認。
+`value_constraint`の複数alternative選択ロジック変更（`CHANGELOG.md`
+Fixed節「C_CODE_REFERENCE-backed alternativeを優先」）によるAnlage側
+回帰は無し（ProblemList.optのat0002が影響しうる変更だが、Anlage側は
+`Opt::PathcardExtractor`という独立実装を使っており`FieldExtractor`の
+出力に直接依存する箇所が無いため無風だったと推定——`FieldExtractor`
+自体はFHIR facade経由でのみAnlageから間接的に使われる）。
+
+---
+
+## R4: 経路2（`Opt::PathcardExtractor`のbinding抽出簡素化）検証（Part 3、2026-08-26）
+
+### 目的
+
+Anlage独自の`Opt::PathcardExtractor#extract_code_bindings`/
+`#bindings_for`（生XML再パース、`app/lib/opt/pathcard_extractor.rb:
+243-280`）は、openehr-rails 0.5.0の`FieldExtractor#code_bindings`/
+`#value_set_uri`と機能重複する。後者へ置換できれば、Anlage側の重複
+実装（二重の生XML再パース）を削減できる。ただし出力形式が変われば
+WP2 golden fixture（`spec/fixtures/pathcards/*.golden.json`）が
+実際に持つ`code`文字列表現に影響するため、実装前に形式互換を実測
+確認する（実装は本タスクでは行わない、裁定事項として提示）。
+
+### 実測結果: 完全一致（バイト単位）
+
+`CardiologyEncounter.opt`・`ProblemList.opt`を`OpenehrRails::Opt.parse`
+→`OpenehrRails::Opt::FieldExtractor#entries`経由で直接抽出した値と、
+WP2 golden fixtureの値を突合:
+
+| 対象 | golden（`Opt::PathcardExtractor`） | gem enrichment（`FieldExtractor`） | 一致 |
+|---|---|---|---|
+| CardiologyEncounter at0004 code_binding | `system_uri: "SNOMED-CT"`, `code: "[SNOMED-CT(2003)::271649006]"` | `system_uri: "SNOMED-CT"`, `code: "[SNOMED-CT(2003)::271649006]"` | ✓完全一致 |
+| CardiologyEncounter at0005 code_binding | `code: "<REDACTED_SNOMED_CODE>"`（golden側でredact済み） | `code: "[SNOMED-CT(2003)::271650006]"`（実コード） | golden側のredaction都合のみの差、抽出値自体は一致（実コード`271650006`はgem側実測で確認済み） |
+| ProblemList at0002 value_set_binding | `system_uri: "terminology:http://id.who.int/icd/release/11/mms"` | `value_set_uri: "terminology:http://id.who.int/icd/release/11/mms"` | ✓完全一致 |
+
+版数付きSNOMED表記（`[SNOMED-CT(2003)::...]`という角括弧＋バージョン
+番号付きの生の`code_string`）はgem側でも一切正規化されず、そのまま
+保持されている（`OpenehrRails::Opt::Parser#binding_code_phrase`が
+`code_string`をそのまま`CodePhrase.new(code_string:)`に渡すのみ、
+`lib/openehr_rails/opt/parser.rb:79-90`実測）。
+
+### 判定（裁定事項として提示）
+
+**形式は保存される（置換可）**。`Opt::PathcardExtractor`の
+`extract_code_bindings`/`bindings_for`のbinding抽出部分は
+`OpenehrRails::Opt::FieldExtractor`の`code_bindings`/`value_set_uri`へ
+置換してもWP2 golden fixtureの値は変化しない（`kind`のラベリング
+——`"code_binding"`/`"value_set_binding"`の区別——のみAnlage側で
+`value_set_uri`の有無から再構成すれば足りる）。実装の要否・時期は
+本タスクでは判定しない（裁定事項）。実装する場合の対象は`bindings_for`
+（`pathcard_extractor.rb:243-257`）と`extract_code_bindings`
+（同`259-280`）の削除・`FieldExtractor`呼び出しへの置換で、
+`semantics_for`等の他メソッドは無関係。
