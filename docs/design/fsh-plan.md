@@ -10,6 +10,11 @@ anlage`の`Fhir::ProfilesController`、gem`openehr-rails`の
 **デモ非依存**: チュートリアル・デモ台本はFSH無しで完結する構成を
 維持する。凍結（11/5）までに未完なら12月世界公開準備へ持ち越す。
 
+> **裁定済み（2026-08-26）**: 4判断すべて承認（条件付き含む）。実装
+> 着手可（前段のみ。後段はopenehr-rails側前提修正待ち）。詳細は本文書
+> 末尾「裁定反映」節を参照。前提修正のIssueドラフト:
+> `docs/upstream/issues/openehr-rails--field-extractor-missing-terminology-bindings.md`。
+
 ## Step 1 explore実測結果（要約。詳細は`docs/reports/fsh-log.md` R1）
 
 1. **中間表現は`FieldExtractor#entries`のみ**（`openehr-rails`
@@ -77,6 +82,11 @@ DV_CODED_TEXTのbinding（前提修正後）。`magnitude_range`（min/max
 Quantity制約）はJSON側が現状未出力のため対象外——JSON側の対応が
 先決（本plan外の別判断）。
 
+**v1検証対象の規模上限（裁定、2026-08-26）**: `mml_referral`級の大規模
+テンプレート（多数entry・深いネスト）はv1の検証対象外とする。v1.1への
+拡大判断は診断ドロップ（実テンプレートでの`FshGenerator`初回実行結果）
+を見てから行う。
+
 ### TDD方針（実装着手後、t-wada方式）
 
 1. **前提修正（`FieldExtractor`拡張）**: Red — 既存golden fixture
@@ -106,44 +116,80 @@ Quantity制約）はJSON側が現状未出力のため対象外——JSON側の�
 - FSH生成（純Ruby、`FshGenerator`）とSushi検証（Node、`fsh-sushi`）は
   明確に分離する。FSH生成自体はNode/npmセットアップの有無に関わらず
   動作する
-- CI組み込みの選択肢: (i) 新規`fsh_lint`ジョブを追加し
-  `actions/setup-node`＋`npm install -g fsh-sushi`＋
-  `actions/cache`で`~/.fhir/packages`をキャッシュ (ii) 手動実行のみ
-  （evalハーネスと同じ扱い、`skoba/anlage#15`の先例に従い別Issue化）
-- evalハーネスとの違い: Sushiは合否を機械的に判定する検証器であり
-  CI適性は高い（eval是非判断の理由「rake taskは指標を表示するだけで
-  合否判定器ではない」がここでは当てはまらない）。ただしNode依存の
-  新規追加というインフラ判断が伴うため、承認事項として提示する
+**裁定（2026-08-26）**: v1はrakeタスク（ローカル・手動実行）まで。CI
+組み込みは行わない。再判断は12月世界公開準備のタイミングで行う
+（「FSHが公開機能として確定すれば、Node依存追加コストに見合う価値が
+立つ」という条件付きで記録。evalハーネスと異なりSushiは合否を機械的に
+判定する検証器でありCI適性自体は高いが、Node依存の新規追加という
+インフラコストが確定的にでは無いため据え置く）。
 
-### 出力の提供形（承認事項4で選定）
+### 出力の提供形
 
-- (i) ダウンロードendpoint（`GET /fhir/profiles/:id.fsh`）
-- (ii) `rake fsh:export`（既存`pathcards:eval`/`pathcards:backfill`と
-  同型、anlage側）
-- (iii) ファサード隣接ルート（`profiles_controller`へのフォーマット
-  追加）
+**裁定（2026-08-26）**: `rake fsh:export`（既存`pathcards:eval`/
+`pathcards:backfill`と同型、anlage側）をv1とする。HTTPダウンロード
+endpoint（`GET /fhir/profiles/:id.fsh`）・ファサード隣接ルートへの
+フォーマット追加はv1.1へ。
 
-### コミット分割（実装フェーズ、Codex起動時の目安）
+### コミット分割（実装フェーズ、Codex起動時の目安。2段構成）
 
-1. `FieldExtractor`へのbinding抽出追加＋`ProfileGenerator`の
-   `valueSet`欠落解消（gem、独立Issue）
-2. `FshGenerator`本体（gem、v1範囲：メタデータ・value[x]・component
-   スライシング）
-3. binding写像（gem、`FshGenerator`への統合）
-4. Sushi検証タスク＋出力提供endpoint（anlage側、承認事項3・4の裁定後）
+**前段（rails待ちの間に先行着手可、binding非依存）**:
 
-### 承認が必要な判断
+1. `FshGenerator`本体（gem、v1範囲のうちbinding以外: メタデータ・
+   単一leaf `value[x]`・複数leaf `component`スライシング・
+   `DV_QUANTITY`の`patternQuantity`）
+2. Sushi検証rakeタスク（anlage側、非binding部のFSHで動作確認）
+3. `rake fsh:export`（anlage側、出力提供形v1）
 
-1. **前提修正の起票単位**: `FieldExtractor`のbinding抽出拡張を
-   本Issue（`skoba/anlage#17`）に含めるか、openehr-rails側の独立Issue
-   として先に起票するか。gemの公開API・実行時挙動に触れるため
-   ticket-driven workflow上は独立Issueが必要（推奨: openehr-rails側で
-   先行Issue起票、本Issueはそれに従属）
-2. **v1範囲の確定**: 上記表の範囲で承認するか、`magnitude_range`も
-   含めるか（含める場合はJSON側の対応修正が前提となり範囲が拡大する）
-3. **Sushi検証のCI組み込み**: 組み込む（新規Node依存追加）か、
-   手動実行のみに留めるか
-4. **出力の提供形**: 上記3案のいずれか（複数選択も可）
+**後段（openehr-rails側の前提修正完了がブロッカー）**:
+
+4. binding写像（gem、`FshGenerator`への統合。`FieldExtractor`が
+   `value_set_uri`/`code_bindings`を持つようになった後に着手）
+5. binding込みgolden fixture更新・Sushi実コンパイル確認（SNOMEDリテラル
+   予算を遵守、`at0004`/`271649006`のみ再利用）
+
+## 裁定反映（2026-08-26）
+
+### 判断1: 前提修正、独立Issue化を承認（条件付き）
+
+帰属はopenehr-rails（`FieldExtractor`）。凍結前実装を承認——理由は
+(a) FSHのbindingを実現する上でのブロッカーであること、(b) 既存JSON
+facadeの`valueSet`欠落バグ自体の是正であること、の2点。Anlageの
+`Opt::PathcardExtractor`（`bindings_for`/`extract_code_bindings`）を
+参照実装とする。
+
+**段取り**: anlage（本セッション）がIssueドラフトを作成——WP2の知見
+（`docs/upstream/issues/openehr-ruby--opt-parser-crash-on-c-code-reference.md`
+＝`skoba/openehr-ruby#30`・CLOSED、`docs/upstream/issues/
+openehr-ruby--opt-parser-ignores-term-bindings.md`＝`skoba/
+openehr-ruby#31`・OPEN、の2件の既存調査を根拠に含める）とfacade欠落の
+実測を根拠とし、binding 2種（`value_set_binding`/`code_binding`）の
+要求仕様を明記——を人間中継でopenehr-railsへ送り、rails側で
+explore→plan→ゲートを別途行う。新テンプレート実戦2号（`skoba/
+anlage#10`のCommitter実装に続く2件目）・openehr-rails 0.5.0の第一弾
+という位置づけ。ドラフト: `docs/upstream/issues/
+openehr-rails--field-extractor-missing-terminology-bindings.md`
+
+### 判断2: v1範囲、承認
+
+上記v1範囲表のとおり承認。`mml_referral`級の大規模テンプレートはv1
+検証対象外、v1.1判断は診断ドロップ後に行う（本文書「v1サブセットの
+範囲確定」節末尾に明記済み）。
+
+### 判断3: Sushi、rakeタスク（ローカル・手動）まで
+
+CI組み込みは12月世界公開準備時に再判断（FSHが公開機能として確定
+すれば価値が立つ、という条件付きで記録。本文書「Sushi検証の位置づけ」
+節に明記済み）。
+
+### 判断4: 提供形、rake exportをv1
+
+HTTPルートはv1.1へ（本文書「出力の提供形」節に明記済み）。
+
+### 実装順序
+
+openehr-rails側の前提修正完了がFSH実装のbinding部のブロッカー。
+非binding部（Profile/cardinality/型/単位）は前提修正を待たず先行
+着手可——本文書「コミット分割」節を前段/後段の2段に分けた。
 
 ## Verification（実装着手後）
 

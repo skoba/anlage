@@ -166,3 +166,54 @@ Sushi検証は別途の`rake fsh:verify`相当のタスクとして隔離し、N
 gem拡張の前提（binding抽出）・v1範囲・TDD（golden、SNOMED予算遵守）・
 Sushi検証の位置づけ・出力形・コミット分割・承認事項を
 `docs/design/fsh-plan.md`に起こす。
+
+---
+
+## R2: 裁定反映・前提修正Issueドラフト作成（2026-08-26）
+
+### 訂正（R1の精度不足）
+
+R1は「両binding形式ともAnlageの`PathcardExtractor`と同型ロジックを
+`FieldExtractor`へ移植すればよい」とだけ記したが、既存の
+`docs/upstream/issues/`調査を突き合わせた結果、**2種のbindingは
+openehr gem側の対応状況が非対称**であることが判明した:
+
+- `value_set_binding`（`C_CODE_REFERENCE#reference_set_uri`）:
+  `skoba/openehr-ruby#30`（`docs/upstream/issues/
+  openehr-ruby--opt-parser-crash-on-c-code-reference.md`）が**CLOSED**
+  済みのため、gemのパース済みオブジェクトモデル経由でそのまま取得可能
+- `code_binding`（`term_bindings`）: `skoba/openehr-ruby#31`
+  （`docs/upstream/issues/openehr-ruby--opt-parser-ignores-term-bindings.md`）
+  が**現在もOPEN**——`OpenEHR::Parser::OPTParser`がontology側の
+  `term_bindings`を一切読まないため、gemのオブジェクトモデルには
+  現れない。Anlageの`Opt::PathcardExtractor#extract_code_bindings`が
+  生XML（`Opt::SafeParser.safe_document`）を独立に再パースしている
+  のはこのため
+
+この非対称性は`FieldExtractor`拡張の実装方針に直結する（`code_binding`
+側は`#31`解消を待たず、`PathcardExtractor`と同じ迂回＝生XML再パースを
+`FieldExtractor`内に持ち込む形で実装可能——ブロッカーではなく実装
+パターンの選択の話）。Issueドラフトに反映済み。
+
+### 前提修正Issueドラフト作成
+
+`docs/upstream/issues/
+openehr-rails--field-extractor-missing-terminology-bindings.md`を
+作成。根拠: WP2由来の2件の既存調査（`#30`・`#31`）・facade欠落の実測
+（`ProfileGenerator`の`valueSet`欠落）・binding 2種の要求仕様（実カード
+2件の実測付き）・参照実装（`PathcardExtractor`）。本リポジトリ自身の
+`spec/templates/bmi_calculation_without_uid.opt`に実SNOMED-CT/LOINC
+`term_bindings`が既に存在すること（`:1683-1697`実測）も確認し、
+code_binding側のテスト対象として引用した。value_set_binding側の
+fixtureは本リポジトリに現状無いことも実測確認し、要否はrails側の
+explore→planに委ねる形で記載。
+
+段取り: 本ドラフトは人間中継でopenehr-railsへ送付される。実装は
+本セッション（anlage）のスコープ外——rails側で別途explore→plan→
+ゲートを行う。
+
+### plan反映
+
+`docs/design/fsh-plan.md`に裁定反映節（4判断）・v1規模上限
+（`mml_referral`級はv1検証対象外）・Sushi rakeタスクのみ・
+`rake fsh:export`をv1・コミット分割の前段/後段2区分を追記した。
