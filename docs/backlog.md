@@ -132,3 +132,24 @@ StructureDefinition生成（現facadeの導出部）・将来のFHIRリソース
   `docs/design/wp3-plan.md`「descriptionsは15枚中13枚(87%)が未翻訳英語」
   のような実測値）と本前提値を突き合わせ、母集団側の翻訳率との整合を
   確認する用途に使う。
+
+## 7. OPT生成ツールチェーンの受け入れポリシー — 確定版（2026-08-26裁定）
+
+OPT生成ツールチェーンは5系統が並立する（人間報告）: Ocean Template
+Designer／ADL Workbench／LinkEHR／HMC／Better Archetype Designer。
+受け入れポリシー:
+
+- **保証対象（first-class）**: Better Archetype Designer系——現在の
+  主流。新規・改訂OPTの標準ツールもこれ
+- **受け入れ実績（検証済み）**: Better AD系＋Ocean TD系。現役fixture:
+  `ProblemList.opt`／`LabResultReport.opt`／`CardiologyEncounter.opt`
+  ＝AD系、`bmi_calculation.opt`／`patient_blood_pressure.opt`／
+  `mml_referral`（予定）＝Ocean系
+- **他3系統（ADL Workbench／LinkEHR／HMC）**: 未検証・best-effort。
+  実物到来時に受け入れ検証する。bug報告のEnvironment欄で生成器系統を
+  申告してもらう運用とする
+
+12月世界公開準備時はこの三層（保証対象／検証済み／best-effort）を
+明示する。未翻訳定量の解釈枠（`docs/design/pathcards-language-policy.md`
+5節）が指すツールチェーン世代差はこの5系統・三層構造の具体例として
+接続する。
