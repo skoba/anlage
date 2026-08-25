@@ -329,3 +329,38 @@ WP2 golden fixtureの値を突合:
 （`pathcard_extractor.rb:243-257`）と`extract_code_bindings`
 （同`259-280`）の削除・`FieldExtractor`呼び出しへの置換で、
 `semantics_for`等の他メソッドは無関係。
+
+---
+
+## R5: FshGenerator実装完了（Part 2、openehr-rails側、2026-08-26）
+
+`skoba/openehr-rails#32`として実装完了・クローズ（コミット`5f669af`・
+`a996ef4`、詳細ログはopenehr-rails側`docs/reports/fsh-generator-log.md`
+R1-R2）。実装はopenehr-rails gem（`OpenehrRails::Fhir::FshGenerator`）
+に着地——`docs/design/fsh-plan.md`「源の確定」節どおり、`FieldExtractor
+#entries`を唯一の入力とする純Rubyクラス。
+
+**Claude Codeによる独立検証で2件の実質的な不具合を発見・是正**
+（Codex自身のsandbox検証はネットワーク制限で不可能だったため、
+実際にSushiでコンパイルして確認する作業はClaude Code側で実施）:
+
+1. **1st round**: 1要素に複数の`code_bindings`があるとFSHが競合し
+   Sushiエラーになる不具合（`* path = SYSTEM#code`形式の固定値代入を
+   複数回スタックする実装ミス）。`code.coding`を`system`値判別子で
+   スライスする形へ修正、0 Errorsを実測確認
+2. **2nd round**: `problem_list.opt`（EVALUATION→Condition、5要素）が
+   Sushiで29エラー——`Condition`に`component`要素が存在しないため。
+   既存JSON facade（`ProfileGenerator`）にも同根の未発見の欠陥がある
+   ことが判明（JSONはSushiのようなスキーマ検証を受けないため
+   これまで検出されなかった）。`skoba/openehr-rails#33`として別途
+   起票、本Issueのスコープ外と切り分け
+
+**最終検証（Claude Code独自、Codexの報告を鵜呑みにせず再実施）**:
+`bmi_calculation.opt`（全Observation系）は0 Errorsを実測確認。
+`bundle exec rspec`全281件green（Codexが報告した18件の失敗は
+sandbox固有の`Errno::EPERM`で、この session の実行環境では再現せず、
+CI runでもgreenを確認）。`bundle exec rubocop`108ファイルoffense無し。
+
+**Part 2完了**。前段/後段の統合実装（binding部含む）が完了し、
+`docs/design/fsh-plan.md`のコミット分割はすべて消化済み。残る
+「rake fsh:export」（anlage側出力提供形v1）は別タスクで着手する。
