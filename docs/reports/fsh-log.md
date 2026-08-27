@@ -364,3 +364,64 @@ CI runでもgreenを確認）。`bundle exec rubocop`108ファイルoffense無�
 **Part 2完了**。前段/後段の統合実装（binding部含む）が完了し、
 `docs/design/fsh-plan.md`のコミット分割はすべて消化済み。残る
 「rake fsh:export」（anlage側出力提供形v1）は別タスクで着手する。
+
+---
+
+## R6: 経路2の撤去を実装（Part 3、2026-08-27）
+
+R4 で「置換可。ただし実装の要否・時期は裁定事項」として保留していた
+経路2（`Opt::PathcardExtractor` の生 XML 再解析による code_binding 抽出）を、
+指示により実装した。`skoba/anlage#19` として起票・クローズ。
+
+### 変更
+
+`app/lib/opt/pathcard_extractor.rb`:
+
+- `extract_code_bindings(document)` → `extract_code_bindings(opt)`。
+  Nokogiri の `//*[local-name()='term_bindings']` 走査をやめ、パース済み OPT の
+  `component_terminologies[archetype_id].term_bindings`
+  （正規形 `{ terminology => { at_code => [CodePhrase] } }`）を読む
+- `nearest_archetype_id`（XML 祖先を遡って archetype_id を引く補助）を削除。
+  enrichment は archetype_id をキーに持つため不要になった
+- `#call` から `Opt::SafeParser.safe_document(@template.source_xml)` の呼び出しを削除。
+  source_xml の再解析そのものが無くなった
+
+`Opt::SafeParser.safe_document` 自体は**残置**した。本メソッドは XXE 対策の
+一部であり、削除は防御面の変更になる。撤去したのは呼び出し側だけで、
+現在このメソッドの呼び出し元は `spec/lib/opt/safe_parser_spec.rb` のみ
+（`grep` 実測）。**production 側の呼び出し元が無い状態になった**ことは
+ここに記録しておく（撤去可否は別途の判断とする）。
+
+### 検証: 抽出結果の差分ゼロ
+
+`spec/fixtures/opt/*.opt` 全5件について `Opt::PathcardExtractor.call` の
+`cards` と `report` を JSON にダンプし、置換前後で突合した。
+
+| | sha256 |
+|---|---|
+| 置換前（`extracted_at` 除去後） | `a88ebeb2134263a3d9b199615977fd72b3620dcf53fad7b1ded95fe776cdda31` |
+| 置換後（同上） | `a88ebeb2134263a3d9b199615977fd72b3620dcf53fad7b1ded95fe776cdda31` |
+
+**完全一致**。生ダンプでの差分は `provenance.extracted_at`（実行時刻）のみで、
+それ以外の差分行は0行（`diff | grep -vc extracted_at` = 0 実測）。
+R4 の予測（形式は保存される）が実装後の実測で裏付けられた。
+
+`bundle exec rspec` 97 examples, 0 failures。
+`bundle exec rubocop` 変更2ファイル offense 無し。
+
+### 副次的効果: `#31` の迂回保有者が1箇所に集約
+
+`skoba/openehr-ruby#31`（OPTParser drops term_bindings）の迂回実装は、
+これまで (a) Anlage の経路2 と (b) openehr-rails の
+`OpenehrRails::Opt::Parser#populate_term_bindings!` の2箇所にあった。
+(a) の撤去により、**迂回保有者は (b) の nil-guard 1箇所のみ**になった。
+上流解消時は (b) の2メソッド削除だけで撤去が完了する。
+
+この事実を明示する撤去条件コメントは、コード側では
+`app/lib/opt/pathcard_extractor.rb` の `extract_code_bindings` 上に記載した。
+**openehr-rails 側 `lib/openehr_rails/opt/parser.rb:43-51` の撤去条件コメント
+（「迂回保有者は2箇所」を前提とした記述）の更新は、本セッションでは
+行っていない** —— 実装先が Anlage 外（gem 本体）になるため、
+`CLAUDE.md`「層規律」（変更は Anlage 内に限る）と、同日 openehr-ruby /
+openehr-rails 双方の `CLAUDE.md` に入った越境認可ゲートの規約により、
+着手前にゲート報告を挟む。人間の裁定待ち。
