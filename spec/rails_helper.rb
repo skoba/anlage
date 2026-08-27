@@ -10,6 +10,16 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 require 'rspec/rails'
 require 'capybara/rspec'
 Capybara.javascript_driver = :selenium_chrome_headless
+# `.adl` ドロップの `POST /templates/preview` は ADL パース（Treetop）を同期実行する
+# ため、1リクエストの所要時間が負荷状況で大きく振れる。実測レンジは静穏時 724ms、
+# CPU 8並列 busy loop 下 2793ms、開発機移行の検収時（並行セッションが別 suite と
+# `rbenv install` を同時実行）2761ms / 3875ms
+# （openehr-ruby `docs/reports/machine-migration-log.md` R1 の D4:
+#  「アプリの挙動の欠損ではなく、本機の単発処理速度が旧機より遅いことによる
+#   タイムアウト」）。Capybara 既定の 2 秒はこのレンジを吸収できず、
+# 負荷時に system spec が偽陰性になる（skoba/anlage#18）。
+# 実測最大 3875ms を上回る 5 秒を待ち時間の下限として固定する。
+Capybara.default_max_wait_time = 5
 # Add additional requires below this line. Rails is not loaded until this point!
 
 # Requires supporting ruby files with custom matchers and macros, etc, in
