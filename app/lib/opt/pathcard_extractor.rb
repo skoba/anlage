@@ -18,8 +18,7 @@ module Opt
       opt = Opt::SafeParser.parse(@template.source_xml)
       @report = {}
       @opt = opt
-      document = Opt::SafeParser.safe_document(@template.source_xml)
-      @code_bindings = extract_code_bindings(document)
+      @code_bindings = extract_code_bindings(opt)
 
       Result.new(cards: extract_cards(opt), report: @report)
     end
@@ -256,36 +255,46 @@ module Opt
       bindings.concat(@code_bindings.fetch([ archetype_id, element.node_id ], []))
     end
 
-    def extract_code_bindings(document)
+    # code_bindingは、パース済みOPTの`component_terminologies`が持つ
+    # `ArchetypeTerminology#term_bindings`（正規形
+    # `{ terminology => { at_code => [CodePhrase] } }`）から読む。
+    #
+    # WP2当時この経路は存在せず、`source_xml`をNokogiriで再解析していた
+    # （`docs/design/wp2-plan.md`の「経路2」）。上流`OPTParser`が
+    # term_bindingsを落とす（`skoba/openehr-ruby#31`）ためスロットが空
+    # だったのが理由で、現在はopenehr-rails 0.5.0の
+    # `OpenehrRails::Opt::Parser#populate_term_bindings!`が同じ正規形へ
+    # 投入している。両経路の出力が一致することは`docs/reports/fsh-log.md`
+    # R4で実測確認済み（版数付きSNOMED表記
+    # `[SNOMED-CT(2003)::271649006]`もgem側で正規化されず素通し）。
+    #
+    # これでAnlage側の迂回実装は無くなり、`#31`の迂回保有者は
+    # openehr-rails側のnil-guard（`parser.rb`の`populate_term_bindings!`）
+    # 1箇所に集約された。上流解消時はそちらの撤去だけで完了する。
+    def extract_code_bindings(opt)
       bindings = Hash.new { |hash, key| hash[key] = [] }
 
-      document.xpath("//*[local-name()='term_bindings']").each do |term_binding|
-        archetype_id = nearest_archetype_id(term_binding)
-        next unless archetype_id
+      opt.component_terminologies.each do |archetype_id, terminology|
+        next unless terminology.respond_to?(:term_bindings)
 
-        term_binding.xpath("./*[local-name()='items']").each do |item|
-          code = item.at_xpath("./*[local-name()='value']/*[local-name()='code_string']")&.text
-          next unless code
+        (terminology.term_bindings || {}).each do |system_uri, codes|
+          codes.each do |at_code, code_phrases|
+            Array(code_phrases).each do |code_phrase|
+              code = code_phrase.code_string
+              next unless code
 
-          bindings[[ archetype_id, item["code"] ]] << {
-            "kind" => "code_binding",
-            "system_uri" => term_binding["terminology"],
-            "code" => code,
-            "display" => nil
-          }
+              bindings[[ archetype_id, at_code ]] << {
+                "kind" => "code_binding",
+                "system_uri" => system_uri,
+                "code" => code,
+                "display" => nil
+              }
+            end
+          end
         end
       end
 
       bindings
-    end
-
-    def nearest_archetype_id(node)
-      node.ancestors.each do |ancestor|
-        value = ancestor.at_xpath("./*[local-name()='archetype_id']/*[local-name()='value']")
-        return value.text if value
-      end
-
-      nil
     end
 
     def quantity_constraints(value_constraint, at_code)
