@@ -232,3 +232,69 @@ docs/とxlsxのsharedStringsに該当なし。xlsxの`AD`言及は上記§7相�
   相互参照しクローズ（not planned）。
 - 本ログは、2節の人間報告の転記（R3）と、jp_referral初版OPTの診断ドロップ
   （`#23`(1)、R4以降）で継続する。
+
+---
+
+## R3: AD移住偵察の実測要点（統括からの人間報告の転記、2026-09-04）
+
+R2 §2で転記待ちとしていた項目を、統括の報告どおりに転記する。**全項目が
+人間報告であり、本セッションでは`.oet`／`.adl`／Archetype Designer（AD）の
+いずれも実測していない**（`skoba/mml`はworking directory外、ADはブラウザ
+操作）。行番号・エラーメッセージ・ノードIDは報告値をそのまま記す。
+
+### 1. ゲート1 ブロッカー1: `at0027`の配置ずれ（テンプレ↔アーキタイプ）
+
+- `mml_referral.oet` 154行目の
+  `<Rule path="/data[at0001]/items[at0027]" max="0"/>`（Related itemの隠蔽）
+  が、repoの`problem_diagnosis.v1.adl`と配置ずれ——`.adl`では`at0027`が
+  一段深い入れ子にある。
+- ADは「missing in the parent archetype. The specialization will be
+  ignored」と表示しつつimportを完了させない。
+- 回避: 当該1行を削除した複製（`mml_referral-import.oet`）でimportを通した。
+- 骨格契約§5「旧資産の指紋」の「同一v1内の改版ドリフト（at0027配置ずれ）」
+  はこの所見を指す。
+
+### 2. ゲート1 ブロッカー2: `request-referral.v1`のスロット矛盾（子↔親）
+
+- 子`request-referral.v1`のSpecific detailsスロット`at0132`が
+  `include {/.*/}`（広い）なのに対し、親`request.v1`の同スロットは
+  catheter／device系に限定（狭い）——特殊化宣言なしにスロットを広げる矛盾。
+- ADは「unspecialized but differing from parent slot. Reverting to parent
+  value」と表示しつつuploadを停止。
+- 手術案（子の1行を親パターンへ置換）は**未実施のまま打ち切り**。
+- 骨格契約§5の「request親子のスロット矛盾」はこの所見を指す。
+
+### 3. ドット付きコードの系統リスク（第3のエラー類型になり得る）
+
+- `.oet`のRule群に`at0.2`／`at0.19`／`at0.20`／`at0011.1`／`at0011.2`への
+  参照が**10箇所**。擬似特殊化クラスタ（`-mml`／`-japan`、`specialise`宣言
+  なし）が特殊化深度のノードIDを内部使用している示唆。
+- 厳格検証では上記1・2とは別の第3のエラー類型になり得る（系統的リスク）。
+  手術予算（1行級×2〜3回）の射程外と判断。
+- R1 7節「対象外」の6アーキタイプ・111カードがこのクラスタ群に当たる。
+
+### 4. 補助所見
+
+- OPT（`mml_referral.opt`）を「ビルド時の全制約を封入したタイムカプセル」
+  として`.oet`／`.adl`のドリフト仲裁に使用した。atコード集合差は`at0004`の
+  1件のみ（OPT区画にあって`.adl`に無い）。
+- 改版ドリフトは「テンプレ↔アーキタイプ」（1節）と「子↔親」（2節）の
+  二層で発生する（指紋#3）。
+
+### 5. 打ち切り裁定（人間）
+
+- 偵察の主目的「旧資産は無手術では入らない」は回収済み。停止規則の1歩手前で
+  打ち切り。
+- パッチは直接経路（`.oet`／`.adl`の直接修正）で代替可。ゲート2／3の知見は
+  ADでパッチする場合にのみ判断価値があるため、ここで止める。
+- Better AD＝保証対象（`docs/backlog.md`7項）の方針は、新規・改訂OPTについて
+  不変。jp_referralの新築（R2、`#23`）がその適用。
+
+### 6. Anlage側で再測できる点（R4以降の材料）
+
+上記のうち`.oet`／`.adl`／ADに依存しない事実は、`spec/fixtures`外の
+`mml_referral.opt`（`skoba/mml`、読み取り越境の明示指示が要る）を
+`Opt::SafeParser.parse`に通せばOPT側だけで再測できる: OPT区画のatコード集合
+（4節の`at0004`差分）と、Rule群が参照するドット付きノードIDの出現数（3節の
+10箇所に対応するOPT側の`node_id`）。必要になった時点で明示指示を受けて
+実施する。
