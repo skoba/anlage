@@ -33,3 +33,7 @@
 # Ignore key files for decrypting credentials and more.
 /config/*.key
 
+# Ignore the NTFS alternate data stream that WSL materializes as a sibling
+# file whenever a file is copied in from Windows ("[ZoneTransfer] ZoneId=3").
+*:Zone.Identifier
+
