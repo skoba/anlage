@@ -167,3 +167,68 @@ diagnosis系」という分布論は、本テンプレートでは適用不能�
 加えないと、翻訳が付いてもSTORYアーキタイプの実際の臨床的用途
 （"Past history"）は検索可能にならない。ADパッチと独立した
 別課題として記録する（本タスクでは実装しない）。
+
+---
+
+## R2: AD移住偵察のクローズ（2026-09-04）
+
+R1の取り込み3分岐のうち2「ADパッチ後に取り込み」（`mml_referral`と依存
+アーキタイプをArchetype Designerへ移して翻訳・改修する経路）の偵察を
+クローズし、**新築（jp_referral）へ打ち切る裁定**を記録する。裁定の
+正典は`docs/design/referral-v2-inventory.md`（骨格契約v2、2026-09-04
+正典化。人間レビュー記録`docs/design/referral-v2-inventory-v2.xlsx`）で、
+その頭書きに「jp_referralは改訂ではなく**新築**（別template_id）」と
+確定している。
+
+### 1. 裁定（打ち切り）と根拠——本リポジトリで実測できる範囲
+
+- **打ち切り裁定**: R1推奨（3の見送り）を採らず、旧資産の改訂でも
+  なく、骨格契約に基づく新築とする。骨格契約§5「系譜ノート」が
+  mml_referral→jp_referralの処遇を明記する: 再配置（意味論的訂正）2件
+  （紹介目的: reason_for_encounter→request-referral at0064/at0062、
+  主訴: →reason_for_encounter）・継承・予約（exposure）・削除（race）・
+  不採用（progress_note）。
+- **旧資産の指紋**（§5、受け入れポリシー項目7への相互参照）: ja宣言×
+  enラベル混在（R1 3節の実測「ja翻訳0/16」と同根）／擬似特殊化命名
+  （`-mml`・`-japan`。R1 2節の`organisation-mml`・`address-japan`・
+  `telecom_details-japan`・`person_name-mml`・
+  `individual_professional-mml`）／同一v1内の改版ドリフト（at0027
+  配置ずれ・request親子のスロット矛盾）。これらは`docs/backlog.md`7項
+  「OPT生成ツールチェーンの受け入れポリシー」の三層構造（保証対象／
+  検証済み／best-effort）における**Ocean TD系旧世代の具体例**として
+  接続する——受け入れ実績「Ocean系＝mml_referral（予定）」は本裁定に
+  より「診断ドロップ済み・取り込み見送り・系譜元として参照」に読み
+  替える（`docs/demo/opt-catalog.md`のjp_referral予定行に反映済み）。
+- **ADで確定させる空欄**（§7）: SLOTの実at-code 4件・Service requested
+  要素・新規6アーキタイプのID/版/公開状態/ja訳・individual_personalの
+  職業要素・organisationの部門表現。記入方法は「jp_referral初版OPTを
+  Anlageに診断ドロップし、抽出パスカードのpathから転記」（手写し不要）。
+  xlsx側でも同趣旨の記載を実測（sharedStrings: 「AD 組立時に実at-codeを
+  正典値として追記」「ID・版はAD実測」「at-codeはAD実測で確定」）。
+
+### 2. 本セッションで復元できなかった偵察記録（人間報告の転記待ち）
+
+指示された記録項目のうち、**「ゲート1の2ブロッカー」と「ドット付き
+コードの系統リスク」の具体内容は、本リポジトリ・openehr-ruby・
+openehr-rails・xlsxのいずれにも記録が無い**（`grep`実測: `偵察`／
+`ゲート1`／`ドット付き`／`ブロッカー`／`打ち切り`は3リポジトリの
+docs/とxlsxのsharedStringsに該当なし。xlsxの`AD`言及は上記§7相当の
+6セルのみ）。クラッシュ前セッションのチャット上の報告と推定されるが、
+推定内容をここに書くことはしない（捏造禁止）。人間から要点の提供を
+受けた時点でR3として転記する。関連する実測事実として本ログに既にある
+のは、擬似特殊化命名（`-mml`・`-japan`）の依存アーキタイプ6件・111
+カード（R1 7節「対象外」）で、特殊化アーキタイプのat-code系統（親
+アーキタイプに紐づくコード体系）が新築側の骨格と干渉する論点は、§5の
+「旧資産の指紋」が示す範囲にとどめる。
+
+### 3. Issue
+
+- goal Issue `skoba/anlage#23`「jp_referral（診療情報提供書v2）の受入」
+  を起票（Goal/Why nowは契約§0・§8から要約、Acceptance criteria 4件:
+  初版OPTの診断ドロップと検収レポート／§7空欄の転記（v2.1）／fixture化・
+  golden・保留問2件の出題化／統合spec「MML 1通・JP-CLINS 1通の手動写像
+  から同じAQLで引ける」）。
+- `#4`「診療情報提供書OPTの受け入れスモーク」は`#23`にsupersededとして
+  相互参照しクローズ（not planned）。
+- 本ログは、2節の人間報告の転記（R3）と、jp_referral初版OPTの診断ドロップ
+  （`#23`(1)、R4以降）で継続する。

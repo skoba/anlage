@@ -25,6 +25,7 @@ openehr-railsの`demo_assets/templates/problem_list.opt`と、Anlageの
 | `ProblemList.opt` | `b821b98beebfba9e758cc0429a91bb98aedb7d50de684424f0eb58d51e4a47c1` | ja | WP1/WP2 サンプルカード1（傷病名、C_CODE_REFERENCE/value_set_binding実例）。ローカルcode_list実例（at0073） | 凍結 | CKM公開archetype、AD経由で人間作成（2026-08-22） |
 | `patient_blood_pressure.opt` | `9f1f679fcf9d2737d9f537b3e256f42c97e875c3fef9e835a54e9c1d415826e4` | en | 全spec一括緑化用fixture（`skoba/anlage#3`解消）。term_bindings（SNOMED-CT）4件・血圧archetype | 凍結 | openehr-rails demo_assets（commit `0028e0c32fc4331f51565d708f6e9f485ea315a3`、2026-07-29）からコピー |
 | `bmi_calculation.opt` | `d80e2ea6bab02fef0d34035cae507887ee1fc21b0a304e1a7175324118c9baea` | en※ | `skoba/anlage#5`案Aシード用途（`openEHR-EHR-OBSERVATION.height.v2`実archetype構造）。LOINC code_binding実例 | 凍結（AQLのpath照会用途限定。ラベル翻訳検証には未使用） | openehr-rails demo_assets（commit `0f88392d7c890a39fa82bebf26f42410d5c9b9af`、2026-06-26）からコピー |
+| `jp_referral`（予定。ファイル名・template_id は初版OPT納品時に実測で確定） | —（未納品） | ja（予定） | 診療情報提供書 v2。骨格契約`docs/design/referral-v2-inventory.md`（v2、2026-09-04正典化）に基づく**新築**テンプレート（別template_id）。受入goal: `skoba/anlage#23`（#4を包含） | AD 組み立て中 | 系譜元は`skoba/mml` `mml_referral.opt`（Ocean TD 2.6世代・136カード診断ドロップ済み、取り込み見送り: `docs/reports/referral-intake-log.md` R1・`docs/backlog.md` 8項）。jp_referral 自体は人間がArchetype Designerで新築（CKM公開アーキタイプ、追加要6件を含む） |
 
 ※ `bmi_calculation.opt`は言語宣言（archetypeレベル）はenだが、`at0013`（判定）のterm_definitionsのみja訳が混在している（`spec/fixtures/opt/bmi_calculation.opt:1678`実測。WP4評価データq09「BMI判定」がこのjaラベル経由で成立することを確認、`docs/reports/wp4-log.md`参照）。
 
@@ -33,6 +34,7 @@ openehr-railsの`demo_assets/templates/problem_list.opt`と、Anlageの
 - **凍結**: 現行のまま使用継続。改訂予定なし
 - **改訂待ち**: 人間からの改訂版供給を待っている（差し替え予定あり）
 - **新規予定**: まだ存在しないが、供給を依頼中の新規fixture
+- **AD 組み立て中**: 人間がArchetype Designerで組み立て中の新規テンプレート（初版OPTの納品待ち。納品後は診断ドロップ→fixture化の順で本表を更新する）
 
 ## 未消化タスクの統合先
 
