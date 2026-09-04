@@ -225,3 +225,62 @@ FHIR橋渡し層（FSHエミッタ・StructureDefinition生成・将来のFHIR
   ことを確認
 - 新規の実SNOMEDコード文字列を追加していないこと（golden fixture差分
   レビューで確認）
+
+## 追記2（2026-09-04）: as-built——配置乖離の記録（承認plan「Anlage内」→実装「gem内」）
+
+### 経緯（歴史改変なし）
+
+- 本planは`skoba/anlage#17`のplanとして起票・承認された（2026-08-26裁定、
+  4判断）。Anlageの`CLAUDE.md`絶対規律5「層規律: 変更はAnlage内に限る。
+  gemのコードは変更しない」の下で承認されたplanであり、承認の前提は
+  「Anlage内の実装」だった。
+- 一方、同じplanのStep 2「源の確定」節は、初版（`1faaef9`）の時点から
+  新設クラスを`OpenehrRails::Fhir::FshGenerator`（gem `lib/openehr_rails/
+  fhir/`直下）と書いていた。層規律との矛盾はplan本文でも裁定反映節でも
+  明示されず、層規律の例外として裁定されてもいない。R2追記1（2026-08-26）
+  に至っては「移行条件が満たされるまではAnlage内（openehr-rails gem）で
+  実装する」と、両者を同一視する書き方になっている。
+- 実装はgem側に着地した: `skoba/openehr-rails#32`（2026-08-26、コミット
+  `5f669af`・`a996ef4`、`docs/reports/fsh-log.md` R5）。openehr-rails側の
+  `docs/reports/fsh-generator-log.md` R1は「設計の権威はanlageの承認済み
+  `fsh-plan.md`」と明記し、rails側で独自のIssue起票とexplore→plan
+  （`docs/design/fsh-generator-plan.md`）を経ている。**しかしAnlage側で
+  「実装対象がAnlage外である」ことを確認するゲート報告は挟まれていない**
+  （`docs/reports/fsh-log.md` R2〜R5およびrails側R1にその記録が無いことを
+  実測）。前提修正`#30`についてはR2で「rails側で別途explore→plan→ゲート」と
+  書きながら、`#32`本体はその手続きを踏まずに進んだ。
+- 越境認可ゲートの規約自体は、この後に成文化された（openehr-rails
+  2026-08-26、openehr-ruby 2026-08-27、Anlage 2026-09-04 絶対規律9）。R6で
+  rails側コメント更新を着手前に止めてゲートへ回したのが、成文化後の最初の
+  適用例。
+
+### 技術的根拠（gem配置が結果として正しかった理由）
+
+1. **二重導出禁止**: 唯一の中間表現`FieldExtractor#entries`はgem側にあり、
+   `ProfileGenerator`（JSON）と同一の入力契約でFSHをレンダリングするには
+   同じ場所に置くのが唯一の一本化形。Anlage側に置けばOPTの意味論的解釈
+   （archetype_id・rm_type・code_list・required）を再導出するか、gem内部
+   構造へ依存することになる（Step 1 explore 2項の判断そのもの）。
+2. **`#33`の発見**: JSON facadeと同じ表（`TypeMap`）から生成したことで、
+   Sushiのスキーマ検証がJSON側の未発見欠陥（`Condition.component`）を
+   炙り出した。Anlage側の別実装ではこの検出は起きていない。
+3. **衛星gemへの移設可能性**（追記1）: 純Rubyモジュール＋薄アダプタの構造
+   はgem内でこそ守れる（active_support除去`0181f7f`、0.6.0収録が実測例）。
+   Anlage側は薄アダプタ（`rake fsh:export`/`fsh:verify`、`lib/tasks/
+   fsh.rake`）だけを持ち、層規律の範囲に収まる。
+
+### 反省
+
+配置の正しさと手続きの正しさは別。plan本文がgem配置を書いていた以上、
+承認時点で層規律の例外として明示裁定を仰ぐか、実装着手前にゲート報告を
+挟むべきだった。以後は絶対規律9が適用される。
+
+### as-built（v1完了時点の配置）
+
+| 要素 | 配置 | 根拠 |
+|---|---|---|
+| `FshGenerator`（FSH生成・binding写像） | openehr-rails gem `lib/openehr_rails/fhir/fsh_generator.rb`（0.6.0収録） | 二重導出禁止・`#33`・追記1 |
+| `FieldExtractor`のbinding抽出（前提修正） | openehr-rails gem（`#30`、0.5.0） | Step 2「前提修正」節 |
+| `rake fsh:export` / `fsh:verify` | Anlage `lib/tasks/fsh.rake`（spec: `spec/tasks/fsh_spec.rb`） | 判断3・判断4 |
+| Sushi本体 | ローカル（`fsh-sushi@3.16.0`固定、CI非組み込み） | 判断3、openehr-ruby `docs/backlog.md`「Sushiの版更新」 |
+| `problem_list`（EVALUATION→Condition）の29エラー | 0.6.0では未解消の既知ギャップ（`skoba/openehr-rails#33`。rails master `01f31f3`で修正済み・未リリース） | `docs/reports/fsh-log.md` R7 |

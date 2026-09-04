@@ -425,3 +425,79 @@ R4 の予測（形式は保存される）が実装後の実測で裏付けら�
 `CLAUDE.md`「層規律」（変更は Anlage 内に限る）と、同日 openehr-ruby /
 openehr-rails 双方の `CLAUDE.md` に入った越境認可ゲートの規約により、
 着手前にゲート報告を挟む。人間の裁定待ち。
+
+---
+
+## R7: FSH パッケージ完了（後半: 0.6.0 bump・`rake fsh:export`/`fsh:verify`・Sushi 実測、2026-09-04）
+
+### R6 残件: rails 側撤去条件コメントの更新（承認済み）
+
+R6 末尾でゲートに回した openehr-rails `lib/openehr_rails/opt/parser.rb` の
+撤去条件コメントを、指示の承認（「Part 3 未着なら実施（承認済み）」）に基づき
+更新した: 「`#31` の迂回保有者は本メソッド群（nil ガード 1 箇所）のみ。
+anlage 側の生 XML 再解析（`skoba/anlage#19`）は撤去済み」。コメントのみの
+変更（openehr-rails `3df9632`。lib/ を触るため次回タグ時は at-minimum-patch
+扱い、Issue 不要）。これで Part 3 は完了。
+
+### openehr-rails 0.6.0 bump
+
+`bundle lock --update openehr-rails --conservative` → `openehr-rails 0.6.0`
+（`openehr` 2.4.2 のまま、他 gem 不変。`--conservative` 無しの初回実行は
+`net-protocol` 0.2.2→0.3.0 も動かしたため、lock を戻して再実行した）。
+CHECKSUMS 記録値
+`sha256=223e3b3897f85c38eaffe7ea39bd7c2acf4c5de9cab7d50fe38f754ff9d65db6`
+は openehr-rails `CHANGELOG.md` [0.6.0] が記す rubygems 公開物（master HEAD
+ビルド。同 `docs/reports/fsh-generator-log.md` R8）の sha256 と一致。
+コミット `afc7e68`。
+
+### `rake fsh:export` / `fsh:verify`（TDD、t-wada）
+
+- **Red**: `spec/tasks/fsh_spec.rb`（4 examples）を先に書き、実行して
+  4 failures（`Don't know how to build task 'fsh:export'`）を確認
+- **Green**: `lib/tasks/fsh.rake`（`fsh:export[output_dir]`: active
+  テンプレートごとに `sushi-config.yaml` + `input/fsh/<profile_id>.fsh`、
+  既定 `tmp/fsh`／`fsh:verify[output_dir]`: 各プロジェクトを `sushi` に通し
+  要約行の Errors/Warnings を報告、`sushi` 不在なら中断）、4/0
+- **Refactor**: `sushi-config.yaml` から `id`/`name`/`title` を除去
+  （FSHOnly では IG 生成専用で sushi が「未使用」警告を 1 件出していた →
+  0 Warnings）。4/0 のまま
+- FSH 本文は `OpenehrRails::Fhir::FshGenerator#to_fsh_files` の出力そのもの
+  （spec で同値を固定）。`fsh:verify` の spec は PATH 先頭のスタブ `sushi` で
+  要約行の読み取り契約だけを固定（Node を Anlage の依存に加えない、判断3）
+- `bin/rubocop` 2 ファイル offense 無し。コミット `25f6fd8`
+- 全 suite **101 examples, 0 failures**、`bin/rubocop -f github` offense 無し
+
+### Sushi 実測（`sushi --version` = **SUSHI v3.16.0**）
+
+spec fixture 5 件を test DB へトランザクション内で一時登録 → `fsh:export`
+→ `/tmp/fsh-measure` → `fsh:verify`（scratch スクリプトはリポジトリ外・
+未コミット。test DB は rollback で 0 件に戻ることを実測）:
+
+| プロジェクト | profiles | Errors | Warnings |
+|---|---|---|---|
+| `bmi_calculation-1-0-0` | 3 | 0 | 0 |
+| `cardiologyencounter-1-0-0` | 1 | 0 | 0 |
+| `labresultreport-1-0-0` | 1 | 0 | 0 |
+| `patient_blood_pressure-v1-1-0-0` | 2 | 0 | 0 |
+| `problemlist-1-0-0` | 1 | **29** | 0 |
+
+`problemlist` の 29 エラーは全て `No element found at path component ...
+in OpenehrEvaluationProblemDiagnosisV1`——`skoba/openehr-rails#33` の既知
+ギャップ（rails 側 R2/R3 の「exactly 29 errors」と同数）。0.6.0 未収録、
+rails master `01f31f3` で修正済み・未リリース。**記録のみ**（本バッチの
+スコープ外）。
+
+### 完了宣言（4 条件）
+
+1. **as-built**: `docs/design/fsh-plan.md` 追記2（配置乖離の経緯・技術的
+   根拠・ゲートを経なかった反省・as-built 表）✓
+2. **active_support 除去済み（rails）**: `0181f7f`、v0.6.0 タグ（`4080053`）
+   に先行 → 0.6.0 収録 ✓
+3. **0.6.0 公開**: rubygems に 0.6.0 実在（`gem list -r openehr-rails`
+   実測）、anlage lock の sha256 が公開物と一致 ✓
+4. **`fsh:export` 実測**: 上表（Observation 系 0 Errors）✓
+
+→ **FSH パッケージ（`skoba/anlage#17`）完了**。Issue はクローズ。
+残る判断（CI 組み込み＝判断3、HTTP endpoint＝判断4 の v1.1、`#33` 修正の
+リリース取り込みと Sushi 3.20 系更新）は 12 月世界公開準備時に一括で
+再判断する（openehr-ruby `docs/backlog.md`「Sushi の版更新」）。
