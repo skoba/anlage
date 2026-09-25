@@ -65,24 +65,31 @@ class Template < ApplicationRecord
   end
 
   def self.build_web_template(opt, extractor)
-    alternatives = Opt::ValueAlternatives.call(opt)
+    constraints = Opt::ElementConstraints.call(opt)
     {
       "template_id" => opt.template_id.value,
       "concept" => opt.concept,
-      "entries" => extractor.entries.map { |entry| serialize_entry(entry, alternatives) }
+      "entries" => extractor.entries.map { |entry| serialize_entry(entry, constraints) }
     }
   end
 
-  # gem の field に Anlage 側の 2 キーを additive に足す（skoba/anlage#33）:
-  #   rm_type_alternatives: value 属性の代替 RM 型（OPT 出現順）
-  #   input_kind: フォーム入力の方針属性（Opt::InputKind、登録時に一度だけ導出）
-  def self.serialize_entry(entry, alternatives)
+  # gem の field に Anlage 側のキーを additive に足す:
+  #   rm_type_alternatives: value 属性の代替 RM 型（OPT 出現順、#33）
+  #   input_kind: フォーム入力の方針属性（Opt::InputKind、登録時に一度だけ導出、#33）
+  #   min_occurrences / required: 要素の occurrences 下限（#34。gem の required は
+  #     「entry が必須 かつ 要素が必須」で 0..1 の entry 配下では常に false なので、
+  #     要素自身の下限 ≥1 を required とする）
+  def self.serialize_entry(entry, constraints)
     fields = (entry[:fields] || []).map do |field|
       field = field.stringify_keys
-      field_alternatives = alternatives.fetch(field["path"], [ field["rm_type"] ])
+      constraint = constraints.fetch(field["path"], { "alternatives" => [ field["rm_type"] ], "min_occurrences" => 0 })
+      field_alternatives = constraint.fetch("alternatives")
+      min_occurrences = constraint.fetch("min_occurrences")
       field.merge(
         "rm_type_alternatives" => field_alternatives,
-        "input_kind" => Opt::InputKind.for(field, field_alternatives)
+        "input_kind" => Opt::InputKind.for(field, field_alternatives),
+        "min_occurrences" => min_occurrences,
+        "required" => field["required"] || min_occurrences >= 1
       )
     end
     entry.merge(occurrences: interval_to_h(entry[:occurrences]), fields: fields).stringify_keys

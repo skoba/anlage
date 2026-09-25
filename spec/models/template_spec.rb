@@ -91,3 +91,14 @@ RSpec.describe Template, "#33 input_kind と rm_type_alternatives" do
     expect(template.reload.fields.find { |f| f["name"] == "problem_diagnosis_at0002" }["input_kind"]).to eq("coded_free")
   end
 end
+
+# skoba/anlage#34: gem の required は「entry が必須 かつ 要素が必須」なので 0..1 の entry
+# 配下では常に false。Anlage 側で要素の occurrences 下限（OPT）から required を導出する。
+RSpec.describe Template, "#34 required は要素の occurrences 下限から導出" do
+  it "ProblemList の傷病名 at0002（1..1）は required、発症日時 at0077（0..1）は任意" do
+    fields = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).fields
+
+    expect(fields.find { |f| f["name"] == "problem_diagnosis_at0002" }).to include("required" => true, "min_occurrences" => 1)
+    expect(fields.find { |f| f["name"] == "problem_diagnosis_at0077" }).to include("required" => false, "min_occurrences" => 0)
+  end
+end

@@ -9,13 +9,12 @@ RSpec.describe "デモ動線: ProblemList のフォーム入力→保存→AQL�
     Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!)
   end
 
-  it "傷病名を自由記載し、診断確度を選び、保存した Composition を AQL で引ける" do
+  # skoba/anlage#34: 壇上で全欄を埋める人はいない——任意項目（日時 3 件）は空欄のまま保存する
+  # 現実の操作列で固定する
+  it "傷病名を自由記載し、診断確度を選び、任意項目は空欄のまま保存した Composition を AQL で引ける" do
     visit form_path(template.template_id)
 
     fill_in "field_problem_diagnosis_at0002", with: "2型糖尿病"
-    fill_in "field_problem_diagnosis_at0077", with: "2026-03-01T00:00:00"
-    fill_in "field_problem_diagnosis_at0003", with: "2026-03-15T00:00:00"
-    fill_in "field_problem_diagnosis_at0030", with: "2026-03-20T00:00:00"
     select "疑い", from: "field_problem_diagnosis_at0073"
     click_button "送信"
 

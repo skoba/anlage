@@ -82,3 +82,25 @@ RSpec.describe Opt::CompositionBuilder, "#33 input_kind" do
     expect(value.defining_code.terminology_id.value).to eq("http://id.who.int/icd/release/11/mms")
   end
 end
+
+# skoba/anlage#34: 空欄（nil／""）の要素は Composition に含めない（要素単位・型別ガードに
+# しない）。builder が送信値へ直接 Float／Integer／Date.parse／Time.zone.parse／iso8601 を
+# 呼ぶ 5 箇所は、非 blank の要素でしか到達しない。
+RSpec.describe Opt::CompositionBuilder, "#34 空欄の要素はスキップ" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!).reload }
+
+  it "DV_DATE_TIME・DV_CODED_TEXT の空欄を含む値でも組め、埋めた要素だけになる" do
+    composition = described_class.new(template, {
+      "problem_diagnosis_at0002" => "かぜ", "problem_diagnosis_at0077" => "2026-09-25T00:00:00",
+      "problem_diagnosis_at0003" => "", "problem_diagnosis_at0030" => nil, "problem_diagnosis_at0073" => ""
+    }).build
+
+    expect(composition.content.first.data.items.map(&:archetype_node_id)).to eq(%w[at0002 at0077])
+  end
+
+  it "全要素が空欄の entry は content に含めない" do
+    composition = described_class.new(template, { "problem_diagnosis_at0002" => "", "problem_diagnosis_at0077" => "" }).build
+
+    expect(composition.content).to be_empty
+  end
+end

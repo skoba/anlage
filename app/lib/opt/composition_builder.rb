@@ -39,7 +39,8 @@ module Opt
         territory: code_phrase(OpenehrRails.default_territory, "ISO_3166-1"),
         category: dv_coded_text(*OpenehrRails.default_category, "openehr"),
         composer: OpenEHR::RM::Common::Generic::PartyIdentified.new(name: OpenehrRails.default_composer_name),
-        content: @template.entries.map { |entry| build_entry(entry) }
+        # 全要素が空欄の entry は含めない（skoba/anlage#34）
+        content: @template.entries.reject { |entry| filled_fields(entry).empty? }.map { |entry| build_entry(entry) }
       )
     end
 
@@ -67,8 +68,15 @@ module Opt
       )
     end
 
+    # 送信値が blank（nil／""）の要素は Composition に含めない（skoba/anlage#34。要素単位・
+    # 型別ガードにしない）。build_value が送信値へ直接 Float／Integer／Date.parse／
+    # Time.zone.parse／iso8601 を呼ぶのは、ここを通った非 blank の要素だけ。
+    def filled_fields(entry)
+      (entry["fields"] || []).reject { |field| @values[field["name"]].blank? }
+    end
+
     def build_data(entry)
-      fields = entry["fields"]
+      fields = filled_fields(entry)
       raise UnsupportedShape, "entry #{entry['archetype_id']} has no fields" if fields.blank?
 
       chains = fields.map { |f| wrapper_chain(f["path"]) }.uniq
@@ -134,7 +142,7 @@ module Opt
       OpenEHR::RM::DataStructures::ItemStructure::Representation::Element.new(
         archetype_node_id: field["node_id"],
         name: dv_text(field["label"]),
-        value: build_value(field, @values.fetch(field["name"]))
+        value: build_value(field, @values[field["name"]])
       )
     end
 
