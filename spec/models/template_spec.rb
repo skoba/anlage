@@ -60,3 +60,34 @@ RSpec.describe Template, type: :model do
     end
   end
 end
+
+# skoba/anlage#33: web_template の field に rm_type_alternatives（additive）と input_kind
+# （登録時に一度だけ導出する方針属性）を付ける。rm_type は gem の値のまま。
+RSpec.describe Template, "#33 input_kind と rm_type_alternatives" do
+  def field_of(fixture, name)
+    Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture}").read).fields.find { |f| f["name"] == name }
+  end
+
+  it "ProblemList の傷病名は rm_type DV_CODED_TEXT のまま、代替 [DV_TEXT, DV_CODED_TEXT]・input_kind coded_free" do
+    field = field_of("ProblemList.opt", "problem_diagnosis_at0002")
+
+    expect(field["rm_type"]).to eq("DV_CODED_TEXT")
+    expect(field["rm_type_alternatives"]).to eq([ "DV_TEXT", "DV_CODED_TEXT" ])
+    expect(field["input_kind"]).to eq("coded_free")
+  end
+
+  it "診断確度（ローカル code_list）は select、数量は number、テキストは text" do
+    expect(field_of("ProblemList.opt", "problem_diagnosis_at0073")["input_kind"]).to eq("select")
+    expect(field_of("patient_blood_pressure.opt", "blood_pressure_systolic")["input_kind"]).to eq("number")
+    expect(field_of("jp_referral.opt", "story")["input_kind"]).to eq("text")
+  end
+
+  it "#rebuild_web_template! は保存済みテンプレートの field を再導出し checksum を変えない" do
+    template = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!)
+    template.update_column(:web_template, template.web_template.deep_dup.tap { |wt| wt["entries"].each { |e| e["fields"].each { |f| f.delete("input_kind") } } })
+    expect(template.reload.fields.first).not_to have_key("input_kind")
+
+    expect { template.rebuild_web_template! }.not_to(change { template.reload.checksum })
+    expect(template.reload.fields.find { |f| f["name"] == "problem_diagnosis_at0002" }["input_kind"]).to eq("coded_free")
+  end
+end

@@ -139,6 +139,17 @@ module Opt
     end
 
     def build_value(field, raw_value)
+      # 方針は input_kind を読むだけ（#33 裁定 A）。coded_free は OR 制約の正規の一方
+      # （DV_TEXT）で保存し、coded_manual は手入力の system／code で DvCodedText を組む。
+      # 型の構築自体は rm_type（モデルの事実）による。
+      case field["input_kind"]
+      when "coded_free"
+        return dv_text(raw_value.to_s)
+      when "coded_manual"
+        system = @values["#{field['name']}__system"].presence || field["value_set_uri"].to_s.delete_prefix("terminology:")
+        return dv_coded_text(raw_value.to_s, @values.fetch("#{field['name']}__code"), system)
+      end
+
       case field["rm_type"]
       when "DV_QUANTITY"
         OpenEHR::RM::DataTypes::Quantity::DvQuantity.new(magnitude: Float(raw_value), units: field["units"])

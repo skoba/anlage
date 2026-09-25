@@ -6,8 +6,9 @@ error ||= nil
 <div class="field <%= "field-error" if error %>">
   <label for="field_<%= field["name"] %>"><%= field["label"] %><%= " *" if field["required"] %></label>
 
-  <% case field["rm_type"] %>
-  <% when "DV_QUANTITY" %>
+  <%# 描画は input_kind（登録時に導出された方針属性、Opt::InputKind）だけで決める（#33） %>
+  <% case field["input_kind"] %>
+  <% when "number" %>
     <input type="number" step="any" id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]"
            <% if field["magnitude_range"] %>
              min="<%= field["magnitude_range"][0] %>" max="<%= field["magnitude_range"][1] %>"
@@ -15,13 +16,23 @@ error ||= nil
            value="<%= value %>"
            <%= "disabled" if disabled %>>
     <span class="units"><%= field["units"] %></span>
-  <% when "DV_CODED_TEXT" %>
+  <% when "select" %>
     <select id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]" <%= "disabled" if disabled %>>
       <option value=""></option>
       <% (field["code_list"] || []).each do |code| %>
         <option value="<%= code %>" <%= "selected" if value == code %>><%= field.dig("code_labels", code) || code %></option>
       <% end %>
     </select>
+  <% when "coded_manual" %>
+    <input type="text" id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]"
+           value="<%= value %>" <%= "disabled" if disabled %>>
+    <p class="field-note">用語サービス未接続（<%= field["value_set_uri"] %>）。コードが分かる場合は system／code を手入力してください。</p>
+    <label for="field_<%= field["name"] %>__system">system</label>
+    <input type="text" id="field_<%= field["name"] %>__system" name="values[<%= field["name"] %>__system]"
+           value="<%= field["value_set_uri"].to_s.delete_prefix("terminology:") %>" <%= "disabled" if disabled %>>
+    <label for="field_<%= field["name"] %>__code">code</label>
+    <input type="text" id="field_<%= field["name"] %>__code" name="values[<%= field["name"] %>__code]"
+           value="" <%= "disabled" if disabled %>>
   <% else %>
     <input type="text" id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]"
            value="<%= value %>" <%= "disabled" if disabled %>>

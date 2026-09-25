@@ -34,12 +34,23 @@ module Opt
       return "必須項目です" if field["required"] && raw.blank?
       return nil if raw.blank?
 
-      case field["rm_type"]
-      when "DV_QUANTITY", "DV_COUNT"
+      # 方針は input_kind を読むだけ（登録時に導出済み、Opt::InputKind。#33 裁定 A）
+      case field["input_kind"]
+      when "number"
         numeric_error(field, raw)
-      when "DV_CODED_TEXT"
+      when "select"
         coded_text_error(field, raw)
+      when "coded_manual"
+        coded_manual_error(field)
       end
+    end
+
+    # 裁定 B: raw 文字列を code に詰めた DvCodedText は存在しないコードの捏造になるので、
+    # コード化必須（用語サービス未接続）では code 未入力をエラーにする
+    def coded_manual_error(field)
+      return nil if @values["#{field['name']}__code"].present?
+
+      "コード入力が必要です（用語サービス未接続のため system／code を手入力してください）"
     end
 
     def numeric_error(field, raw)

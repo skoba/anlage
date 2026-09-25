@@ -47,3 +47,38 @@ RSpec.describe Opt::CompositionBuilder do
     end
   end
 end
+
+# skoba/anlage#33: builder は input_kind を読むだけ。coded_free は DV_TEXT（OR 制約の
+# 正規の一方）、coded_manual は手入力の system/code で DvCodedText。
+RSpec.describe Opt::CompositionBuilder, "#33 input_kind" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!).reload }
+  let(:base_values) do
+    { "problem_diagnosis_at0077" => "2026-03-01T00:00:00", "problem_diagnosis_at0003" => "2026-03-01T00:00:00",
+      "problem_diagnosis_at0030" => "2026-03-01T00:00:00", "problem_diagnosis_at0073" => "at0074" }
+  end
+
+  def diagnosis_value(values)
+    described_class.new(template, values).build.content.first.data.items.find { |item| item.archetype_node_id == "at0002" }.value
+  end
+
+  it "coded_free（ProblemList 傷病名）は DvText で保存する" do
+    value = diagnosis_value(base_values.merge("problem_diagnosis_at0002" => "2型糖尿病"))
+
+    expect(value).to be_a(OpenEHR::RM::DataTypes::Text::DvText)
+    expect(value).not_to be_a(OpenEHR::RM::DataTypes::Text::DvCodedText)
+    expect(value.value).to eq("2型糖尿病")
+  end
+
+  it "coded_manual は手入力の system/code で DvCodedText を組む" do
+    field = template.fields.find { |f| f["name"] == "problem_diagnosis_at0002" }
+    field["input_kind"] = "coded_manual"
+    template.update_column(:web_template, template.web_template)
+    template.reload
+
+    value = diagnosis_value(base_values.merge("problem_diagnosis_at0002" => "2型糖尿病", "problem_diagnosis_at0002__code" => "5A11", "problem_diagnosis_at0002__system" => "http://id.who.int/icd/release/11/mms"))
+
+    expect(value).to be_a(OpenEHR::RM::DataTypes::Text::DvCodedText)
+    expect(value.defining_code.code_string).to eq("5A11")
+    expect(value.defining_code.terminology_id.value).to eq("http://id.who.int/icd/release/11/mms")
+  end
+end
