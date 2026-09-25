@@ -43,6 +43,12 @@ RSpec.describe "デモクエリ（フォーム保存経路経由）", type: :req
         }
       end
 
+      # skoba/anlage#33 裁定 B: 傷病名 at0002（外部値集合のみ・DV_TEXT 代替あり = coded_free）は
+      # raw を code に詰めた DvCodedText ではなく DV_TEXT として保存される（是正の pin）。
+      saved_diagnosis = Composition.order(:id).last.rm_composition.dig("content", 0, "data", "items", 0, "value")
+      expect(saved_diagnosis["_type"]).to eq("DV_TEXT")
+      expect(saved_diagnosis["value"]).to eq("Demo diagnosis (at0076)")
+
       # 実測により訂正: value/defining_code/code_string は現行AQLエンジンの
       # ALLOWED_TERMINAL_HOPS（openehr gem lib/openehr/aql/engine/path_evaluator.rb）
       # が magnitude/name/value のみを許可しており、defining_code 経由の
