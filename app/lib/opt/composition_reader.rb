@@ -39,7 +39,14 @@ module Opt
 
         items = items_for(entry, entry_node)
         (entry["fields"] || []).each do |field|
-          element = items&.find { |i| i["archetype_node_id"] == field["node_id"] }
+          # 埋め込み CLUSTER 一段（#38／#39）: field の archetype_id が entry と異なるときは、
+          # その archetype_node_id を持つ CLUSTER の items から探す
+          scope = if field["archetype_id"] && field["archetype_id"] != entry["archetype_id"]
+                    items&.find { |i| i["archetype_node_id"] == field["archetype_id"] }&.dig("items")
+          else
+                    items
+          end
+          element = scope&.find { |i| i["archetype_node_id"] == field["node_id"] }
           values[field["name"]] = extract_value(field, element["value"]) if element
         end
       end

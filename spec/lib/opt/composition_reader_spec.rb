@@ -23,4 +23,21 @@ RSpec.describe Opt::CompositionReader do
     expect { described_class.call(template, "not json") }
       .to raise_error(described_class::InvalidComposition)
   end
+
+  # skoba/anlage#39: 埋め込み CLUSTER 一段（#38 で保存できる形）の値も読み戻す
+  it "埋め込み CLUSTER 配下の値（LabResultReport の分析名・数値）を読み戻す" do
+    lab = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/LabResultReport.opt").read)
+    json = build_composition_json(lab, {
+      "laboratory_test_result_at0005" => "血液検査", "laboratory_test_analyte_at0024" => "空腹時血糖",
+      "laboratory_test_analyte_at0001" => "98", "laboratory_test_analyte_at0001__units" => "mg/dL"
+    })
+
+    read_back = described_class.call(lab, json)
+
+    expect(read_back).to eq(
+      "laboratory_test_result_at0005" => "血液検査",
+      "laboratory_test_analyte_at0024" => "空腹時血糖",
+      "laboratory_test_analyte_at0001" => "98.0"
+    )
+  end
 end
