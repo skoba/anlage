@@ -460,3 +460,36 @@ R4 6 節に記録: 8 Errors。clinical_synopsis ×2 は #38 型（見込みど�
 - (2) §7 転記・v2.1: **完了**（R5）。
 - (3) fixture 化・golden・保留問の出題化: 未着手。`#29`（path 崩れ）の解消前に golden を固定すると崩れた path を固定してしまうため、**#29 → (3)** の順。
 - (4) 統合 spec: フォーム保存経路（`#30`）と RM グラフ（上流 15・16 項）の両方が前提。凍結前に揃わない場合の代替（手写像 JSON の直接コミット経路で AQL 統一性を示す）は裁定事項。
+
+---
+
+## R7: #29 修正（凍結前バッチ 項目 1、2026-09-25）
+
+計画 `docs/design/jp-referral-freeze-batch-plan.md` 1 節、裁定 A〜D（同日）に基づく。コミット `127e809`。
+
+### Red → Green（解決形 (a)）
+
+- Red: `spec/lib/opt/pathcard_extractor_spec.rb` に 3 例を追加して実行 → **3 failures**（at0121 の path が `items[at0000]`、紹介先担当医の path が `items[at0000]/items[at0000]/items[at0000]`、26 カード中に `[at0000]` あり）。
+- Green: `app/lib/opt/pathcard_extractor.rb` `walk` の述語を `archetype_id_of(child) || child.node_id` に（1 箇所）。3 例 green。
+- 波及: 同 spec のインライン sample-card 期待値（LabResultReport 分析項目、`:79`・`:242`）と `spec/tasks/fsh_spec.rb` の pin（fixture 件数 5→6）を追随。全 suite **106 examples, 0 failures**、rubocop 0。
+
+### fixture（裁定 D）
+
+`spec/fixtures/opt/jp_referral.opt`（real）。出所ヘッダ（XML コメント）に openehr-templates-jp@`8eebe04…`・上流 sha256 `99d474f8…`・AD リポジトリ openEHR-templates-jp・翻訳プロジェクト `openehr-japanese-translation`@`e552c0a5…6293`（main HEAD、`gh api` 実測）・v0.1（処方なし・at0002 DV_TEXT・患者未配置）・版管理規約を記載。ヘッダ分だけ上流と異なり fixture sha256 は `48e20a3f…300bb`。`Opt::SafeParser` → 抽出 26 カードを実測（ヘッダは XML コメントなので parse に影響なし）。
+
+### golden 再生成（LabResultReport、#29 path 訂正による再生成）
+
+`spec/fixtures/pathcards/LabResultReport.golden.json` の 2 カードの path のみ意味差分（`_provenance` 不変、sha 照合 OK）:
+
+| at | 旧 | 新 |
+|---|---|---|
+| at0024 | `.../data[at0003]/items[at0000]/items[at0024]/value` | `.../data[at0003]/items[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1]/items[at0024]/value` |
+| at0001 | `.../data[at0003]/items[at0000]/items[at0001]/value` | `.../data[at0003]/items[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1]/items[at0001]/value` |
+
+（JSON のキー順が `rm_type` 後置へ揃った差分も含むが値は不変。golden spec はハッシュ比較。）
+
+**スポットチェック（裁定条件）**: `LabResultReport.opt` を Nokogiri で直接辿り、`CLUSTER.laboratory_test_analyte.v1` の C_ARCHETYPE_ROOT の親連鎖が `/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[…]` で、その直下 ELEMENT が at0024・at0001 の 2 つであることを実測。訂正後 path と一致。
+
+### opt-catalog
+
+jp_referral 行を「fixture 化済み v0.1」へ（fixture／上流 sha256 の両方を記載、版管理規約を凡例に追加）。
