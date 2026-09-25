@@ -4,7 +4,11 @@ RSpec.describe Opt::PathcardExtractor, "golden regression from CKM fixture OPTs"
   GOLDEN_CASES = {
     "CardiologyEncounter.opt" => { golden: "CardiologyEncounter.golden.json", count: 2 },
     "LabResultReport.opt" => { golden: "LabResultReport.golden.json", count: 3 },
-    "ProblemList.opt" => { golden: "ProblemList.golden.json", count: 6 }
+    "ProblemList.opt" => { golden: "ProblemList.golden.json", count: 6 },
+    # jp_referral v0.1（skoba/anlage#23 (3)）: SECTION 配下 13 ルート・26 カード。
+    # 束縛 0 件（傷病名 at0002 は DV_TEXT）。出所は fixture 先頭コメントと golden の
+    # _provenance.source_repository。
+    "jp_referral.opt" => { golden: "jp_referral.golden.json", count: 26 }
   }.freeze
 
   GOLDEN_CASES.each do |fixture_name, golden_case|

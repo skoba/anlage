@@ -1,0 +1,1810 @@
+{
+  "_provenance": {
+    "source_fixture": "jp_referral.opt",
+    "source_sha256": "48e20a3fbeeff74c6738c64059266ad12f453c58f73934cd0c3ecf66a4f300bb",
+    "binding_origin": "CKM公開束縛由来",
+    "source_repository": "skoba/openehr-templates-jp@8eebe0434f363deb71acb298f11cb1c70adbb77d (jp_referral.opt sha256 99d474f8ab86a9980cb6d997168b89a3eed6fd4e8f02a8217dbcd1ef936d62fa; fixture adds a provenance header)",
+    "template_version": "jp_referral v0.1 (2026-09-21)"
+  },
+  "cards": [
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/activities[at0001]/description[at0009]/items[at0121]/value",
+        "at_code": "at0121"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "サービス名",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "依頼する単一のサービスまたは活動の名称。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 1,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/activities[at0001]/description[at0009]/items[at0062]/value",
+        "at_code": "at0062"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "紹介目的",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "依頼の理由を述べる短い語句。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": null
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/activities[at0001]/description[at0009]/items[at0150]/value",
+        "at_code": "at0150"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "備考",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "他の項目には収まらないサービス依頼についての追加の記述。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[at0010]/value",
+        "at_code": "at0010"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "依頼者オーダー識別子",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "依頼側の臨床システムが付与したローカルな識別子。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT",
+        "rm_type_alternatives": [
+          "DV_TEXT",
+          "DV_IDENTIFIER"
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[at0001]/value",
+        "at_code": "at0001"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "名称",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "組織の名称またはラベル（非構造情報）。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介元医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.address.v1]/items[at0001]/value",
+        "at_code": "at0001"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "住所行",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "場所を特定する手がかりとなる、街区レベルまたは私書箱の関連する詳細情報をすべて表す非構造化の住所行。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介元医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "住所",
+            "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": null
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.address.v1]/items[at0002]/value",
+        "at_code": "at0002"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "市区町村",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "住所を含む最下位の地域の名称。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介元医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "住所",
+            "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": null
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.address.v1]/items[at0003]/value",
+        "at_code": "at0003"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "地区／郡",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "住所を含む地方自治体の区域または地理的区域の名称。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介元医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "住所",
+            "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": null
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.address.v1]/items[at0004]/value",
+        "at_code": "at0004"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "都道府県／州",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "住所を含む主要な行政区域または地理的区域の名称。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介元医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "住所",
+            "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.address.v1]/items[at0005]/value",
+        "at_code": "at0005"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "郵便番号",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "該当する郵便配達サービスが定める、住所を含む郵便配達区域のコード。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介元医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "住所",
+            "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.address.v1]/items[at0018]/value",
+        "at_code": "at0018"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "コメント",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "他の項目には収まらない住所についての追加の記述。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介元医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "住所",
+            "archetype_id": "openEHR-EHR-CLUSTER.address.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.electronic_communication.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.electronic_communication.v1]/items[at0001]/value",
+        "at_code": "at0001"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "種別",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "電子的な連絡先の種別または形式。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介元医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "電子的な連絡先",
+            "archetype_id": "openEHR-EHR-CLUSTER.electronic_communication.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_CODED_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {
+          "code_list": [
+            {
+              "code": "at0006",
+              "label": "固定電話"
+            }
+          ]
+        }
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.electronic_communication.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.electronic_communication.v1]/items[at0002]/value",
+        "at_code": "at0002"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "値",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "「種別」に応じて連絡先を一意に表す英数字の組み合わせ。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介元医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "電子的な連絡先",
+            "archetype_id": "openEHR-EHR-CLUSTER.electronic_communication.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 1,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.person.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.person.v1]/items[at0001]/value",
+        "at_code": "at0001"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "氏名",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "個人の氏名（非構造情報）。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介元医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "医師",
+            "archetype_id": "openEHR-EHR-CLUSTER.person.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[at0011]/value",
+        "at_code": "at0011"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "受領者オーダー識別子",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "サービス依頼を受領する医療従事者または医療機関が、その依頼に付与したローカルな識別子。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT",
+        "rm_type_alternatives": [
+          "DV_TEXT",
+          "DV_IDENTIFIER"
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[at0001]/value",
+        "at_code": "at0001"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "名称",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "組織の名称またはラベル（非構造情報）。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介先医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[at0001]/value",
+        "at_code": "at0001"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "名称",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "組織の名称またはラベル（非構造情報）。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介先医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "診療科",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[at0003]/value",
+        "at_code": "at0003"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "識別子",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "組織に関連付けられた識別子。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介先医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "診療科",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_IDENTIFIER",
+        "rm_type_alternatives": [
+          "DV_IDENTIFIER",
+          "DV_TEXT"
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": null
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[at0004]/value",
+        "at_code": "at0004"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "役割",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "個人またはケア対象者に対する組織の関係または役割。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介先医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "診療科",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": null
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.person.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.person.v1]/items[at0001]/value",
+        "at_code": "at0001"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "氏名",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "個人の氏名（非構造情報）。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介先医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "診療科",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "担当医",
+            "archetype_id": "openEHR-EHR-CLUSTER.person.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.person.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.person.v1]/items[at0010]/value",
+        "at_code": "at0010"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "コメント",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "他の項目には収まらない個人についての追加の記述。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介先医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "診療科",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "担当医",
+            "archetype_id": "openEHR-EHR-CLUSTER.person.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[at0019]/value",
+        "at_code": "at0019"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "コメント",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "他の項目には収まらない組織についての追加の記述。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "サービス依頼",
+            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "紹介先医療機関",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "診療科",
+            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0002]/value",
+        "at_code": "at0002"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "プロブレム・診断の名称",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "特定されたプロブレムや診断の名称。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "傷病名",
+            "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 1,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-OBSERVATION.story.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-OBSERVATION.story.v1]/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value",
+        "at_code": "at0004"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "病歴の記述",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "ケア対象者の語り、または医療従事者が聴取した病歴の叙述的な記述。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "既往歴及び家族歴",
+            "archetype_id": "openEHR-EHR-OBSERVATION.story.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": null
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-EVALUATION.clinical_synopsis.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-EVALUATION.clinical_synopsis.v1]/data[at0001]/items[at0002]/value",
+        "at_code": "at0002"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "要約",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "臨床所見の要約、アセスメント、まとめ、または評価。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "症状経過及び検査結果",
+            "archetype_id": "openEHR-EHR-EVALUATION.clinical_synopsis.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 1,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-EVALUATION.clinical_synopsis.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-EVALUATION.clinical_synopsis.v1]/data[at0001]/items[at0002]/value",
+        "at_code": "at0002"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "要約",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "臨床所見の要約、アセスメント、まとめ、または評価。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "治療経過",
+            "archetype_id": "openEHR-EHR-EVALUATION.clinical_synopsis.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_TEXT"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 1,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    }
+  ]
+}

@@ -281,3 +281,22 @@
   notes: "semantics.labels/descriptionsには無くconstraints.value.code_list[].label経由でのみ成立.小林コメント：容認。expected は at0073(診断確度・ELEMENT)のまま正 — カード単位は ELEMENT であり、「疑い」の正確な指示対象はその値集合内のコード at0074(Suspected)。クエリが code_list の値ラベルに一致して要素カードへ届く「値着地」型の代表例(WP2 の code_list 抽出+WP3 の検索対象化の実証)。【台帳10項への接続】本問の臨床意図の最終形は「診断確度 = at0074 のレコード絞り込み」= コード値 WHERE であり、AQL エンジンの defining_code/code_string 到達不能(台帳10項)の初の具体的実需例。10項の凍結後起票時に本問を Use case として引用可"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-08-24
+
+# q21: WP4 将来課題の保留問「既往歴→story」の出題化（skoba/anlage#23 (3)、裁定 B、
+# 2026-09-25 下書き）。jp_referral v0.1 の OBSERVATION.story.v1 は AD 上の名前が
+# 「既往歴及び家族歴」で、スキーマ v1.2 の container_labels 経由で着地する
+# （docs/reports/referral-intake-log.md R8）。intent_tag は「同義語ギャップ」を仮置き
+# （カード自身のラベル「病歴の記述」に字面の手がかりが無く、祖先ルート名で救われる
+# 問——既存 3 タグのどれとも違うため、人間レビューで新タグ「節名」等に確定する）。
+# 保留問のもう一方「検体→CLUSTER.specimen」は v0.3 まで該当カードが無く出題不能
+# （見送り）。ゴールド本体（query／expected_*／notes）は人間レビュー領域: reviewed_by／
+# reviewed_at が空欄の間は評価母数に含める前に統括の確認を要する。
+- id: q21
+  query: "既往歴"
+  expected_archetype_id: openEHR-EHR-OBSERVATION.story.v1
+  expected_at_code: at0004
+  intent_tag: 同義語ギャップ
+  source: new
+  notes: "保留問（wp4-plan 将来課題）。jp_referral v0.1 の story ルート名「既往歴及び家族歴」に container_labels で着地する想定。q18「既往」（problem_diagnosis）とは指示対象が異なる（既往歴の約8割は story 系、q18 注記）"
+  reviewed_by:
+  reviewed_at:
