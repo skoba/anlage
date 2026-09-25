@@ -565,3 +565,9 @@ AQL は name 述語 `items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療
 ### `#23` の状態
 
 (1)(2)(3) 完了、(4) は pending（上流 15 項＋手写像元供給）。12 月許容（裁定 C）。
+
+### 補記: CI 赤（run 36117630926）と修正 `42330cf`
+
+`c81d07d` の push で CI が赤になった（`spec/lib/tasks/pathcards_eval_spec.rb` 3 例: q21 追加で `pathcards:eval` が 18 問体制になり、17 問体制の集計固定と「正解 archetype_id が現有 4 テンプレートに存在」が崩れた）。**全 suite の結果を確認せずコミット・push した手順ミス**（スクリプトが suite 結果でゲートしていなかった。以後はゲートを入れた）。
+
+修正（読み込み系のみ、ゴールド本体は不変）: seed に `draft: true` を導入し q21 に付与。`pathcards:eval` は draft を母数から除外（Red: 「draft は母数外」の期待を先に書き 2 failures → Green）。存在チェックは jp_referral を含む 5 fixture に拡張。q21 の確定時は draft を外し、索引 context に jp_referral を加えて集計値を実測し直す。全 suite 119 examples, 0 failures, 3 pending。CI run 36117950871 success。
