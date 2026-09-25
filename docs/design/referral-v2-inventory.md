@@ -152,7 +152,9 @@ COMPOSITION.request.v1  (template_id: jp_referral)
 | SLOT other_context/patient | **未配置**（request.v1 `other_context[at0001]/items[at0042]` Extension スロットのみ） |
 | 要素 Service requested（No.20） | service_request.v1 **at0121**「サービス名」DV_TEXT 1..1 |
 | 紹介目的（No.8） | service_request.v1 **at0062**「紹介目的」DV_TEXT 0..*（at0064 未使用） |
-| 傷病名（No.7） | problem_diagnosis.v1 **at0002** DV_TEXT 1..1、束縛なし |
+| 傷病名（No.7） | problem_diagnosis.v1 **at0002** 1..1。v0.1: DV_TEXT・束縛なし → **v0.2: 代替 [DV_TEXT, DV_CODED_TEXT]、主型 DV_CODED_TEXT、ICD-11 MMS の `referenceSetUri`（value_set_binding）**（R10） |
+| 発症日時（v0.2 追加） | problem_diagnosis.v1 **at0077**「発症日時」DV_DATE_TIME 0..1（`data[at0001]/items[at0077]`） |
+| 診断確度（v0.2 追加） | problem_diagnosis.v1 **at0073**「診断確度」DV_CODED_TEXT（ローカル code_list: at0074 疑い／at0075 推定／at0076 確定。`spec/demo/` の MATCHES クエリ 2 と同じ要素） |
 | 新規 6 アーキタイプの ID・版・公開状態・ja 訳 | **v0.1 未収録**（laboratory_test_result／medication_order／adverse_reaction_risk／infectious_disease_summary／social_summary／problem_qualifier）。§10 の段階へ |
 | individual_personal の職業要素（No.5） | 患者未配置のため **未確定**（v0.1 は person.v1 系を使用、individual_personal は不使用） |
 | organisation の部門表現（No.1） | **入れ子の独立 organisation**: 紹介先医療機関 ⊃ [at0017 追加の詳細情報] organisation「診療科」⊃ [at0002 連絡担当者] person「担当医」 |
@@ -192,5 +194,6 @@ v0.2 着手前の裁定事項（v0.1 実測から）——**2026-09-25 に統括
 ### 変更履歴
 
 - v2（2026-09-04）: 人間レビュー完了版を正典化。既定値 2 件（No.17 案a／No.19 不採用）を置く。
+- **v2.1 追記 2（2026-09-25、v0.2 再ドロップ）**: §7 に at0077 発症日時・at0073 診断確度と、at0002 の ICD-11 代替制約（v0.2）を追記。v0.2 では clinical_synopsis ×2 の要素名がルート別に「症状経過及び検査結果」「治療経過」へ改名され（§3.1 No.12/14 の裁定と整合）、at0062 の説明に主訴の包含が明文化された（No.9 主訴は v0.2 でも独立エントリ無し＝紹介目的に畳む運用）。改版差分は `docs/reports/referral-intake-log.md` R10。
 - **v2.1 補記（2026-09-25、統括裁定）**: §10 の裁定事項 3 件を v0.1 実装で確定、§8 にデモ役割の縮退と上流 15〜17 の相互参照を補記（`docs/design/jp-referral-freeze-batch-plan.md` 項目 4）。
 - **v2.1（2026-09-25）**: §7 を jp_referral v0.1 の診断ドロップから転記（`skoba/anlage#23` (2)）。§2 を v0.1 実測骨格（現行 CKM 名・protocol 配置・スロット at-code）へ差し替え、判別の原理を改定。§3.1（実装突合表）・§5 系譜 2 行・§10 段階付けを追加。設計値からの差分 3 件は v0.2 前の裁定事項として保留。

@@ -571,3 +571,61 @@ AQL は name 述語 `items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療
 `c81d07d` の push で CI が赤になった（`spec/lib/tasks/pathcards_eval_spec.rb` 3 例: q21 追加で `pathcards:eval` が 18 問体制になり、17 問体制の集計固定と「正解 archetype_id が現有 4 テンプレートに存在」が崩れた）。**全 suite の結果を確認せずコミット・push した手順ミス**（スクリプトが suite 結果でゲートしていなかった。以後はゲートを入れた）。
 
 修正（読み込み系のみ、ゴールド本体は不変）: seed に `draft: true` を導入し q21 に付与。`pathcards:eval` は draft を母数から除外（Red: 「draft は母数外」の期待を先に書き 2 failures → Green）。存在チェックは jp_referral を含む 5 fixture に拡張。q21 の確定時は draft を外し、索引 context に jp_referral を加えて集計値を実測し直す。全 suite 119 examples, 0 failures, 3 pending。CI run 36117950871 success。
+
+---
+
+## R10: jp_referral v0.2 の再ドロップ（supersede）と改版差分（2026-09-25）
+
+出所: `skoba/openehr-templates-jp` main = `09187226bd735246a36044597935b4c891a74c7b`（v0.2: 「changed default language and added translations to v 0.2.0」ほか。`gh api` 読み取りのみ）。`jp_referral.opt` 457,775 bytes・sha256 `99abe4e3e1e5a494805764f3565593b2a0d0482f619917266ab46a22d025c659`、`jp_referral.t.json` sha256 `453db4d5…0a736`。`sem_ver 0.2.0`、13 ルート（構成は v0.1 と同じ）、`<language>` ja、term_definitions は ja のみ（description details は ja＋en）。コミット `d48d2f2`（fixture・golden・pin）。
+
+### 1. 再投入と supersede の系譜（dev、dropzone 実投入）
+
+| 経路 | 結果 |
+|---|---|
+| `POST /templates/preview` | 200、`new_version_of: "jp_referral"`、`field_count` 4→**6** |
+| `POST /templates` | **201** `version: "1.0.1"` |
+
+registry: id=5 `1.0.0` **superseded**（checksum `99d474f8…`、26 カード v1.2）／id=6 `1.0.1` **active**（checksum `99abe4e3…`、26 カード v1.2、controller 経由でカード生成済み）。`Template.next_version` の patch bump（`1.0.0`→`1.0.1`）と `supersede!` が想定どおり動いた（`app/models/template.rb:52-55,58`）。
+
+### 2. パスカード diff（v0.1 golden → v0.2 抽出、改版差分測定器の初実演）
+
+機械可読: scratch `card_diff.json`（key = archetype_id＋path＋at_code＋同 key 内の出現順、比較フィールド semantics／constraints／bindings）。**26 → 26、追加 2・削除 2・変更 4・不変 20**。golden の `git diff` もこの内訳と一致（`d48d2f2`）。
+
+| 区分 | カード | 内容 |
+|---|---|---|
+| 追加 | problem_diagnosis/**at0077** 発症日時 | DV_DATE_TIME、束縛なし |
+| 追加 | problem_diagnosis/**at0073** 診断確度 | DV_CODED_TEXT（代替 [DV_CODED_TEXT, DV_TEXT]）、`code_list` at0074 疑い／at0075 推定／at0076 確定 |
+| 削除 | person/at0010 コメント（担当医） | 診療科 ⊃ 担当医 の要素が外れた |
+| 削除 | organisation/at0019 コメント（診療科） | 同上 |
+| 変更 | problem_diagnosis/at0002 | `rm_type` DV_TEXT→**DV_CODED_TEXT**、`rm_type_alternatives` [DV_TEXT, DV_CODED_TEXT]、`bindings` に value_set_binding `terminology:http://id.who.int/icd/release/11/mms` |
+| 変更 | service_request/at0062 紹介目的 | description に「紹介目的。主訴(主たる訴え)を含めて記載する」が追記（v0.2 で主訴を紹介目的に畳む運用の明文化） |
+| 変更 | clinical_synopsis/at0002 ×2 | label 要約→**治療経過**（2 枚とも。4 節の例外を参照） |
+
+### 3. 束縛の内訳
+
+- `referenceSetUri` は **1 件**のみ（`C_CODE_REFERENCE` 1 件、`problem_diagnosis` at0002 の DV_CODED_TEXT 代替、ICD-11 MMS）。プロンプトの「referenceSetUri 2 件」は実測と一致しない——at0002 以外にはない（`grep -c referenceSetUri` = 1、Nokogiri で `@type='C_CODE_REFERENCE'` 1 件）。
+- `term_bindings`: 0 件（v0.1 と同じ）。パース後の `component_terminologies` にも term_bindings 無し。
+- **pin**（`d48d2f2`、regression pin）: at0002 の `rm_type_alternatives` = [DV_TEXT, DV_CODED_TEXT]、主型 DV_CODED_TEXT（スキーマ v1.1 設計判断 9 の「コード参照を持つ代替を主型」が実 fixture で成立）、value_set_binding ICD-11。
+
+### 4. 例外報告: per-root の ELEMENT 改名が畳み込まれる（openehr-ruby#58 の射程拡大）
+
+v0.2 は clinical_synopsis の at0002 を**ルートごとに**改名している（OPT XML 実測: 「症状経過及び検査結果」ルートの at0002 = `症状経過及び検査結果`、「治療経過」ルートの at0002 = `治療経過`。v0.1 は両方 `要約`）。しかし抽出器の `terminology_term` は `component_terminologies[archetype_id]`（畳み込み後）を引くため、**2 枚とも「治療経過」**になった（後勝ち）。golden はこの実測を固定している（誤ラベルの固定であることを本節で明示）。
+
+- 含意: #58 の影響はルート名（container_labels、案 a で迂回済み）だけでなく **ELEMENT の labels／descriptions にも及ぶ**。同一アーキタイプ複数ルートで要素を改名するテンプレートでは、カードのラベルが最後のルートの値になる。
+- 対応案（承認待ち、コードは書いていない）: `extract_root_names` を「ルートごとの全 term_definitions」へ拡張し、`semantics_for` が per-root の term を優先する（キーは既存と同じ path＋出現順）。撤去条件は同じく openehr-ruby#58。小さな変更だが抽出器の実装変更なので計画→承認が要る。
+- 検索への影響: 「症状経過」は container「症状経過及び検査結果」経由で着地する（5 節）ので、着地自体は v1.2 で救われている。
+
+### 5. 検索の試し打ちと eval（新旧併記）
+
+`pathcards:eval`（17 問、draft 除外）: v0.1（R8 後）→ v0.2 とも Top-1 14/17・Top-3 15/17・完全失敗 2/17（q16・q18）・MRR 0.8529、各問 rank も全問不変（`docs/reports/wp4-eval-log.md` に追記）。draft q21「既往歴」: rank **0**（v0.1 でも 0）。
+
+試し打ち（dev、v0.2 active）: 発症 → at0077（1 件）、診断確度 → at0073（s=3）、疑い → at0073（code_list ラベル経由）、既往歴／傷病名／治療経過／症状経過は着地。ただし **jp_referral のヒットが 2 倍**（既往歴 2、傷病名 4、紹介先 52）——`Opt::PathcardSearch` が superseded 版（id=5）のカードも索引しているため。→ **`skoba/anlage#32`**（problem、解決形 (a)）。eval の 17 問には影響しなかった（順位不変）が、デモ画面の重複表示に直結する。
+
+### 6. 差し替えと文書
+
+- fixture: `spec/fixtures/opt/jp_referral.opt` を v0.2 に差し替え（ヘッダに v0.2・上流 sha256・差分要旨・v0.1 の SHA）。fixture sha256 `5ffc7e6d…f924`。golden 26 カード再生成（`_provenance.source_repository`／`template_version` を v0.2 へ）。全 suite 120 examples, 0 failures, 3 pending。
+- opt-catalog を v0.2 へ、language-policy 5 節に v0.2 の検収行、契約 §7 に at0077／at0073 を追記（本コミット）。
+
+### 7. v0.3 待ち（変わらず）
+
+処方（medication_order、DV_QUANTITY の実例＝WP1 素材の残課題）、アレルギー、「依頼内容」改名、患者 CLUSTER。

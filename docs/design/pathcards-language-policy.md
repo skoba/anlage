@@ -115,6 +115,7 @@
 
 fixtureは日本語訳等を適宜更新予定（2026-08-22 人間申告）のため、上記は同日時点のスナップショット。更新版が届いたら本チェックリストを再適用する。
 
+- [x] **jp_referral.opt v0.2（2026-09-25、`skoba/anlage#23`。v0.1 は同日、R4）**: チェックリスト 3 項目クリア（`<language>` ja／全 term_definitions に text・description／AD 上で ja 定義済み、term_definitions は ja のみ）。26 カード全て ja ラベル、未翻訳疑い 0、AD 生成プレースホルダ 0。**デモ要件（WP1 素材）の充足状況**: コード化要素・値集合束縛の実例 ✓（v0.2 で傷病名 at0002 に ICD-11 `referenceSetUri`、診断確度 at0073 にローカル code_list）／**DV_QUANTITY（単位・値域）の実例 ✗ — 残: 処方（medication_order）＝v0.3**。改版差分は `docs/reports/referral-intake-log.md` R10。注意: 同一アーキタイプ複数ルートの要素改名（clinical_synopsis at0002）はパーサの畳み込みで 1 つに潰れる（R10 4 節、openehr-ruby#58）——検収ではルート別の改名を OPT XML で確認すること
 - [x] **bmi_calculation.opt（2026-08-23、`skoba/anlage#5`用）**: **本チェックリストの対象外として意図的に受け入れる例外**。`<language>`のcode_stringは**en**（jaではない）——CKM/Ocean Template Designer出力のgem側demo_assetsをそのまま取り込んだもので、AD上でのja追加・再エクスポート等の翻訳作業は行っていない。パスカード抽出（未翻訳検出・ラベル取得）の検収対象ではなく、`openEHR-EHR-OBSERVATION.height.v2`の実archetype構造をAQLシード（#5案A）のpath照会用途に使うためだけの取り込みであり、ラベル言語は用途上本質的でない。term_definitions構造（`items id="text"`/`"description"`両存在）は目視確認済み（パース自体は問題なく通ることを`docs/reports/demo-queries-log.md`で実測確認予定）。
 
 ## 6. 抽出時レポート（WP2で実装）

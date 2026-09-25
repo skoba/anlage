@@ -475,4 +475,6 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 含意: Anlage のパスカード v1.2（祖先ルート名 `container_labels`）は gem 経路が無いため、`source_xml` の Nokogiri 再解析で per-root の at0000 を読む（案 a、撤去条件付き）。`#19` で撤去した「経路2」と同型の迂回が再び必要になる
 - 提案: `CArchetypeRoot` に per-root の `term_definitions`（`{lang => {code => ArchetypeTerm}}`）と（あれば）`term_bindings` を持たせ、`OPTParser` が集約と併せて各ルートにも保持させる。`component_terminologies` の畳み込みは互換のため残す
 - 還流先: openehr-ruby
-- ステータス: **観察ログ**（起票候補。Anlage 側の迂回コードの撤去条件として参照する）
+- 起票: **`skoba/openehr-ruby#58`**（2026-09-25、データ損失級として `#31`／`#48` と同格で起票）
+- 追記（2026-09-25、jp_referral v0.2、`docs/reports/referral-intake-log.md` R10 4 節）: 影響はルート名だけでなく **ELEMENT の term にも及ぶ**。v0.2 は clinical_synopsis の at0002 をルートごとに「症状経過及び検査結果」「治療経過」へ改名しているが、`component_terminologies` では後勝ちで 1 つに潰れ、Anlage のカードは 2 枚とも「治療経過」になる。Anlage 側の迂回（案 a）を ELEMENT term まで広げるかは承認待ち
+- ステータス: **起票済み**（openehr-ruby#58）。Anlage 側の迂回コードの撤去条件として参照する
