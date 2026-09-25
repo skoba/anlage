@@ -15,6 +15,14 @@ RSpec.describe "pathcards:eval" do
   # - 20問の実測集計値と完全失敗一覧を固定する
   # - 評価ログへの追記を固定する
 
+  # 2026-09-25: q21（既往歴→story、skoba/anlage#23 (3) の保留問）を draft として seed に
+  # 置いたところ、eval が 18 問体制になり本 spec が赤になった（CI run 36117630926）。
+  # draft は人間レビュー前の下書きで、確定までは 17 問体制の集計に含めない。
+  it "draft エントリ（人間レビュー前）は評価母数に含めない" do
+    expect(entries.select { |entry| entry["draft"] }.map { |entry| entry["id"] }).to eq([ "q21" ])
+    expect(entries.reject { |entry| entry["draft"] }.size).to eq(17)
+  end
+
   it "評価シードの全エントリが必須キーを持つ" do
     expect(entries).not_to be_empty
     expect(entries).to all(include("id", "query", "expected_archetype_id"))
@@ -23,8 +31,10 @@ RSpec.describe "pathcards:eval" do
     end)
   end
 
-  it "全ての正解archetype_idが現有4テンプレートの実抽出結果に存在する" do
-    fixture_names = %w[CardiologyEncounter LabResultReport ProblemList bmi_calculation]
+  it "全ての正解archetype_idが現有テンプレート（4 件＋jp_referral）の実抽出結果に存在する" do
+    # draft の q21（story）は jp_referral にしか無い。確定時は下の索引 context にも
+    # jp_referral を加えて集計値を実測し直す
+    fixture_names = %w[CardiologyEncounter LabResultReport ProblemList bmi_calculation jp_referral]
     actual_archetype_ids = fixture_names.flat_map do |fixture_name|
       source_xml = Rails.root.join("spec/fixtures/opt/#{fixture_name}.opt").read
       template = Template.build_from_opt_xml(source_xml)
@@ -63,9 +73,10 @@ RSpec.describe "pathcards:eval" do
       Rake::Task["pathcards:eval"].invoke
     end
 
-    it "17問の実測集計値と完全失敗問題を表示する" do
+    it "17問の実測集計値と完全失敗問題を表示する（draft の q21 は母数外）" do
       expect { run_task }.to output(
         a_string_including(
+          "Questions: 17",
           "Top-1 accuracy: 14/17 (82.35%)",
           "Top-3 accuracy: 15/17 (88.24%)",
           "Complete failure rate: 2/17 (11.76%)",

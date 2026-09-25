@@ -10,6 +10,8 @@ namespace :pathcards do
   desc "Evaluate pathcard search against the WP4 seed questions"
   task eval: :environment do
     entries = YAML.load_file(Rails.root.join("spec/fixtures/pathcards_eval_seed.yml"), permitted_classes: [ Date ])
+    # draft: true は人間レビュー前の下書き（seed 冒頭の説明）。確定するまで母数に含めない
+    entries = entries.reject { |entry| entry["draft"] }
     evaluations = entries.map do |entry|
       results = Opt::PathcardSearch.call(entry.fetch("query"))
       rank = results.index do |result|

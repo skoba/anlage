@@ -20,6 +20,9 @@
 #   notes: 補足（複数archetypeがヒットしうる場合の注記、フィールド経由の注記等）
 #   reviewed_by: 人間レビュー実施者（未レビューは空欄のまま）
 #   reviewed_at: レビュー日（未レビューは空欄のまま）
+#   draft: true — 人間レビュー前の下書き。`pathcards:eval` は draft を評価母数に
+#     含めない（17問体制の集計を変えずに下書きを seed に置くため、2026-09-25 導入）。
+#     レビュー確定時に draft を外す（その時点で母数が増える）
 #
 # 人間レビューの対象範囲（skoba/anlage#12裁定3）: 各クエリの文言と正解ラベルの
 # 臨床的妥当性のみ。intent_tagの分類自体（bigram成立の技術的成否）はWP3実測に
@@ -300,3 +303,4 @@
   notes: "保留問（wp4-plan 将来課題）。jp_referral v0.1 の story ルート名「既往歴及び家族歴」に container_labels で着地する想定。q18「既往」（problem_diagnosis）とは指示対象が異なる（既往歴の約8割は story 系、q18 注記）"
   reviewed_by:
   reviewed_at:
+  draft: true
