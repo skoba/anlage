@@ -80,6 +80,9 @@ WP0-5やSliceの実装計画には載らないが、確認済みで記録して�
   (c) Nokogiri側にも明示的な `NONET`/`NOENT` を渡し二段目を保証させる
   （`docs/upstream/issues/openehr-ruby--xxe-safe-default-parse-options.md`
   参照）などが考えられるが、**いずれも実装は別途承認を得てから**。
+- **時期（2026-09-25 裁定）**: **12月世界公開前に修正する**。公開後は
+  外部からの OPT 投入（外部入力）を受けるため、二段目（gem 既定）頼みのままに
+  しない。11/5 凍結までは対象外（デモは手元 fixture のみ）。
 
 ## 2. 診療情報提供書 OPT 入手時の受け入れスモーク
 
@@ -169,3 +172,50 @@ Designer／ADL Workbench／LinkEHR／HMC／Better Archetype Designer。
 11/5凍結までの残工数を理由とする）。ADパッチする場合の推奨範囲
 （臨床実質8アーキタイプ・19カードのみ、管理系111カードは対象外）は
 ログに記録済み。判断は人間へ委ねる。
+
+## 9. `json < 3` ピン（2026-09-25、`44a05dc`）
+
+- Gemfile に `gem "json", "< 3"` を明示。json 3.0（2026-09-08）が `JSON.parse`
+  の引数形を変え、activesupport 8.1.3.1 の `ActiveSupport::JSON.decode` が
+  options を位置引数で渡すため、json カラム（`templates.web_template`／
+  `pathcards`、`compositions`）の読み取りが
+  `ArgumentError (wrong number of arguments (given 2, expected 1))` になる。
+  openehr-rails#40（同 gem の dev ピン・生成アプリ雛形のピン）と同型。
+- lock 実測は `json (2.21.2)` のまま（ピン追加時点で 3 系に動いていない。
+  `docs/reports/fsh-log.md` R8 1 節）。
+- **撤去条件**: activesupport 側の修正（Rails の patch release が
+  `ActiveSupport::JSON.decode` を keyword 渡しに直したもの）を取り込んだ時点。
+  撤去時は `bundle lock --update json --conservative` → 全 suite で json カラム
+  読み書き（`spec/requests/compositions_spec.rb` 等）が green であることを確認。
+
+## 10. dependabot の凍結前運用（2026-09-25）
+
+- 11/5 凍結までは、dependabot PR を個別にマージせず **月 1 回、R8 と同型の手順で
+  まとめて** direct-to-main で吸収する: `bundle lock --update <gems>
+  --conservative` → lock の CHECKSUMS を公開値と照合 → json が 3 系に動いて
+  いないことを確認 → 全 suite + rubocop green → 1〜2 コミットで main →
+  対応 PR を superseded でクローズ。GitHub Actions の bump は workflow を直接
+  編集する。
+- 凍結後（11/5〜11/12）は依存を動かさない。
+
+## 11. image_processing 2.x は見送り（2026-09-25、dependabot #24）
+
+- 2.x は `ruby-vips`／`mini_magick` を soft dependency 化し、libvips 不在時の
+  LoadError を Rails 8.1 Active Storage engine の rescue
+  （`activestorage-8.1.3.1/lib/active_storage/engine.rb:105-115`、`/libvips/`・
+  `/image_processing/` のメッセージ一致のみ）に一致しない文言で再送出するため、
+  libvips の無い環境で起動不能になる（`docs/reports/fsh-log.md` R8 3 節、
+  手元で再現）。Anlage は Active Storage の variant を使っていない。
+- **再開条件**: (a) Rails 側が rescue のメッセージ一致を広げる／
+  image_processing 側が文言を戻す、または (b) 12月公開のパッケージング時に
+  実行環境へ libvips を必須化する判断（Rails 既定 Dockerfile は libvips を
+  入れる）——いずれかが揃った時点で `gem "ruby-vips"` 明示付きで再試行。
+  それまで Gemfile の `~> 1.2` とコメントを維持。
+
+## 12. `#7`・`#13` は凍結後送り（既定の再確認、2026-09-25）
+
+- `skoba/anlage#7`（canonical データ混在時の埋め込み C_ARCHETYPE_ROOT パス不一致）
+  と `#13`（パスカード抽出時レポートの UI 未表出）は、いずれも 11/5 凍結の
+  受入条件（`spec/demo/` green）に関与しない。既定どおり凍結後（11/12 以降）に
+  着手判断する。jp_referral 受入（`#23`）の途中で再現条件が変わった場合のみ
+  例外報告で前倒しを諮る。

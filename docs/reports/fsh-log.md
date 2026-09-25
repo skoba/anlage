@@ -501,3 +501,117 @@ rails master `01f31f3` で修正済み・未リリース。**記録のみ**（�
 残る判断（CI 組み込み＝判断3、HTTP endpoint＝判断4 の v1.1、`#33` 修正の
 リリース取り込みと Sushi 3.20 系更新）は 12 月世界公開準備時に一括で
 再判断する（openehr-ruby `docs/backlog.md`「Sushi の版更新」）。
+
+---
+
+## R8: 依存更新バッチ（openehr 2.4.3 / openehr-rails 0.7.0、json < 3、fsh:verify 0 Errors、2026-09-25）
+
+jp_referral 納品前の整地として、R7 で「12月に再判断」とした `#33` 修正の
+リリース取り込み（openehr-rails 0.7.0）を前倒しで実施した。コミット
+`44a05dc`（deps + regression pin）・`bbf88d0`（CI）。
+
+### 1. json 3.0.x の予防（先に）
+
+- lock 実測: `json (2.21.2)`（2.x）。Gemfile に `gem "json", "< 3"` を明示
+  （openehr-rails#40 と同型。0.7.0 の生成アプリ雛形も同じピンを持つ）。
+  撤去条件は `docs/backlog.md` 9 項。
+- 更新後も lock は `json (2.21.2)` のまま（3 系へ動いていないことを
+  `grep` で確認）。
+
+### 2. gem 更新（direct-to-main、`--conservative`）
+
+| gem | 前 | 後 | dependabot PR |
+|---|---|---|---|
+| openehr | 2.4.2 | **2.4.3** | — |
+| openehr-rails | 0.6.0 | **0.7.0** | #27 |
+| bootsnap | 1.25.0 | 1.26.0 | #26 |
+| solid_queue | 1.6.0 | 1.7.0 | #22 |
+| thruster | 0.1.25 | 0.1.26 | #21 |
+| selenium-webdriver | 4.47.0 | 4.49.0 | #28 |
+| mini_magick | 5.3.3 | 5.4.0 | —（image_processing の再 lock に随伴） |
+| image_processing | 1.14.0 | 1.14.0（据え置き） | #24 見送り（3 節） |
+| actions/cache | v5 | v6 | #1（`ci.yml` 直接編集） |
+
+CHECKSUMS 照合（lock 記録値 = 公開値、一致）:
+
+- `openehr (2.4.3) sha256=f66418d350d80e3341ed3df36fea0fee173c9e9492a7bf50a4f89b2648926f40`
+- `openehr-rails (0.7.0) sha256=922ec940f15c8793ef6ee08568e4d7ea16f8a158da0d45936ff898e73cd1171a`
+
+### 3. image_processing 2.1.0 は見送り（#24 の test 赤の原因を手元で再現）
+
+- 2.x は `ruby-vips`／`mini_magick` を soft dependency にした（release note）。
+  Anlage の lock から `ruby-vips`・`mini_magick`・`ffi` が消える。
+- Rails 8.1 の Active Storage engine は起動時に
+  `ActiveStorage::Transformers::Vips` → `image_processing/vips` を require し
+  （`activestorage-8.1.3.1/lib/active_storage/engine.rb:95-101`）、LoadError を
+  **メッセージが `/libvips/` か `/image_processing/` に一致する場合だけ** warning
+  に落とす（同 `:105-115`）。
+- image_processing 1.14 の `require "vips"` は libvips 不在時に ffi の
+  「Could not open library 'libvips.so.42'」で失敗し `/libvips/` に一致 → warning
+  で起動継続（これが従来 libvips の無い開発機・CI で動いていた理由）。
+- 2.1.0 の `lib/image_processing/vips.rb:2-6` は同じ LoadError を
+  「ImageProcessing::Vips requires the ruby-vips gem …」に**書き換えて再送出**する。
+  この文言は上記どちらのパターンにも一致せず、engine が再送出 → 起動不能。
+  実測: `gem "ruby-vips", "~> 2.0"` を明示しても、Bundler.require（明示時）または
+  engine（`require: false` 時）のどちらかで同じ LoadError になり、libvips 本体が
+  無い限り起動しない（開発機は `ldconfig -p | grep vips` 空）。
+- 裁定: 1.x 据え置き（Gemfile にコメントで理由を固定）。再開条件は
+  `docs/backlog.md` 11 項。
+
+### 4. 検証
+
+- 全 suite **101 examples, 0 failures**（`bin/rails db:test:prepare` →
+  `bundle exec rspec`）、`bin/rubocop -f github` offense 無し。
+
+### 5. 0.7.0 の効果（実測）
+
+**前提の訂正**: Upgrade note の「`app/fhir/profiles/*.json` を再生成」は Anlage
+には該当しない。Anlage は profile JSON をキャッシュせず、
+`Fhir::ProfilesController#all_profiles`
+（`app/controllers/fhir/profiles_controller.rb:24-29`）が登録テンプレートの OPT
+から毎回 `ProfileGenerator#profiles` で導出する（`git ls-files | grep -i profile`
+は controller と request spec のみ）。したがって再生成する成果物は無く、効果は
+bump の前後で generator 出力を dump して差分を取った（scratch、未コミット）。
+
+- 5 fixture 中、出力が変わったのは **ProblemList のみ**（他 4 件は byte 同一）。
+- ProblemList（`openehr-evaluation-problem-diagnosis-v1`）の差分要旨:
+  - `Condition.component` スライス 5 本（at0002／at0077／at0003／at0030／at0073）が
+    **消滅**
+  - アーキタイプ錨が `Condition.code` から `Condition.category` スライス `ckm`
+    （`1..1`、`$this` の pattern 判別）へ移動
+  - 葉が実要素へ写像: `Condition.code`（ICD-11 value set、`terminology:` 接頭辞が
+    落ちて `http://id.who.int/icd/release/11/mms`）／`Condition.onset[x]`／
+    `Condition.recordedDate`（at0003 の近似である旨の `comment` 付き）／
+    `Condition.abatement[x]`／`Condition.verificationStatus`
+- `ProfileGenerator#skipped`／`FshGenerator#skipped`（0.7.0 で追加）は 5 fixture
+  とも **空**（skip-and-report に載る entry 無し。現 fixture に多葉の
+  非 Observation entry が無いため、見込みどおり）。
+
+`rake fsh:export` → `fsh:verify`（R7 と同じ手順: test DB にトランザクション内で
+5 fixture を一時登録 → `/tmp/fsh-measure` → rollback で 0 件に戻ることを実測）:
+
+| プロジェクト | profiles | Errors | Warnings | R7 |
+|---|---|---|---|---|
+| `bmi_calculation-1-0-0` | 3 | 0 | 0 | 0/0 |
+| `cardiologyencounter-1-0-0` | 1 | 0 | 0 | 0/0 |
+| `labresultreport-1-0-0` | 1 | 0 | 0 | 0/0 |
+| `patient_blood_pressure-v1-1-0-0` | 2 | 0 | 0 | 0/0 |
+| `problemlist-1-0-0` | 1 | **0** | 0 | **29**/0 |
+
+`SUSHI v3.16.0`。Total **0 Errors across 5 project(s)**。
+
+→ **facade の invalid FHIR（R5 `Condition` に存在しない `component`）が
+デモ経路から消えた。** `#33` の既知ギャップは 0.7.0 取り込みで解消。
+
+### 6. regression pin（解決形 (c)）
+
+`spec/tasks/fsh_spec.rb` に 2 例を追加（sushi 無しで検査できる形）:
+ProblemList の FSH に `component` が含まれず `* category contains ckm 1..1` を
+含むこと／fixture 5 件の `skipped` が空であること。0.7.0 bump 時点で既に
+成立している性質の固定であり Red は作れない（spec 内コメントに明記）。
+6 examples, 0 failures。
+
+### 7. 運用（backlog へ）
+
+- 11/5 凍結までの dependabot は「同型手順で月 1 回まとめて」（`docs/backlog.md`
+  10 項）。今回の 7 PR は superseded（#24 のみ「見送り」）としてクローズ。
