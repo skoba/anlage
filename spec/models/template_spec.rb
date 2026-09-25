@@ -102,3 +102,12 @@ RSpec.describe Template, "#34 required は要素の occurrences 下限から導�
     expect(fields.find { |f| f["name"] == "problem_diagnosis_at0077" }).to include("required" => false, "min_occurrences" => 0)
   end
 end
+
+RSpec.describe Template, "フォームのラベルも per-instance の ELEMENT 改名を使う" do
+  it "jp_referral v0.2 の clinical_synopsis ×2 の field label は「症状経過及び検査結果」「治療経過」" do
+    fields = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).fields
+    labels = fields.select { |f| f["archetype_id"] == "openEHR-EHR-EVALUATION.clinical_synopsis.v1" }.map { |f| f["label"] }
+
+    expect(labels).to eq([ "症状経過及び検査結果", "治療経過" ])
+  end
+end

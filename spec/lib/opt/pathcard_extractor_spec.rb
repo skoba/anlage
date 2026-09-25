@@ -468,3 +468,17 @@ RSpec.describe Opt::PathcardExtractor, "jp_referral v0.2 の傷病名（regressi
     ])
   end
 end
+
+# 裁定 2026-09-25（intake-log R10 4 節の例外）: 同一アーキタイプ複数インスタンスの ELEMENT
+# 改名（jp_referral v0.2 の clinical_synopsis at0002「症状経過及び検査結果」「治療経過」）を、
+# 祖先名と同じ OPT 再解析（path＋出現順キー）でインスタンス別に取り、カードのラベルに反映する。
+# 撤去条件は openehr-ruby#58（同一）。
+RSpec.describe Opt::PathcardExtractor, "同一アーキタイプ複数インスタンスの ELEMENT 改名（per-instance term）" do
+  it "jp_referral v0.2 の clinical_synopsis ×2 の at0002 は、それぞれのルートの改名でラベルされる" do
+    cards = described_class.call(Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read)).cards
+    labels = cards.select { |c| c.dig("identity", "archetype_id") == "openEHR-EHR-EVALUATION.clinical_synopsis.v1" }
+                  .map { |c| c.dig("semantics", "labels", 0, "text") }
+
+    expect(labels).to eq([ "症状経過及び検査結果", "治療経過" ])
+  end
+end

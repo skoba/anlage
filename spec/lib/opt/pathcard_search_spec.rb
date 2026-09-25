@@ -96,3 +96,19 @@ RSpec.describe Opt::PathcardSearch, "superseded 版は索引しない（#32）" 
     expect(hits.first.dig("provenance", "source_checksum")).to eq(new_version.checksum)
   end
 end
+
+RSpec.describe Opt::PathcardSearch, "ELEMENT 改名がラベルとして検索に効く（per-instance term）" do
+  before do
+    template = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read)
+    template.pathcards = Opt::PathcardExtractor.call(template).cards
+    template.save!
+  end
+
+  it "「症状経過及び検査結果」「治療経過」が要素ラベルとして着地する（container ではなく labels 経由）" do
+    %w[症状経過及び検査結果 治療経過].each do |query|
+      hit = described_class.call(query).find { |c| c.dig("semantics", "labels", 0, "text") == query }
+      expect(hit).not_to be_nil, "#{query} が labels でヒットしない"
+      expect(hit.dig("identity", "archetype_id")).to eq("openEHR-EHR-EVALUATION.clinical_synopsis.v1")
+    end
+  end
+end

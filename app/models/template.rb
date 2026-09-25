@@ -28,7 +28,7 @@ class Template < ApplicationRecord
       template_id: opt.template_id.value,
       version: "1.0.0",
       source_xml: source_xml,
-      web_template: build_web_template(opt, extractor),
+      web_template: build_web_template(opt, extractor, source_xml),
       status: "active",
       checksum: Digest::SHA256.hexdigest(source_xml)
     )
@@ -61,16 +61,30 @@ class Template < ApplicationRecord
   # checksum・pathcards・status は変えない。
   def rebuild_web_template!
     opt = Opt::SafeParser.parse(source_xml)
-    update!(web_template: self.class.send(:build_web_template, opt, OpenehrRails::Opt::FieldExtractor.new(opt)))
+    update!(web_template: self.class.send(:build_web_template, opt, OpenehrRails::Opt::FieldExtractor.new(opt), source_xml))
   end
 
-  def self.build_web_template(opt, extractor)
+  def self.build_web_template(opt, extractor, source_xml)
     constraints = Opt::ElementConstraints.call(opt)
+    terms = Opt::TemplateTerms.call(source_xml)
+    root_occurrences = Hash.new(0)
     {
       "template_id" => opt.template_id.value,
       "concept" => opt.concept,
-      "entries" => extractor.entries.map { |entry| serialize_entry(entry, constraints) }
+      "entries" => extractor.entries.map { |entry| serialize_entry(entry, constraints, instance_terms(entry, terms, root_occurrences)) }
     }
+  end
+
+  # ENTRY 自身のルート（インスタンス）の term_definitions。同一アーキタイプの複数 ENTRY
+  # （clinical_synopsis ×2）は entries の並び＝文書順で出現順に結ぶ。埋め込み CLUSTER
+  # ルート配下の field は gem のラベルのまま（現 fixture に複数インスタンスの例が無い）。
+  def self.instance_terms(entry, terms, root_occurrences)
+    root_path = (entry[:fields] || []).map { |f| f[:path].to_s[/\A.*\[openEHR-EHR-[^\]]+\]/] }.compact.min_by(&:length)
+    return {} unless root_path
+
+    index = root_occurrences[root_path]
+    root_occurrences[root_path] += 1
+    terms.fetch(root_path, [])[index] || {}
   end
 
   # gem の field に Anlage 側のキーを additive に足す:
@@ -79,9 +93,11 @@ class Template < ApplicationRecord
   #   min_occurrences / required: 要素の occurrences 下限（#34。gem の required は
   #     「entry が必須 かつ 要素が必須」で 0..1 の entry 配下では常に false なので、
   #     要素自身の下限 ≥1 を required とする）
-  def self.serialize_entry(entry, constraints)
+  def self.serialize_entry(entry, constraints, instance_terms = {})
     fields = (entry[:fields] || []).map do |field|
       field = field.stringify_keys
+      instance_label = instance_terms.dig(field["node_id"], "text")
+      field["label"] = instance_label if instance_label.present?
       constraint = constraints.fetch(field["path"], { "alternatives" => [ field["rm_type"] ], "min_occurrences" => 0 })
       field_alternatives = constraint.fetch("alternatives")
       min_occurrences = constraint.fetch("min_occurrences")
