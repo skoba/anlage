@@ -517,3 +517,13 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 提案: `datetime_value` と並べて元の ISO 文字列（`datetime_text`）を保持し、`RmObjectBuilder` はそれを優先して DvDateTime を組む（openehr-ruby#59 の解消と併せて部分精度を往復させる）
 - 還流先: openehr-rails（＋openehr-ruby#59）
 - ステータス: **観察ログ**（起票候補）
+
+## 22. `FieldExtractor` が埋め込みルートの path を `items[at0000]` で書き、field 名を宿主アーキタイプで名前空間化し、DV_QUANTITY の units を先頭 1 つしか載せない
+
+- 発見日: 2026-09-25（`skoba/anlage#37`／`#38`、`docs/reports/referral-intake-log.md` R14）
+- 対象: openehr-rails 0.7.1 `lib/openehr_rails/opt/field_extractor.rb:137-138`（`node_path += "[#{child.node_id}]"`——埋め込み C_ARCHETYPE_ROOT でも node_id＝at0000。anlage `#29` と同型）、`:155-171`（`field_name(entry[:concept], …)` が宿主の concept で命名、`archetype_id` は正しい）、`:189-198`（`quantity_constraints` は `constraint.list&.first` の units のみ）
+- 実測: LabResultReport の分析結果 at0001 は path `…/data[at0003]/items[at0000]/items[at0001]/value`、name `laboratory_test_result_at0001`。bmi の body_mass_index は OPT に units 2 件（`kg/m2`／`[lb_av]/[in_i]2`）があるが field は先頭のみ
+- Anlage 側: `Template.build_web_template` が `Opt::ElementConstraints` の対応表で path を archetype_id 述語に訂正し name を自アーキタイプで名前空間化、`units_list` を付与（撤去条件: gem が同等を載せた版へ bump）
+- 提案: 埋め込みルートは `[archetype_id]` 述語で書く（パスカード・AQL と一致）、name は自アーキタイプの concept、`units_list`（全 list item の units）を additive で載せる
+- 還流先: openehr-rails
+- ステータス: **Anlage 側で迂回済み**（起票候補）

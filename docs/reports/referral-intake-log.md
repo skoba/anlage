@@ -682,3 +682,31 @@ v0.2 は clinical_synopsis の at0002 を**ルートごとに**改名してい�
 ### dev の反映
 
 `rake templates:rebuild_web_template`（6 テンプレート）＋全テンプレートの pathcards を再抽出。jp_referral active の clinical_synopsis ラベル・フォームラベルは「症状経過及び検査結果」「治療経過」、ProblemList の input_kind は coded_free／datetime ×3／select、required は at0002 のみ true。eval 17 問は不変。
+
+---
+
+## R14: 凍結前バッチ 3 — #36（壇上防御）・#37（代替順位と単位）・#38（埋め込み CLUSTER 一段）（2026-09-25）
+
+統括指示（problem 2 件＋guard 1 件、優先順）をそのまま計画とし Issue に転記。コミット `b126df1`（#36）・`7d126f8`（#37・#38）。全 suite 174 examples, 0 failures, 3 pending（実ブラウザ system spec 2 本を含む）。
+
+### #36 壇上防御（form_capability）
+
+- explore: LabResultReport は `fields span more than one branch`、jp_referral は SECTION 配下の `unexpected wrapper depth`（INSTRUCTION entry は field 0 のため #34 の空 entry として先に飛ばされる）で、いずれもフォームは描画され送信で 500 だった。
+- 修正: `Opt::FormCapability` が登録時に builder のドライラン（input_kind ごとの作例値）で saveable／preview_only と理由を判定し web_template に保存。preview_only は閲覧専用（disabled・送信ボタン無し）＋「保存は未対応（#30）: 理由」、POST は 422。判定規則を builder と二重に持たない。
+- opt-catalog に form_capability 列。
+
+### #37 代替順位と単位
+
+- `Opt::InputKind`: DV_QUANTITY → select 可能な DV_CODED_TEXT → DV_TEXT → coded_manual（主型ではなく代替集合で決める。日付・時刻は主型どおり）。合成 field 4 ケースで固定（現 fixture に多代替の数量は無い）。
+- 単位: `Opt::ElementConstraints` が DV_QUANTITY 代替の units 一覧を取る（gem は先頭 1 つ、上流 22 項）。view は複数なら select（bmi の body_mass_index: kg/m2／[lb_av]/[in_i]2）、1 つなら固定表示＋hidden、無ければ自由入力（LabResultReport at0001 は OPT に units 無し＝「暫定版、単位・値域なし」の実物どおり）。validator は単位必須（リストがあれば既定＝先頭）、builder は magnitude＋units。`DvQuantity` は units nil を拒否（実測）。
+
+### #38 埋め込み CLUSTER 一段（規模判定: 小 → 凍結前）
+
+- explore: builder は共通枝しか扱えず LabResultReport で `fields span more than one branch`。gem の path は埋め込みルートを `items[at0000]` で書き（#29 と同型）、name は宿主（`laboratory_test_result_at0001`）。AQL 側（GraphBuilder の `child_path`／RmObjectBuilder の CLUSTER）は既に対応 → 小。
+- 修正: `Template.build_web_template` が `Opt::ElementConstraints` の gem path 対応表で path を archetype_id 述語に訂正（pathcards の identity.path と一致、spec で固定）、name を `laboratory_test_analyte_at0001`、`archetype_id` を自ルート、`root_label`（TemplateTerms の at0000＝「検査分析結果」）を付与。builder は共通の ITEM_TREE の先に `items[<archetype_id>]` 一段が残る field を CLUSTER（archetype_details・name＝root_label）にまとめる。二段以上は UnsupportedShape のまま（12 月）。
+- 検証: request spec（2 件保存 → `cl/items[at0001]/value/magnitude > 50` で 1 行）と実ブラウザ system spec（検査名・分析名・数値＋単位 → 保存 → AQL）。form_capability は LabResultReport で saveable（ドライランで自動）。
+- 未対応の注記: `Opt::CompositionReader`（composition ドロップのプレビュー）は entry 直下の items しか読まないため、CLUSTER 配下の値はプレビューに出ない（保存・AQL には影響なし。要すれば別 problem）。
+
+### dev の反映
+
+`rake templates:rebuild_web_template`（6 テンプレート）。実測: jp_referral v1.0.1 は preview_only（フォームに「保存は未対応」、送信ボタン無し）、LabResultReport は saveable（units の自由入力欄あり）、他 4 件 saveable。
