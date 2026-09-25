@@ -75,17 +75,25 @@ module Opt
       (entry["fields"] || []).reject { |field| @values[field["name"]].blank? }
     end
 
+    # 埋め込み CLUSTER 一段（skoba/anlage#38）: 全 field に共通の枝（ITEM_TREE まで）を取り、
+    # その先に `items[<archetype_id>]` 一段だけ残る field は CLUSTER（archetype_details 付き）に
+    # まとめる。二段以上は UnsupportedShape のまま（#30 と同じ 12 月）。
     def build_data(entry)
       fields = filled_fields(entry)
       raise UnsupportedShape, "entry #{entry['archetype_id']} has no fields" if fields.blank?
 
-      chains = fields.map { |f| wrapper_chain(f["path"]) }.uniq
-      unless chains.size == 1
-        raise UnsupportedShape, "entry #{entry['archetype_id']} fields span more than one branch (#{chains.inspect})"
+      chains = fields.map { |f| wrapper_chain(f["path"]) }
+      common = chains.min_by(&:size)
+      groups = fields.zip(chains).group_by do |_field, chain|
+        rest = chain[common.size..]
+        raise UnsupportedShape, "entry #{entry['archetype_id']} fields span more than one branch (#{chains.uniq.inspect})" unless chain[0, common.size] == common && rest.size <= 1
+        raise UnsupportedShape, "entry #{entry['archetype_id']}: embedded node #{rest.first.inspect} is not an archetype root" if rest.size == 1 && !rest.first[1].start_with?("openEHR-")
+
+        rest.first&.last
       end
 
-      item_tree_seg, *outer_segs = chains.first.reverse
-      item_tree = build_item_tree(item_tree_seg, entry, fields)
+      item_tree_seg, *outer_segs = common.reverse
+      item_tree = build_item_tree(item_tree_seg, entry, groups)
 
       case entry["rm_type"]
       when "OBSERVATION"
@@ -108,11 +116,29 @@ module Opt
       segments.map { |seg| seg.match(/\A(\w+)\[(.+)\]\z/).captures }
     end
 
-    def build_item_tree(item_tree_seg, entry, fields)
+    # groups: { nil => [[field, chain], ...] (ITEM_TREE 直下), "<archetype_id>" => [...] (埋め込み CLUSTER) }
+    def build_item_tree(item_tree_seg, entry, groups)
       _attr, node_id = item_tree_seg
+      items = groups.flat_map do |cluster_archetype_id, pairs|
+        fields = pairs.map(&:first)
+        cluster_archetype_id ? [ build_cluster(cluster_archetype_id, fields) ] : fields.map { |field| build_element(field) }
+      end
       OpenEHR::RM::DataStructures::ItemStructure::ItemTree.new(
         archetype_node_id: node_id,
         name: dv_text(entry["concept"]),
+        items: items
+      )
+    end
+
+    def build_cluster(archetype_id, fields)
+      OpenEHR::RM::DataStructures::ItemStructure::Representation::Cluster.new(
+        archetype_node_id: archetype_id,
+        name: dv_text(fields.first["root_label"] || archetype_id.split(".")[1]),
+        archetype_details: OpenEHR::RM::Common::Archetyped::Archetyped.new(
+          archetype_id: OpenEHR::RM::Support::Identification::ArchetypeID.new(value: archetype_id),
+          template_id: OpenEHR::RM::Support::Identification::TemplateID.new(value: @template.web_template["template_id"]),
+          rm_version: RM_VERSION
+        ),
         items: fields.map { |field| build_element(field) }
       )
     end
@@ -151,6 +177,11 @@ module Opt
       # （DV_TEXT）で保存し、coded_manual は手入力の system／code で DvCodedText を組む。
       # 型の構築自体は rm_type（モデルの事実）による。
       case field["input_kind"]
+      when "number"
+        return OpenEHR::RM::DataTypes::Quantity::DvCount.new(magnitude: Integer(raw_value)) if field["rm_type"] == "DV_COUNT" && !Array(field["rm_type_alternatives"]).include?("DV_QUANTITY")
+
+        # #37: 単位は __units（無ければ units リストの先頭）
+        return OpenEHR::RM::DataTypes::Quantity::DvQuantity.new(magnitude: Float(raw_value), units: Opt::FormValidator.units_for(field, @values).to_s)
       when "coded_free"
         return dv_text(raw_value.to_s)
       when "coded_manual"

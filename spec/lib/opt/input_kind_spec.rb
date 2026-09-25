@@ -35,4 +35,15 @@ RSpec.describe Opt::InputKind do
     expect(kind({ "rm_type" => "DV_TIME" })).to eq("time")
     expect(kind({ "rm_type" => "DV_DATE_TIME" })).to eq("datetime")
   end
+
+  # skoba/anlage#37: 代替順位 DV_QUANTITY → select 可能な DV_CODED_TEXT → DV_TEXT → coded_manual
+  it "代替に DV_QUANTITY があれば主型がコード化でも number" do
+    expect(kind({ "rm_type" => "DV_CODED_TEXT", "code_list" => [], "value_set_uri" => "terminology:x" }, [ "DV_CODED_TEXT", "DV_QUANTITY" ])).to eq("number")
+  end
+
+  it "DV_QUANTITY が無く code_list 付き DV_CODED_TEXT があれば select、無ければ DV_TEXT（coded_free）、それも無ければ coded_manual" do
+    expect(kind({ "rm_type" => "DV_TEXT", "code_list" => %w[at0001] }, [ "DV_TEXT", "DV_CODED_TEXT" ])).to eq("select")
+    expect(kind({ "rm_type" => "DV_CODED_TEXT", "code_list" => [], "value_set_uri" => "terminology:x" }, [ "DV_CODED_TEXT", "DV_TEXT" ])).to eq("coded_free")
+    expect(kind({ "rm_type" => "DV_CODED_TEXT", "code_list" => [], "value_set_uri" => "terminology:x" }, [ "DV_CODED_TEXT" ])).to eq("coded_manual")
+  end
 end

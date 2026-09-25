@@ -35,6 +35,7 @@ module Opt
         name = field["name"]
         values[name] = field["input_kind"] == "select" ? Array(field["code_list"]).first : SAMPLE.fetch(field["input_kind"], "x")
         values["#{name}__code"] = "x" if field["input_kind"] == "coded_manual"
+        values["#{name}__units"] = "x" if field["input_kind"] == "number"
       end
     end
   end

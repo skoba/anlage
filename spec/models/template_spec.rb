@@ -132,3 +132,30 @@ RSpec.describe Template, "#36 form_capability" do
     expect(reason).to include("unexpected wrapper depth")
   end
 end
+
+# skoba/anlage#38: 埋め込み CLUSTER 一段の field は path を #29 と同じ archetype_id 述語に訂正し、
+# 名前を自アーキタイプで名前空間化する（gem の FieldExtractor は items[at0000]・宿主名）。
+RSpec.describe Template, "#38 埋め込み CLUSTER の field" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/LabResultReport.opt").read) }
+
+  it "分析結果 at0001 の path・name・archetype_id が自アーキタイプで書かれ、root_label と units_list を持つ" do
+    field = template.fields.find { |f| f["node_id"] == "at0001" }
+
+    expect(field["path"]).to eq("/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1]/items[at0001]/value")
+    expect(field["name"]).to eq("laboratory_test_analyte_at0001")
+    expect(field["archetype_id"]).to eq("openEHR-EHR-CLUSTER.laboratory_test_analyte.v1")
+    expect(field["root_label"]).to eq("検査分析結果")
+    expect(field["input_kind"]).to eq("number")
+    expect(field["units_list"]).to eq([])
+  end
+
+  it "path は pathcards の identity.path と一致する（#29 の訂正後の形）" do
+    card_paths = Opt::PathcardExtractor.call(template).cards.map { |c| c.dig("identity", "path") }
+
+    expect(template.fields.map { |f| f["path"] }).to all(satisfy { |path| card_paths.include?(path) })
+  end
+
+  it "LabResultReport は saveable になる（#36 のドライラン）" do
+    expect(template.web_template["form_capability"]).to eq("saveable")
+  end
+end

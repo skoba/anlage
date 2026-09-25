@@ -42,4 +42,20 @@ RSpec.describe "templates/_field", type: :view do
     expect(rendered).to match(/<input[^>]*type="time"[^>]*name="values\[dt__time\]"/)
     expect(rendered).to include("時刻（任意）")
   end
+
+  # skoba/anlage#37: DV_QUANTITY は数値＋単位。単位は units リストから select、1 つなら固定表示、無ければ自由入力
+  it "number は units リストが複数なら select、1 つなら固定表示、無ければ自由入力" do
+    base = { "name" => "q", "label" => "値", "rm_type" => "DV_QUANTITY", "input_kind" => "number", "required" => false }
+
+    render partial: "templates/field", locals: { field: base.merge("units_list" => [ "kg/m2", "[lb_av]/[in_i]2" ]), disabled: false, value: nil, error: nil }
+    expect(rendered).to match(/<input[^>]*type="number"[^>]*name="values\[q\]"/)
+    expect(rendered).to match(/<select[^>]*name="values\[q__units\]"[^>]*>.*kg\/m2.*<\/select>/m)
+
+    render partial: "templates/field", locals: { field: base.merge("units_list" => [ "cm" ]), disabled: false, value: nil, error: nil }
+    expect(rendered).to include('<span class="units">cm</span>')
+    expect(rendered).to match(/<input[^>]*type="hidden"[^>]*name="values\[q__units\]"[^>]*value="cm"/)
+
+    render partial: "templates/field", locals: { field: base.merge("units_list" => []), disabled: false, value: nil, error: nil }
+    expect(rendered).to match(/<input[^>]*type="text"[^>]*name="values\[q__units\]"/)
+  end
 end

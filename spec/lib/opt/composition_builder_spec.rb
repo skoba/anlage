@@ -143,3 +143,27 @@ RSpec.describe Opt::CompositionBuilder, "#35 日付・時刻の部分精度保�
     expect(time.value).to eq("14:30")
   end
 end
+
+# skoba/anlage#38: 埋め込み CLUSTER 一段を ITEM_TREE → CLUSTER（archetype_details 付き）→ ELEMENT で組む。
+# skoba/anlage#37: number は magnitude＋units（__units、リストがあれば既定＝先頭）で DvQuantity。
+RSpec.describe Opt::CompositionBuilder, "#38 埋め込み CLUSTER 一段・#37 units" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/LabResultReport.opt").read).tap(&:save!).reload }
+
+  it "検査名は ITEM_TREE 直下、分析名と数値は CLUSTER.laboratory_test_analyte 配下に入る" do
+    composition = described_class.new(template, {
+      "laboratory_test_result_at0005" => "血糖", "laboratory_test_analyte_at0024" => "空腹時血糖",
+      "laboratory_test_analyte_at0001" => "98", "laboratory_test_analyte_at0001__units" => "mg/dL"
+    }).build
+
+    tree = composition.content.first.data.events.first.data
+    expect(tree.items.map(&:archetype_node_id)).to eq([ "at0005", "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1" ])
+    cluster = tree.items.last
+    expect(cluster).to be_a(OpenEHR::RM::DataStructures::ItemStructure::Representation::Cluster)
+    expect(cluster.archetype_details.archetype_id.value).to eq("openEHR-EHR-CLUSTER.laboratory_test_analyte.v1")
+    expect(cluster.name.value).to eq("検査分析結果")
+    expect(cluster.items.map(&:archetype_node_id)).to eq(%w[at0024 at0001])
+    quantity = cluster.items.last.value
+    expect(quantity.magnitude).to eq(98.0)
+    expect(quantity.units).to eq("mg/dL")
+  end
+end

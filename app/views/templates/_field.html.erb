@@ -15,7 +15,19 @@ error ||= nil
            <% end %>
            value="<%= value %>"
            <%= "disabled" if disabled %>>
-    <span class="units"><%= field["units"] %></span>
+    <%# 単位（#37）: OPT の units リストから select、1 つなら固定表示、無ければ自由入力 %>
+    <% units_list = Array(field["units_list"].presence || [ field["units"] ].compact) %>
+    <% if units_list.size > 1 %>
+      <select id="field_<%= field["name"] %>__units" name="values[<%= field["name"] %>__units]" <%= "disabled" if disabled %>>
+        <% units_list.each do |unit| %><option value="<%= unit %>"><%= unit %></option><% end %>
+      </select>
+    <% elsif units_list.size == 1 %>
+      <span class="units"><%= units_list.first %></span>
+      <input type="hidden" name="values[<%= field["name"] %>__units]" value="<%= units_list.first %>">
+    <% else %>
+      <input type="text" id="field_<%= field["name"] %>__units" name="values[<%= field["name"] %>__units]"
+             placeholder="単位" <%= "disabled" if disabled %>>
+    <% end %>
   <% when "select" %>
     <select id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]" <%= "disabled" if disabled %>>
       <option value=""></option>

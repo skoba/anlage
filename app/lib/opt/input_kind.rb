@@ -20,14 +20,17 @@ module Opt
 
     module_function
 
+    # 代替順位（skoba/anlage#37）: DV_QUANTITY → select 可能な DV_CODED_TEXT → DV_TEXT → coded_manual。
+    # 主型（rm_type）に関わらず代替集合で決める。日付・時刻は主型どおり。
     def for(field, alternatives)
       rm_type = field["rm_type"]
-      return "number" if NUMBER_TYPES.include?(rm_type)
+      alternatives = Array(alternatives).presence || [ rm_type ]
+      return "number" if (alternatives & NUMBER_TYPES).any?
       return TEMPORAL_KINDS.fetch(rm_type) if TEMPORAL_KINDS.key?(rm_type)
-      return "text" unless rm_type == "DV_CODED_TEXT"
-      return "select" if Array(field["code_list"]).any?
+      return "select" if alternatives.include?("DV_CODED_TEXT") && Array(field["code_list"]).any?
+      return "text" unless alternatives.include?("DV_CODED_TEXT")
 
-      Array(alternatives).include?("DV_TEXT") ? "coded_free" : "coded_manual"
+      alternatives.include?("DV_TEXT") ? "coded_free" : "coded_manual"
     end
   end
 end

@@ -37,7 +37,7 @@ module Opt
       # 方針は input_kind を読むだけ（登録時に導出済み、Opt::InputKind。#33 裁定 A）
       case field["input_kind"]
       when "number"
-        numeric_error(field, raw)
+        numeric_error(field, raw) || units_error(field)
       when "select"
         coded_text_error(field, raw)
       when "coded_manual"
@@ -76,6 +76,17 @@ module Opt
       return nil if @values["#{field['name']}__code"].present?
 
       "コード入力が必要です（用語サービス未接続のため system／code を手入力してください）"
+    end
+
+    # skoba/anlage#37: 単位は __units、無ければ units リストの先頭。どちらも無ければエラー
+    def units_error(field)
+      return nil if Opt::FormValidator.units_for(field, @values).present?
+
+      "単位を入力してください"
+    end
+
+    def self.units_for(field, values)
+      values["#{field['name']}__units"].presence || Array(field["units_list"].presence || [ field["units"] ].compact).first
     end
 
     def numeric_error(field, raw)

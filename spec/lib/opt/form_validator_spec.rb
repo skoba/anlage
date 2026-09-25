@@ -8,7 +8,7 @@ RSpec.describe Opt::FormValidator do
 
   let(:template) do
     FakeTemplate.new([
-      { "name" => "systolic", "rm_type" => "DV_QUANTITY", "input_kind" => "number", "required" => true, "magnitude_range" => [ 0.0, 300.0 ] },
+      { "name" => "systolic", "rm_type" => "DV_QUANTITY", "input_kind" => "number", "units" => "mm[Hg]", "required" => true, "magnitude_range" => [ 0.0, 300.0 ] },
       { "name" => "cuff_size", "rm_type" => "DV_CODED_TEXT", "input_kind" => "select", "required" => false, "code_list" => %w[small medium large] }
     ])
   end
@@ -98,5 +98,23 @@ RSpec.describe Opt::FormValidator, "#35 日付・時刻の形式" do
 
   it "時刻（任意）だけが不正なら日時の項目にエラーを付ける" do
     expect(described_class.call(template, { "dt" => "2026-09-22", "dt__time" => "14時30分" }).errors["dt"]).to include("時刻の形式")
+  end
+end
+
+# skoba/anlage#37: 数値には単位が要る（リストが 1 つ以上あれば既定＝先頭、無ければ入力必須）
+RSpec.describe Opt::FormValidator, "#37 単位" do
+  def template_with(units_list)
+    Template.new(template_id: "t", web_template: { "template_id" => "t", "entries" => [ { "archetype_id" => "a", "fields" => [
+      { "name" => "q", "label" => "値", "rm_type" => "DV_QUANTITY", "input_kind" => "number", "units_list" => units_list, "required" => false }
+    ] } ] })
+  end
+
+  it "units リストが無い要素は単位未入力でエラー、入力があれば通る" do
+    expect(described_class.call(template_with([]), { "q" => "5.5" }).errors["q"]).to include("単位")
+    expect(described_class.call(template_with([]), { "q" => "5.5", "q__units" => "mg/dL" })).to be_valid
+  end
+
+  it "units リストがあれば未入力でも通る（既定＝先頭）" do
+    expect(described_class.call(template_with([ "kg/m2", "[lb_av]/[in_i]2" ]), { "q" => "21.6" })).to be_valid
   end
 end
