@@ -15,6 +15,7 @@ Rails.application.load_tasks
 # - [x] superseded テンプレートは出力しない
 # - [x] fsh:verify は各プロジェクトを sushi に通し、Errors/Warnings 件数を報告する
 # - [x] fsh:verify は sushi が無ければ中断して理由を出す
+# - [x] openehr-rails 0.7.0: ProblemList の FSH から Condition.component が消え、skipped が空（regression pin）
 RSpec.describe "fsh:export / fsh:verify" do
   def run_task(name, *args)
     Rake::Task[name].reenable
@@ -60,6 +61,35 @@ RSpec.describe "fsh:export / fsh:verify" do
       expect(project_dirs.size).to eq(1)
       expect(project_dirs.first.join("input/fsh").glob("*.fsh").map { |path| path.basename.to_s })
         .to all(start_with("openehr-observation-"))
+    end
+  end
+
+  # regression pin（解決形 (c)）: openehr-rails 0.7.0 で EVALUATION の
+  # Condition.component スライスが撤去され（rails #33）、ProblemList の Sushi
+  # エラーが 29 → 0 になったことを、sushi 無しで検査できる形に固定する
+  # （`docs/reports/fsh-log.md` R7 の 29 件は全て `No element found at path
+  # component`。R8 で 0 Errors を実測）。0.7.0 bump 時点で既に成立している
+  # 性質の固定であり、Red は作れない。
+  describe "openehr-rails 0.7.0 の FSH（regression pin）" do
+    let(:fixture_paths) { Rails.root.glob("spec/fixtures/opt/*.opt").sort }
+
+    it "ProblemList の FSH に Condition.component 制約が含まれない" do
+      fsh_files = OpenehrRails::Fhir::FshGenerator.new(Opt::SafeParser.parse(problem_list_xml)).to_fsh_files
+
+      expect(fsh_files.keys).to eq([ "openehr-evaluation-problem-diagnosis-v1" ])
+      expect(fsh_files.values.join).not_to include("component")
+      expect(fsh_files.values.join).to include("* category contains ckm 1..1")
+    end
+
+    it "spec fixture 5 件とも skip-and-report の対象（skipped）が空である" do
+      skipped = fixture_paths.to_h do |path|
+        generator = OpenehrRails::Fhir::FshGenerator.new(Opt::SafeParser.parse(path.read))
+        generator.to_fsh_files
+        [ path.basename.to_s, generator.skipped ]
+      end
+
+      expect(skipped.keys.size).to eq(5)
+      expect(skipped.values).to all(be_empty)
     end
   end
 

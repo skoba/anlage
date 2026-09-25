@@ -2,6 +2,13 @@ source "https://rubygems.org"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 8.1.3", ">= 8.1.3.1"
+# json 3.0 (2026-09-08) changed JSON.parse's arity; ActiveSupport::JSON.decode as of
+# activesupport 8.1.3.1 still passes its options positionally, so every json-column
+# read (templates.web_template / pathcards, compositions) raises
+# ArgumentError (wrong number of arguments (given 2, expected 1)).
+# Same pin as openehr-rails#40 / its generated-app template (0.7.0).
+# Drop once a Rails patch release carries the fix (docs/backlog.md 9項).
+gem "json", "< 3"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use sqlite3 as the database for Active Record
@@ -38,6 +45,10 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
+# Kept on 1.x on purpose: image_processing 2.x made ruby-vips a soft dependency and
+# re-raises the missing-libvips LoadError with a message Rails 8.1's Active Storage
+# engine does not recognise (it only swallows /libvips/ or /image_processing/), so
+# the app cannot boot on a machine without libvips (dependabot #24, docs/backlog.md).
 gem "image_processing", "~> 1.2"
 
 group :development, :test do
