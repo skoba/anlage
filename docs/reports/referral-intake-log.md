@@ -537,3 +537,31 @@ dev DB の 5 テンプレートの pathcards を v1.2 で再抽出（scratch run
 
 - 検索 UI（`_pathcard.html.erb`）は未変更（Out of scope）。
 - `#31` の受入条件は golden 4 件目（jp_referral、R9）で充足。
+
+---
+
+## R9: #23 (3)(4) — golden・q21・統合 spec 骨格（凍結前バッチ 項目 3、2026-09-25）
+
+計画 3 節、裁定 B・C。コミット `c81d07d`。
+
+### (3) fixture・golden・保留問
+
+- fixture は R7 で導入済み。golden `spec/fixtures/pathcards/jp_referral.golden.json`: **26 カード・v1.2**、`_provenance` は既存 3 件の形（`source_fixture`／`source_sha256`（fixture の `48e20a3f…`）／`binding_origin`）に `source_repository`（openehr-templates-jp@`8eebe04…`、上流 sha256）と `template_version`（v0.1）を追加。束縛 0 件なので伏せ字対象なし。`GOLDEN_CASES` に `count: 26`。golden spec 4 件 green → **`#31` の受入条件（golden 4 件）充足、クローズ**。
+- q21「既往歴→story」を `pathcards_eval_seed.yml` に下書き（`expected_archetype_id: OBSERVATION.story.v1`／`at0004`、`intent_tag` は「同義語ギャップ」を仮置き、`reviewed_by`／`reviewed_at` 空欄）。dev v1.2 で **rank 0** を実測（R8 の試し打ちと整合）。人間レビューで文言・タグ（新タグ「節名」等）を確定するまで評価母数には含めない（`pathcards:eval` は seed 全件を読むため、次回の eval 実行時点で 18 問体制になる——確定前に走らせる場合は q21 の扱いを報告に明記する）。
+- 「検体→CLUSTER.specimen」: v0.3 まで該当カードが無く出題不能。seed の注記に見送り理由を記載。
+
+### (4) 統合 spec（直接コミット経路、pending）
+
+`spec/integration/jp_referral_aql_spec.rb`（3 例）:
+
+| 例 | 現状 | 解除条件 |
+|---|---|---|
+| MML 紹介状 1 通の手写像 | **skip**（`mml-case1.canonical.json` 未供給） | 統括供給（裁定 C）→ 手写像 → fixture 化（reduced） |
+| JP-CLINS Bundle 1 通の手写像 | **skip**（`jpclins-case1.canonical.json` 未供給） | 同上 |
+| 構造骨格（実 at-code・作例値、R6 変種 4 と同形） | **pending**（`CompositionCommitter.commit` は通り、`Executor.execute` が `NoMethodError` = 上流 15 項） | openehr-rails が `RmObjectBuilder::TYPE_CLASSES` に SECTION／INSTRUCTION／ACTIVITY を持つ版へ bump → example が通り RSpec が「pending が成功した」と失敗で知らせる → pending を外す |
+
+AQL は name 述語 `items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']`（契約 §2 の裁定）＋ `CONTAINS (INSTRUCTION AND EVALUATION)`。紹介日は 16 項により含めない。fixture の置き場・写像規則は `spec/fixtures/compositions/jp_referral/README.md`。全 suite green（pending 3 を含む）、rubocop 0。
+
+### `#23` の状態
+
+(1)(2)(3) 完了、(4) は pending（上流 15 項＋手写像元供給）。12 月許容（裁定 C）。
