@@ -615,3 +615,39 @@ ProblemList の FSH に `component` が含まれず `* category contains ckm 1..
 
 - 11/5 凍結までの dependabot は「同型手順で月 1 回まとめて」（`docs/backlog.md`
   10 項）。今回の 7 PR は superseded（#24 のみ「見送り」）としてクローズ。
+
+---
+
+## R9: openehr-rails 0.7.1 bump（#38・#44）、jp_referral v0.2 の Sushi 8 → 0（2026-09-25）
+
+コミット `a3b27cb`。統括指示（「#33 完了後」のバッチ。#33 はゲート承認待ちのため未着手、本 R9 はそれと独立に実施）。
+
+### bump
+
+`bundle lock --update openehr-rails --conservative` → 0.7.0→**0.7.1**（他 gem 不変）。CHECKSUMS 記録値 `29e89993894fe974a1f7eb1cbd51b1809c67aadd1cd5917f4b01af8142159784` は指示の公開値と一致。`json (< 3)` ピン健在（lock 2.21.2）。全 suite **121 examples, 0 failures, 3 pending**（fsh pin を実測へ追随）、rubocop 0。backlog 10 項の「月 1 回まとめて」の例外: 0.7.1 は jp_referral の受入に直接効く修正（#38・#44）のため単独で前倒し。
+
+### `rake fsh:verify`（dev、5 active テンプレート、jp_referral は v0.2 = `1.0.1`）
+
+| プロジェクト | profiles | Errors（R8 → R9） |
+|---|---|---|
+| `jp_referral-1-0-1` | **2**（problem_diagnosis／story） | **8 → 0** |
+| 他 4 件 | 不変 | 0 → 0 |
+
+見込み「8 → 6」より良い。内訳:
+
+- clinical_synopsis ×2（単葉 → Condition）: #38 で **skipped** へ（value[x] 2 エラー消滅）——見込みどおり
+- service_request（葉 0 → ServiceRequest）: 0.7.1 の skip 規則は **葉 0 も対象**（`UnsupportedProfileError` 文言「0 leaves map to ServiceRequest, which has neither value[x] nor component」）→ 5 エラー消滅。R8 で「skip に載らない」と記録した上流 17 項の (2) は 0.7.1 で解消
+- problem_diagnosis の `code only string` 1 エラー: v0.2 で at0002 が DV_CODED_TEXT（ICD-11 value set）になったため消滅（R10）。上流 17 項の (3)（DV_TEXT 葉 → Condition.code）は fixture 上は再現しなくなったが写像表の課題としては残る
+
+`FshGenerator#skipped`（jp_referral v0.2）= service_request（0 leaves）・clinical_synopsis ×2（1 leaf）。`spec/tasks/fsh_spec.rb` の pin をこの 3 件で固定。**残件は Sushi エラーではなく写像の不在**（ServiceRequest／clinical_synopsis の Condition 写像）——rails #47／#48／#49 待ちとして記録。
+
+### #44 の効果（壇上事故の予防装置、初動作）
+
+dev の RM store（0 件）に jp_referral 由来の手写像 Composition（SECTION ⊃ INSTRUCTION + EVALUATION、実 at-code、R6 変種 4）を `CompositionCommitter.commit` で 1 件入れ、`spec/demo/` と同じ 4 クエリを実行:
+
+| | 0.7.0（R6 実測） | 0.7.1 |
+|---|---|---|
+| 4 クエリ | 全て `NoMethodError`（store 全滅） | **全て例外なし**（rows=0、store が空なので件数は 0） |
+| ログ | — | `openehr-rails AQL: skipping composition uid=11111111-2222-4333-8444-555555555555 (id=6): OpenehrRails::Rm::UnsupportedRmTypeError: composition uid=…: node /content[openEHR-EHR-SECTION.referral_details.v0] has rm_type SECTION, which RmObjectBuilder::TYPE_CLASS…`（`log/development.log`、クエリごとに 1 行） |
+
+→ jp_referral の Composition が store に混在しても既存デモクエリは落ちない。測定後に purge（rm compositions 0）。SECTION／INSTRUCTION の読み戻し自体は rails #45（次 minor）待ち（`spec/integration/jp_referral_aql_spec.rb` の pending は「例外」から「rows 不一致」に変わるが pending のまま。解除条件は同じ）。

@@ -443,7 +443,7 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 含意: SECTION 入れ子（referral_details.v0）や INSTRUCTION（service_request）を持つテンプレートは、現行 gem では RM グラフに入れてはならない（入れると demo 経路の AQL 4 件も落ちる）。`#23` (4) の統合 spec は本項の解消が前提
 - 提案: `TYPE_CLASSES` に `SECTION`→`OpenEHR::RM::Composition::Content::Navigation::Section`、`INSTRUCTION`→`...Entry::Instruction`、`ACTIVITY`→`...Entry::Activity`（+ ACTION）を追加し、`build_node` に SECTION.items／INSTRUCTION.activities・protocol／ACTIVITY.description の組み立てを足す。書き込みと読み出しの型集合を一致させる（`TypeMap::NODE_TYPES` を単一の真実にする）。少なくとも未知型は `to_rm` で明示エラー（Composition 単位で skip）にし、store 全体を巻き込まない
 - 還流先: openehr-rails
-- ステータス: **観察ログ**（起票候補。再現手順: R6 の手写像 canonical JSON を `CompositionCommitter.commit` → 任意の AQL）
+- ステータス: **緩和済み（0.7.1、rails #44）／読み戻しは rails #45 待ち**。0.7.1 は該当 Composition を warn（`openehr-rails AQL: skipping composition uid=…`）付きで skip し、store の他の Composition へのクエリは通る（`docs/reports/fsh-log.md` R9 で実測）。SECTION／INSTRUCTION／ACTIVITY の `to_rm` は #45（次 minor）。再現手順: R6 の手写像 canonical JSON を `CompositionCommitter.commit` → 任意の AQL
 
 ## 16. `CompositionCommitter`／`GraphBuilder` が canonical JSON の `context`（EVENT_CONTEXT）を永続化しない
 
@@ -465,7 +465,7 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   - 併せて: 単葉 EVALUATION（clinical_synopsis）は `Condition` に `value[x]` 規則で 2 エラー（rails `#38`、0.7.1 未リリース）。problem_diagnosis の at0002 が **DV_TEXT** の場合 `Condition.code only string` で 1 エラー（ProblemList.opt は DV_CODED_TEXT なので顕在化しなかった。写像表が text 葉 → CodeableConcept を扱っていない）
 - 提案: (1) `FieldExtractor` が INSTRUCTION の activities/description・protocol を ENTRY の葉として扱う（少なくとも ACTIVITY.description の ELEMENT）。(2) skip 規則に「葉 0 の非 Observation」も含める（空プロファイルを出さない）。(3) DV_TEXT 葉 → `Condition.code` は `CodeableConcept.text` へ写像するか skip
 - 還流先: openehr-rails（(3) は `#35` の写像表）
-- ステータス: **観察ログ**（起票候補。`#38` の 0.7.1 と同時に扱うのが自然）
+- ステータス: **(2) は 0.7.1 で解消**（葉 0 の非 Observation entry も skip-and-report、`docs/reports/fsh-log.md` R9）。(1) INSTRUCTION の葉抽出と (3) の写像表は rails #47／#48／#49 待ち
 
 ## 18. `OPTParser` が C_ARCHETYPE_ROOT ごとの `term_definitions` を `component_terminologies[archetype_id]` に畳み込み、テンプレート改名（同一アーキタイプ複数ルートの at0000 名）が失われる
 

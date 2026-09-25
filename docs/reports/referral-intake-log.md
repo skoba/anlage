@@ -629,3 +629,11 @@ v0.2 は clinical_synopsis の at0002 を**ルートごとに**改名してい�
 ### 7. v0.3 待ち（変わらず）
 
 処方（medication_order、DV_QUANTITY の実例＝WP1 素材の残課題）、アレルギー、「依頼内容」改名、患者 CLUSTER。
+
+---
+
+## R11: 0.7.1 bump 後の状態（2026-09-25）
+
+- v0.2 の再ドロップ・diff・fixture 差し替えは R10（`d48d2f2`・`6a5e37b`）で完了済み。#33（空 select）は計画 `6d1bd91` でゲート承認待ち、未着手。
+- openehr-rails **0.7.1**（`a3b27cb`、`docs/reports/fsh-log.md` R9）: jp_referral v0.2 の Sushi 8 → **0 Errors**（skipped = service_request・clinical_synopsis ×2）。#44 により jp_referral 由来 Composition が store にあっても 4 デモクエリは warn+skip で通る（実測、purge 済み）。
+- `#23` (4) の pending 例（`spec/integration/jp_referral_aql_spec.rb`）は 0.7.1 で失敗の形が `NoMethodError` → `rows` 不一致（skip される）に変わったが pending のまま。解除条件は rails #45（SECTION／INSTRUCTION の読み戻し）。
