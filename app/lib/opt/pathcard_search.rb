@@ -11,7 +11,9 @@ module Opt
     def call
       return [] if @query_bigrams.empty?
 
-      Template.where.not(pathcards: nil).flat_map do |template|
+      # 索引は active 版のみ（skoba/anlage#32）。superseded 版のカードは系譜・diff 用に
+      # 保持するが、同一カードが版ごとに並ぶのを避けるため索引から外す。
+      Template.active.where.not(pathcards: nil).flat_map do |template|
         Array(template.pathcards).filter_map do |card|
           score = (@query_bigrams & card_bigrams(card)).size
           card.merge("score" => score) if score.positive?

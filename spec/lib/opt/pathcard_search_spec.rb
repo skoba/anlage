@@ -73,3 +73,26 @@ RSpec.describe Opt::PathcardSearch, "祖先ルート名での着地（#31）" do
     expect(jp_referral_hits("紹介先")).to include([ "openEHR-EHR-CLUSTER.organisation.v1", "at0001" ])
   end
 end
+
+# skoba/anlage#32（解決形 (a)、裁定 2026-09-25）: 検索索引は active 版のテンプレートの
+# カードのみ。superseded 版のカードは系譜・diff 用に保持したまま索引から外す
+# （v0.1／v0.2 の同一カードがデモの検索結果に並ばないようにする）。
+RSpec.describe Opt::PathcardSearch, "superseded 版は索引しない（#32）" do
+  it "同一 template_id の旧版（superseded）のカードは結果に現れず、active 版だけがヒットする" do
+    xml = Rails.root.join("spec/fixtures/opt/jp_referral.opt").read
+    old_version = Template.build_from_opt_xml(xml)
+    old_version.pathcards = Opt::PathcardExtractor.call(old_version).cards
+    old_version.checksum = "0" * 64 # 旧版として別 checksum で登録
+    old_version.save!
+    new_version = Template.build_from_opt_xml(xml)
+    new_version.version = "1.0.1"
+    new_version.pathcards = Opt::PathcardExtractor.call(new_version).cards
+    new_version.save!
+    old_version.supersede!
+
+    hits = described_class.call("既往歴").select { |card| card.dig("identity", "template_id") == "jp_referral" }
+
+    expect(hits.size).to eq(1)
+    expect(hits.first.dig("provenance", "source_checksum")).to eq(new_version.checksum)
+  end
+end
