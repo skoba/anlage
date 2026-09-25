@@ -649,3 +649,36 @@ v0.2 は clinical_synopsis の at0002 を**ルートごとに**改名してい�
 - demo spec クエリ 2 に「at0002 は DV_TEXT で保存」の pin（裁定 B の是正）。4 クエリの期待値は不変。
 - **dev の rebuild 実施**: `rake templates:rebuild_web_template` → 6 テンプレート（jp_referral は superseded の v1.0.0 も含む）。再描画実測: `/forms/ProblemList`・`/forms/jp_referral` の at0002 が `<input type="text">`。input_kind の内訳は上記 runner 出力のとおり（coded_free は両テンプレートの at0002 のみ、coded_manual は現 fixture に無し）。
 - 凍結受入条件に実ブラウザ system spec を追加（`CLAUDE.md`）。backlog 13・upstream 19・opt-catalog の運用注記を同梱。
+
+---
+
+## R13: 凍結前バッチ 2 — #34（空欄クラッシュ）・#32（検索の superseded）・要素改名の per-instance 化・#35（日付 UX）（2026-09-25）
+
+統括の指示・裁定（同日）をそのまま計画とし、各項目を Red→Green で実装（`docs/design/` の計画文書は作らず、Issue 本文に計画を転記）。コミット `cebc7b5`（#34）・`8965387`（#32）・`0b2a521`（要素改名）・`054326e`（#35）。全 suite 159 examples, 0 failures, 3 pending。
+
+### #34 空欄の任意項目でクラッシュ（解決形 (a)）
+
+- 再現: 実ブラウザ送信の実パラメータ（at0002「かぜ」・at0077・at0003 埋め、at0030／at0073 空）で `dv_date_time(nil)`（`composition_builder.rb:187`）。
+- 修正: blank（nil／""）の要素は Composition に含めない（要素単位・型別ガードにしない）。全要素が空欄の entry は content に含めない。builder が送信値へ直接呼ぶ `Float`／`Integer`／`Date.parse`／`Time.zone.parse`／`iso8601` の 5 箇所は非 blank の要素でしか到達しない（走査済み。#35 で `Date.parse`／`Time.zone.parse` は撤去）。
+- 必須: gem の `required` は「entry が必須 かつ 要素が必須」（`field_extractor.rb:117,171,290`）で、0..1 の entry 配下では 1..1 の at0002 でも false（**upstream 20 項**）。Anlage は `Opt::ElementConstraints`（#33 の ValueAlternatives を統合）で要素の occurrences 下限を取り、下限 ≥1 を `required` にする → 空なら 422 と項目ラベル＋「必須項目です」。
+- spec: request（実パラメータ → 302・items 3 要素／必須空 → 422）、builder 2、Template 1。system spec は「任意項目は空欄のまま保存」の操作列へ。
+
+### #32 検索の superseded 重複（解決形 (a)、裁定 1）
+
+`Opt::PathcardSearch` を `Template.active` に限定。superseded 版の pathcards は系譜・diff 用に保持。dev 実測: eval 17 問不変（14/17・15/17・0.8529）、「既往歴」の jp_referral ヒット 2 → 1、「紹介先」52 → 26。
+
+### 要素改名の per-instance 化（裁定 2、解決形 (b)）
+
+- `Opt::TemplateTerms`（#31 の `extract_root_names` を一般化・移設）: ルート path＋出現順で各インスタンスの term_definitions（全コード）を返す。抽出器は per-instance の text／description を優先し、無ければ gem の畳み込み済み terminology へ後退。フォームは ENTRY 自身のルートの改名を field label に反映（entries の並び＝文書順で結ぶ。埋め込み CLUSTER 配下は gem のまま）。撤去条件は openehr-ruby#58（同一）。
+- pin: clinical_synopsis ×2 の at0002 ラベルが「症状経過及び検査結果」「治療経過」（抽出器・フォーム）、両語が要素ラベルとして検索に着地。golden 再生成 1 カード（R10 4 節の誤ラベル固定を解消）。
+
+### #35 日付 UX と精度保存（解決形 (b)）
+
+- `input_kind` に date／time／datetime。view は `type="date"`／`type="time"`、datetime は date＋「時刻（任意）」の 2 入力。validator は形式をローカル検証（datetime の日付欄は完全な ISO 日時も可、POST クライアント向け）。builder は Time 経由をやめ ISO 部分精度の文字列のまま（日付のみ "2026-09-22"、時刻ありは "2026-09-22T14:30"）。
+- **openehr-ruby 実測**: `ISO8601DateTime`（`assumed_library_types.rb:528-530`）は `T`＋時（hh）を必須にし、日付のみを拒否（`T14`／`T14:30` は受理、そのまま往復）。→ **openehr-ruby #59** を起票。暫定: 日付のみは時刻付きで構築後に `@value` を差し替える（撤去条件 #59）。`DvDate` は `YYYY`／`YYYY-MM`／`YYYY-MM-DD`、`DvTime` は `HH:MM` を受理。
+- **限界（実測）**: AQL は RM グラフの `datetime_value` 列（`graph_builder.rb:161-162` `parse_time`、`rm_object_builder.rb:177-178` `dv_date_time`）から読み戻すため "2026-03-01" が "2026-03-01T00:00:00Z" になる。精度は canonical JSON（`compositions.rm_composition`）にのみ残る → **upstream 21 項**（起票候補）。system spec は canonical と AQL の両方を固定、demo spec Q4 は AQL の観測値（Z 付き）のまま。
+- spec: InputKind 1・view 2・builder 3・validator 2・request 1。system spec は発症日時を日付ピッカー（`fill_in ..., with: Date`）で入力する操作列に。
+
+### dev の反映
+
+`rake templates:rebuild_web_template`（6 テンプレート）＋全テンプレートの pathcards を再抽出。jp_referral active の clinical_synopsis ラベル・フォームラベルは「症状経過及び検査結果」「治療経過」、ProblemList の input_kind は coded_free／datetime ×3／select、required は at0002 のみ true。eval 17 問は不変。

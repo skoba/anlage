@@ -476,7 +476,7 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 提案: `CArchetypeRoot` に per-root の `term_definitions`（`{lang => {code => ArchetypeTerm}}`）と（あれば）`term_bindings` を持たせ、`OPTParser` が集約と併せて各ルートにも保持させる。`component_terminologies` の畳み込みは互換のため残す
 - 還流先: openehr-ruby
 - 起票: **`skoba/openehr-ruby#58`**（2026-09-25、データ損失級として `#31`／`#48` と同格で起票）
-- 追記（2026-09-25、jp_referral v0.2、`docs/reports/referral-intake-log.md` R10 4 節）: 影響はルート名だけでなく **ELEMENT の term にも及ぶ**。v0.2 は clinical_synopsis の at0002 をルートごとに「症状経過及び検査結果」「治療経過」へ改名しているが、`component_terminologies` では後勝ちで 1 つに潰れ、Anlage のカードは 2 枚とも「治療経過」になる。Anlage 側の迂回（案 a）を ELEMENT term まで広げるかは承認待ち
+- 追記（2026-09-25、jp_referral v0.2、`docs/reports/referral-intake-log.md` R10 4 節）: 影響はルート名だけでなく **ELEMENT の term にも及ぶ**。v0.2 は clinical_synopsis の at0002 をルートごとに「症状経過及び検査結果」「治療経過」へ改名しているが、`component_terminologies` では後勝ちで 1 つに潰れていた。→ 同日裁定で Anlage 側の迂回を ELEMENT term まで拡張（`Opt::TemplateTerms`、R13。カードとフォームのラベルに反映）。撤去条件は同じく #58
 - ステータス: **起票済み**（openehr-ruby#58）。Anlage 側の迂回コードの撤去条件として参照する
 
 ## 19. `FieldExtractor#entries` が value 属性の代替 RM 型（rm_type_alternatives）を field に載せず、`code_list` 空の DV_CODED_TEXT を主型にする
@@ -497,3 +497,23 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   未確認——確認でき次第ここに追記する
 - ステータス: **Anlage 側で迂回済み**（`Opt::ValueAlternatives`、撤去条件: 上記 field 露出を含む
   openehr-rails へ bump した時点で `ValueAlternatives` を gem 値へ置換）
+
+## 20. `FieldExtractor` の `required` は「entry が必須 かつ 要素が必須」で、0..1 の entry 配下では 1..1 の要素も false になる
+
+- 発見日: 2026-09-25（`skoba/anlage#34`、`docs/reports/referral-intake-log.md` R13）
+- 対象: openehr-rails 0.7.1 `lib/openehr_rails/opt/field_extractor.rb:117`（`required: mandatory?(root)`）、`:171`（`required: entry[:required] && mandatory?(element)`）、`:290-293`
+- 実測: ProblemList／jp_referral の傷病名 at0002（occurrences 1..1）は entry が 0..1 のため `required: false`。フォームは必須表示も検証もできず、空欄送信が builder のクラッシュに直結した
+- 含意: entry の任意性と要素の必須性は別の軸（entry を書くなら要素は必須）。Anlage は `Opt::ElementConstraints` で要素の occurrences 下限を取り、下限 ≥1 を required にしている
+- 提案: field に `min_occurrences`（要素自身の下限）を additive で載せ、`required` は要素自身の下限で決める（entry の任意性は entry 側の `required` で表す）
+- 還流先: openehr-rails
+- ステータス: **Anlage 側で迂回済み**（起票候補）
+
+## 21. RM グラフの `datetime_value` 列が DV_DATE_TIME の部分精度を落とし、AQL の読み戻しが UTC iso8601 に正規化される
+
+- 発見日: 2026-09-25（`skoba/anlage#35`、R13）
+- 対象: openehr-rails 0.7.1 `lib/openehr_rails/rm/graph_builder.rb:161-162`（`datetime_value: parse_time(hash['value'])`、`:187-191` `Time.zone.parse`）、`lib/openehr_rails/rm/rm_object_builder.rb:177-178`（`dv_date_time(dv.datetime_value)` → `Time#iso8601`）
+- 実測: canonical JSON で `"2026-03-01"`（日付精度）として commit した DV_DATE_TIME を AQL で SELECT すると `"2026-03-01T00:00:00Z"`。`"2026-03-15T00:00:00"`（TZ 無し）も `Z` 付きになる。DV_DATE／DV_TIME は文字列列（`date_value`／`time_value`）なので精度を保つ
+- 含意: 「存在しない精度（午前 0 時）を付けない」は正本（Anlage の `compositions.rm_composition`）でしか成立せず、AQL の権威ストアでは午前 0 時 UTC が捏造される。紹介状の発症日（日付精度）を AQL で扱う場面（`spec/demo/` Q4 の期間 WHERE）に影響
+- 提案: `datetime_value` と並べて元の ISO 文字列（`datetime_text`）を保持し、`RmObjectBuilder` はそれを優先して DvDateTime を組む（openehr-ruby#59 の解消と併せて部分精度を往復させる）
+- 還流先: openehr-rails（＋openehr-ruby#59）
+- ステータス: **観察ログ**（起票候補）

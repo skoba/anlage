@@ -231,3 +231,9 @@ Designer／ADL Workbench／LinkEHR／HMC／Better Archetype Designer。
 - 相互参照: `docs/design/pathcards-schema-v1.md` 1 節 `bindings.display: null`（WP5 の
   `$lookup` で解決する前提の受け皿）・`docs/design/wp2-plan.md` 5（code_string 分解は WP5 境界）・
   `docs/upstream-candidates.md` 19 項（FieldExtractor の代替型露出）
+
+## 14. 日付の精度セレクタと DV_DURATION／DV_INTERVAL の入力（12 月の帳票 UX 課題、2026-09-25、`#35`）
+
+- 精度セレクタ（年／年月／年月日）: 「2020 年頃発症」を `2020`（年精度）として正しく表す UI。#35 は `type="date"`（年月日）＋時刻（任意）までで、年・年月の入力経路は無い（validator・builder は `YYYY`／`YYYY-MM` を既に受ける）。前提: openehr-ruby#59（DvDateTime の日付のみ）と `docs/upstream-candidates.md` 21 項（RM グラフの datetime 列が部分精度を落とす）の解消
+- DV_DURATION（ISO 8601 duration）・DV_INTERVAL（下限／上限）の入力欄。現 fixture に該当要素は無い
+- 帳票パイプライン（10 月）の `capture.rules`（`docs/design/pathcards-schema-v1.md` 1 節 `era_date` 等）と同じ節で設計する
