@@ -466,3 +466,13 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 提案: (1) `FieldExtractor` が INSTRUCTION の activities/description・protocol を ENTRY の葉として扱う（少なくとも ACTIVITY.description の ELEMENT）。(2) skip 規則に「葉 0 の非 Observation」も含める（空プロファイルを出さない）。(3) DV_TEXT 葉 → `Condition.code` は `CodeableConcept.text` へ写像するか skip
 - 還流先: openehr-rails（(3) は `#35` の写像表）
 - ステータス: **観察ログ**（起票候補。`#38` の 0.7.1 と同時に扱うのが自然）
+
+## 18. `OPTParser` が C_ARCHETYPE_ROOT ごとの `term_definitions` を `component_terminologies[archetype_id]` に畳み込み、テンプレート改名（同一アーキタイプ複数ルートの at0000 名）が失われる
+
+- 発見日: 2026-09-25（`skoba/anlage#31` の explore、`docs/design/jp-referral-freeze-batch-plan.md` 0 節 3〜4）
+- 対象: openehr-ruby 2.4.3 `lib/openehr/parser/opt_parser.rb:132-163`（各 C_ARCHETYPE_ROOT 直下の `term_definitions` を archetype_id キーの `component_terminologies` へ集約）、`lib/openehr/am/archetype/constraint_model.rb:488-502`（`CArchetypeRoot` は `slot_node_id`／`archetype_id` のみ保持）
+- 実測: jp_referral v0.1（organisation ×5・person ×3・clinical_synopsis ×2）で、パース後の at0000 名は organisation 全て「診療科」、person 全て「担当医」、clinical_synopsis 全て「治療経過」——OPT XML 上は「紹介元医療機関」「紹介先医療機関」「医師」「症状経過及び検査結果」等と各ルートで異なる。ルート単位の名前（AD の rename＝様式11 の欄名）は gem の API からは復元できない
+- 含意: Anlage のパスカード v1.2（祖先ルート名 `container_labels`）は gem 経路が無いため、`source_xml` の Nokogiri 再解析で per-root の at0000 を読む（案 a、撤去条件付き）。`#19` で撤去した「経路2」と同型の迂回が再び必要になる
+- 提案: `CArchetypeRoot` に per-root の `term_definitions`（`{lang => {code => ArchetypeTerm}}`）と（あれば）`term_bindings` を持たせ、`OPTParser` が集約と併せて各ルートにも保持させる。`component_terminologies` の畳み込みは互換のため残す
+- 還流先: openehr-ruby
+- ステータス: **観察ログ**（起票候補。Anlage 側の迂回コードの撤去条件として参照する）

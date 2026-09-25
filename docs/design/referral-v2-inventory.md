@@ -51,7 +51,7 @@ COMPOSITION.request.v1  (template_id: jp_referral)
 
 **紹介先・紹介元の配置**: COMPOSITION context ではなく **service_request の protocol[at0008]**（Requester at0141 / Receiver at0142 スロット）に置かれている。AD 実装を正とする（v2 §2 の設計どおり。context 配置ではない）。
 
-**判別の原理（v2.1 で改定）**: 同一アーキタイプの複数出現（organisation ×5、person ×3、clinical_synopsis ×2）は AD ソースではスロット役割（at0141／at0142、at0017、at0002）で区別されるが、OPT 1.4 と RM インスタンスでは両 organisation が同じ `protocol[at0008]/items` 属性に並び、残る判別子は **`name/value`（AD が at0000 に与えた ja 名）と入れ子構造**だけである（R6 実測: AQL は `items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']` の name 述語で引く）。v2 の「名前制約に依存しない」は v0.1 では成立しない。名前を安定識別子として凍結するか、v0.2 で構造判別（例: 紹介先を Receiver スロット固有の入れ子で固定）へ寄せるかは §10 の裁定事項。
+**判別の原理（v2.1 で改定。2026-09-25 人間裁定で確定: name 述語を安定識別子として採用し、AD が at0000 に与えた ja 名を凍結する）**: 同一アーキタイプの複数出現（organisation ×5、person ×3、clinical_synopsis ×2）は AD ソースではスロット役割（at0141／at0142、at0017、at0002）で区別されるが、OPT 1.4 と RM インスタンスでは両 organisation が同じ `protocol[at0008]/items` 属性に並び、残る判別子は **`name/value`（AD が at0000 に与えた ja 名）と入れ子構造**だけである（R6 実測: AQL は `items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']` の name 述語で引く）。v2 の「名前制約に依存しない」は v0.1 では成立しない。名前を安定識別子として凍結するか、v0.2 で構造判別（例: 紹介先を Receiver スロット固有の入れ子で固定）へ寄せるかは §10 の裁定事項。
 
 ## 3. 決定表（概念 → アーキタイプ）
 
@@ -93,11 +93,11 @@ COMPOSITION.request.v1  (template_id: jp_referral)
 | 5 | 患者基本情報 | **未配置**（other_context[at0001] は Extension at0042 のみ） | v0.2 以降（職業要素は未確定のまま） |
 | 6 | 紹介日 | context/start_time（RM 固有、OPT に制約なし） | 一致 |
 | 7 | 傷病名 | problem_diagnosis「傷病名」at0002（DV_TEXT、**ICD-11 束縛なし**、term_bindings 0） | 一致（束縛は v0.2 で追加要） |
-| 8 | 紹介目的 | service_request at0062「紹介目的」(DV_TEXT 0..*) | **差分**: v2 は at0064（記述・主）+ at0062（コード 0..1）。v0.1 は at0062 を記述欄として改名使用、at0064 未使用 |
+| 8 | 紹介目的 | service_request at0062「紹介目的」(DV_TEXT 0..*) | **裁定済み（2026-09-25）: at0062 改名使用で確定**。v2 の at0064＋at0062 案は取り下げ（コード化理由は将来 at0062 の DV_CODED_TEXT 化で扱う） |
 | 9 | 主訴 | **未配置**（reason_for_encounter 無し） | v0.2 |
 | 10 | 既往歴 | story「既往歴及び家族歴」at0004（narrative のみ） | 一致（narrative-first。problem_diagnosis + problem_qualifier の構造化は v0.3） |
 | 11 | 家族歴 | story「既往歴及び家族歴」に包含（family_history 無し） | v0.3 |
-| 12 | 症状経過（現病歴） | **clinical_synopsis「症状経過及び検査結果」** | **差分**: v2 は OBSERVATION.story @ Details。v0.1 は EVALUATION.clinical_synopsis（ENTRY 型判定則 4 では観察事実 → OBSERVATION）。裁定待ち（§10） |
+| 12 | 症状経過（現病歴） | **clinical_synopsis「症状経過及び検査結果」** | **裁定済み（2026-09-25）: clinical_synopsis で確定**（様式11 直写＝欄が一つの叙述。判定則 4 の例外として記録。v2 の story 案は取り下げ） |
 | 13 | 検査結果 | 同上の narrative に包含 | v0.3（laboratory_test_result 構造化） |
 | 14 | 治療経過 | clinical_synopsis「治療経過」 | 一致 |
 | 15 | 現在の処方 | **未配置** | v0.2（既知の欠落） |
@@ -165,6 +165,8 @@ COMPOSITION.request.v1  (template_id: jp_referral)
 - JP-CLINS 側: 準拠 Bundle 1 通（NoEntry 作例可）→ 同上
 - 統合 spec: 「両源から同じ AQL で引ける」を jp_referral の受入条件とする。変換器の自動化（fhirbridge / MML パーサ）は 12 月以降
 
+**補記（2026-09-25 裁定・デモ役割の縮退）**: 統合 spec は Anlage のフォーム保存経路ではなく**直接コミット経路**（手写像 canonical JSON → `OpenehrRails::Rm::CompositionCommitter` → AQL）で組む（`skoba/anlage#30` はフォーム経路の課題として別扱い）。ただし RM 側の実体化が SECTION／INSTRUCTION を扱えない（`docs/upstream-candidates.md` **15 項**）ため、spec は `pending` で置き、**上流 15 項の解消待ち**を明記する。紹介日（context/start_time）は **16 項**（EVENT_CONTEXT 未永続化）により含めない。FHIR facade／FSH の jp_referral 出力は **17 項**（FieldExtractor が INSTRUCTION を辿らない）により 8 Errors のまま。したがって 11/5 凍結デモにおける jp_referral の役割は「ドロップ → フォーム生成 → パスカード検索の着地（祖先ルート名込み、`skoba/anlage#{GOAL}`）」までに縮退し、AQL 統一性の実証（本節）は上流解消後（12 月世界公開の準備期）へ送る。凍結受入条件（`spec/demo/` 4 クエリ）は変更しない。
+
 ## 9. 可逆性ノート
 
 1 枚テンプレート＋写像 2 本を戦略とするが、JP-CLINS の実インジェスト実装時に写像の捻れが許容を超えた場合、**同じ骨格を共有する JP-CLINS プロファイル版 OPT を分岐してよい**。AQL の包含照合はアーキタイプ基準のため、骨格共有下では分岐してもクエリ層は壊れない（判断時期: 凍結後の実インジェスト着手時）。
@@ -179,13 +181,16 @@ COMPOSITION.request.v1  (template_id: jp_referral)
 | **v0.2** | 現在の処方（medication_order、最小サブセット）＋主訴（EVALUATION.reason_for_encounter）＋アレルギー（adverse_reaction_risk）。傷病名の ICD-11 束縛。患者（other_context）配置の可否 | 人間が AD で組み立て |
 | **v0.3 以降** | 既往歴二本立て（story + problem_diagnosis/problem_qualifier）・検査結果構造化（laboratory_test_result）・感染症（infectious_disease_summary）・生活歴（social_summary）。12 月でも可 | — |
 
-v0.2 着手前の裁定事項（v0.1 実測から）:
+v0.2 着手前の裁定事項（v0.1 実測から）——**2026-09-25 に統括が裁定、すべて v0.1 の実装を採用**:
 
-1. **症状経過の ENTRY 型**（§3.1 No.12）: v0.1 は clinical_synopsis、v2 は story。判定則 4 に従って story へ戻すか、様式11 直写（「症状経過及び検査結果」欄＝一つの叙述）を優先して clinical_synopsis のままとするか。
-2. **同一アーキタイプ複数出現の判別**（§2）: name 述語を安定識別子として凍結するか、構造判別へ寄せるか。
-3. **紹介目的の at-code**（§3.1 No.8）: at0062 改名使用のまま（コード化理由は将来 DV_CODED_TEXT 化）か、v2 どおり at0064 記述＋at0062 コードへ戻すか。
+1. **症状経過の ENTRY 型**（§3.1 No.12）: **clinical_synopsis で確定**（様式11 直写を優先。判定則 4 の例外）。
+2. **同一アーキタイプ複数出現の判別**（§2）: **name 述語で確定**（AD が at0000 に与えた ja 名を凍結。AQL は `items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']`）。
+3. **紹介目的の at-code**（§3.1 No.8）: **at0062 改名使用で確定**。
+
+併せて: デモ役割の縮退（§8 補記）と、上流候補 15〜17 項の相互参照（§8 補記）。
 
 ### 変更履歴
 
 - v2（2026-09-04）: 人間レビュー完了版を正典化。既定値 2 件（No.17 案a／No.19 不採用）を置く。
+- **v2.1 補記（2026-09-25、統括裁定）**: §10 の裁定事項 3 件を v0.1 実装で確定、§8 にデモ役割の縮退と上流 15〜17 の相互参照を補記（`docs/design/jp-referral-freeze-batch-plan.md` 項目 4）。
 - **v2.1（2026-09-25）**: §7 を jp_referral v0.1 の診断ドロップから転記（`skoba/anlage#23` (2)）。§2 を v0.1 実測骨格（現行 CKM 名・protocol 配置・スロット at-code）へ差し替え、判別の原理を改定。§3.1（実装突合表）・§5 系譜 2 行・§10 段階付けを追加。設計値からの差分 3 件は v0.2 前の裁定事項として保留。
