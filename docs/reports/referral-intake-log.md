@@ -493,3 +493,47 @@ R4 6 節に記録: 8 Errors。clinical_synopsis ×2 は #38 型（見込みど�
 ### opt-catalog
 
 jp_referral 行を「fixture 化済み v0.1」へ（fixture／上流 sha256 の両方を記載、版管理規約を凡例に追加）。
+
+---
+
+## R8: #31 祖先ルート名 container_labels（凍結前バッチ 項目 2、2026-09-25）
+
+計画 2 節、裁定 A（案 a）。コミット `e7d9027`（コード・spec・golden 3 件・スキーマ文書）。上流 18 項は openehr-ruby **#58** として起票（データ損失級、`#31`／`#48` と同格）。
+
+### Red → Green（解決形 (b)）
+
+- Red: 抽出器 4 例（content 直下 1 段／LabResultReport 2 段／jp_referral 担当医 5 段／紹介元・紹介先・診療科の区別）＋検索 4 例（既往歴・傷病名・治療経過・紹介先）→ **8 failures** を確認。
+- Green: `extract_root_names`（`Opt::SafeParser.safe_document` で再解析、`//*[@type='C_ARCHETYPE_ROOT']` を文書順に、キー＝archetype_id 述語の RM path）／`container_labels_for`（同 path 内の出現順で結ぶ）／`walk` に祖先スタック／`searchable_texts` に container_labels。撤去条件（openehr-ruby#58）と文書順＝走査順の前提をコード注記に明文化。
+- 追随: インライン sample-card の `schema_version`／`container_labels`／`extractor_version`。全 suite **114 examples, 0 failures**、rubocop 0。
+
+### golden 再生成（3 件、v1.2）
+
+CardiologyEncounter（2 カード）／LabResultReport（3）／ProblemList（6）。git diff の意味差分は `schema_version: 1.1→1.2` と `container_labels` の追加のみ（`rm_type` のキー順が後置へ揃う差分を含む、値不変）。`missing_container_labels` は 4 fixture とも 0、最大深さ Cardiology 1／Lab 2／Problem 1／jp_referral 5。
+
+### eval 17 問（裁定条件: 新旧併記）
+
+dev DB の 5 テンプレートの pathcards を v1.2 で再抽出（scratch runner。`pathcards:backfill` は nil のみ対象のため）→ `rake pathcards:eval`。`docs/reports/wp4-eval-log.md` に **前**（09:07、v1.1 のまま）と **後**（09:12、v1.2）を追記。
+
+| | 前（v1.1） | 後（v1.2） |
+|---|---|---|
+| Top-1 | 14/17 (82.35%) | 14/17 (82.35%) |
+| Top-3 | 15/17 (88.24%) | 15/17 (88.24%) |
+| 完全失敗 | 2/17（q16 BMI・q18 既往） | 2/17（同） |
+| MRR | 0.8529 | 0.8529 |
+
+各問の rank は全 17 問で不変（q07 検査結果は前後とも rank 1）。**結果列に変化があった問**: q18「既往」は前は 0 件、後は top-1 が jp_referral の `OBSERVATION.story.v1/at0004`（container「既往歴及び家族歴」経由）——ゴールドは problem_diagnosis のため判定は不変（失敗のまま）。これは WP4 将来課題の「既往歴→story」そのもので、q21 の下書き（R9）の根拠。ゴールドには触れていない。
+
+### 試し打ち（着地、dev v1.2）
+
+| クエリ | jp_referral ヒット | 着地（top） |
+|---|---|---|
+| 既往歴 | 1 | story/at0004 病歴の記述 [紹介状の詳細情報>既往歴及び家族歴] |
+| 傷病名 | 1 | problem_diagnosis/at0002 [紹介状の詳細情報>傷病名] |
+| 治療経過 | 2 | clinical_synopsis/at0002 要約 [>治療経過]（s=3）、次点 [>症状経過及び検査結果]（s=1） |
+| 紹介先 | 26 | organisation/at0019・person/at0010（[>紹介先医療機関>診療科(>担当医)]、s=2）。**26 件全てが 1 点以上**——ルート「紹介状の詳細情報」が bigram「紹介」を全カードに与えるため。着地はするが順位は粗い（重み付けは対象外、v1.2 は着地のみ） |
+| 紹介元／症状経過／診療科／担当医 | 26／2／6／2 | いずれも該当サブツリーが上位 |
+
+### 補記
+
+- 検索 UI（`_pathcard.html.erb`）は未変更（Out of scope）。
+- `#31` の受入条件は golden 4 件目（jp_referral、R9）で充足。
