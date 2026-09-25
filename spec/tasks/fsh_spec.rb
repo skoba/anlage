@@ -70,7 +70,7 @@ RSpec.describe "fsh:export / fsh:verify" do
   # （`docs/reports/fsh-log.md` R7 の 29 件は全て `No element found at path
   # component`。R8 で 0 Errors を実測）。0.7.0 bump 時点で既に成立している
   # 性質の固定であり、Red は作れない。
-  describe "openehr-rails 0.7.0 の FSH（regression pin）" do
+  describe "openehr-rails 0.7.x の FSH（regression pin）" do
     let(:fixture_paths) { Rails.root.glob("spec/fixtures/opt/*.opt").sort }
 
     it "ProblemList の FSH に Condition.component 制約が含まれない" do
@@ -81,17 +81,26 @@ RSpec.describe "fsh:export / fsh:verify" do
       expect(fsh_files.values.join).to include("* category contains ckm 1..1")
     end
 
-    it "spec fixture 全件（6 件、jp_referral を含む）で skip-and-report の対象（skipped）が空である" do
+    it "CKM fixture 5 件の skipped は空、jp_referral は葉 0 の service_request と単葉 EVALUATION（clinical_synopsis ×2）が skip-and-report に載る" do
       skipped = fixture_paths.to_h do |path|
         generator = OpenehrRails::Fhir::FshGenerator.new(Opt::SafeParser.parse(path.read))
         generator.to_fsh_files
         [ path.basename.to_s, generator.skipped ]
       end
 
-      # jp_referral.opt（#29 で fixture 化）の service_request は葉 0 のため skip 規則に
-      # 掛からず空のまま（docs/upstream-candidates.md 17 項）。件数はその実測を固定する。
+      # openehr-rails 0.7.1（rails #38）: Observation 以外へ写像される entry で写像表に
+      # 行が無いものは、葉 0（service_request → ServiceRequest）・単葉（clinical_synopsis
+      # → Condition ×2）とも value[x]/component を出さず skipped へ（0.7.0 では多葉のみ）。
+      # jp_referral v0.2 の Sushi は 8 → 0 Errors（docs/reports/fsh-log.md R9）。写像自体は
+      # rails #47-#49 待ち（docs/upstream-candidates.md 17 項）。
       expect(skipped.keys.size).to eq(6)
-      expect(skipped.values).to all(be_empty)
+      expect(skipped.except("jp_referral.opt").values).to all(be_empty)
+      jp = skipped.fetch("jp_referral.opt")
+      expect(jp.map { |e| [ e.archetype_id, e.resource_type, e.leaf_count ] }).to eq([
+        [ "openEHR-EHR-INSTRUCTION.service_request.v1", "ServiceRequest", 0 ],
+        [ "openEHR-EHR-EVALUATION.clinical_synopsis.v1", "Condition", 1 ],
+        [ "openEHR-EHR-EVALUATION.clinical_synopsis.v1", "Condition", 1 ]
+      ])
     end
   end
 
