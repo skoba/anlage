@@ -68,11 +68,21 @@ class Template < ApplicationRecord
     constraints = Opt::ElementConstraints.call(opt)
     terms = Opt::TemplateTerms.call(source_xml)
     root_occurrences = Hash.new(0)
-    {
+    web_template = {
       "template_id" => opt.template_id.value,
       "concept" => opt.concept,
       "entries" => extractor.entries.map { |entry| serialize_entry(entry, constraints, instance_terms(entry, terms, root_occurrences)) }
     }
+    # 保存可否は登録時に一度だけ判定（skoba/anlage#36）
+    web_template.merge(Opt::FormCapability.call(web_template))
+  end
+
+  def preview_only?
+    (web_template || {})["form_capability"] == "preview_only"
+  end
+
+  def form_capability_reason
+    (web_template || {})["form_capability_reason"]
   end
 
   # ENTRY 自身のルート（インスタンス）の term_definitions。同一アーキタイプの複数 ENTRY

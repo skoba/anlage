@@ -1,12 +1,19 @@
 <h1><%= @template.web_template["concept"] || @template.template_id %></h1>
 
+<%# skoba/anlage#36: builder が扱えない形は閲覧専用（壇上で 500 を出さない） %>
+<% if @template.preview_only? %>
+  <p class="form-notice">保存は未対応（<a href="https://github.com/skoba/anlage/issues/30">#30</a>）: <%= @template.form_capability_reason %>。このフォームは閲覧専用です。</p>
+<% end %>
+
 <%= form_with url: template_compositions_path(@template.template_id), method: :post, local: true do %>
   <fieldset>
     <% @template.fields.each do |field| %>
-      <%= render "templates/field", field: field, disabled: false,
+      <%= render "templates/field", field: field, disabled: @template.preview_only?,
                  value: @values[field["name"]], error: @errors[field["name"]] %>
     <% end %>
   </fieldset>
 
-  <button type="submit">送信</button>
+  <% unless @template.preview_only? %>
+    <button type="submit">送信</button>
+  <% end %>
 <% end %>

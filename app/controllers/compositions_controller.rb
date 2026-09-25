@@ -11,6 +11,13 @@ class CompositionsController < ApplicationController
     @template = Template.active.find_by!(template_id: params[:template_id])
     values = (params[:values] || {}).to_unsafe_h
 
+    # skoba/anlage#36: 閲覧専用テンプレートへの POST は 500 ではなく説明付きの 422
+    if @template.preview_only?
+      @values = values
+      @errors = {}
+      return render "forms/show", status: :unprocessable_content
+    end
+
     result = Opt::FormValidator.call(@template, values)
     unless result.valid?
       @values = values

@@ -111,3 +111,24 @@ RSpec.describe Template, "フォームのラベルも per-instance の ELEMENT �
     expect(labels).to eq([ "症状経過及び検査結果", "治療経過" ])
   end
 end
+
+# skoba/anlage#36（壇上防御）: 登録時に form_capability を判定する。判定は builder の
+# ドライラン（input_kind ごとの作例値で build を試みる）で、判定規則を builder と二重に持たない。
+RSpec.describe Template, "#36 form_capability" do
+  def capability_of(fixture)
+    Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture}").read).web_template.values_at("form_capability", "form_capability_reason")
+  end
+
+  it "ProblemList は saveable" do
+    expect(capability_of("ProblemList.opt")).to eq([ "saveable", nil ])
+  end
+
+  # 実測: INSTRUCTION entry は field 0 のためドライランでは #34 の空 entry として飛ばされ、
+  # 最初に当たる理由は SECTION 配下 ENTRY の wrapper depth（builder 未対応）
+  it "jp_referral（SECTION 配下・INSTRUCTION）は preview_only で理由を持つ" do
+    capability, reason = capability_of("jp_referral.opt")
+
+    expect(capability).to eq("preview_only")
+    expect(reason).to include("unexpected wrapper depth")
+  end
+end
