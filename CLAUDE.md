@@ -56,7 +56,9 @@ Anlageでは「1 issue = 1 branch」は要求しない（WP駆動の進行と両
   起票先リンクを残す
 
 コミットメッセージ・PRには関連Issueを `Refs #N` で記載する
-（`Fixes #N` はその変更単独でcriteriaを満たす場合のみ）。
+（`Fixes #N` はその変更単独でcriteriaを満たす場合のみ）。複数 Issue を
+閉じるときはキーワードを各番号に付ける（`Fixes #37, Fixes #38`。
+`Fixes #37, #38` は先頭しか閉じない——2026-09-25 の手動クローズの原因）。
 docsのみ・軽微修正はIssue不要（従来どおり）。
 
 タスクの完了報告は origin への push 後に行い、報告に push 済みの SHA を

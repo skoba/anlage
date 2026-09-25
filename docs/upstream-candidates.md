@@ -506,7 +506,7 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 含意: entry の任意性と要素の必須性は別の軸（entry を書くなら要素は必須）。Anlage は `Opt::ElementConstraints` で要素の occurrences 下限を取り、下限 ≥1 を required にしている
 - 提案: field に `min_occurrences`（要素自身の下限）を additive で載せ、`required` は要素自身の下限で決める（entry の任意性は entry 側の `required` で表す）
 - 還流先: openehr-rails
-- ステータス: **Anlage 側で迂回済み**（起票候補）
+- ステータス: **Anlage 側で迂回済み**。正式起票は openehr-rails の次回覚醒（#45／0.8.0）で本台帳の項番を添えて中継する（裁定 2026-09-25）
 
 ## 21. RM グラフの `datetime_value` 列が DV_DATE_TIME の部分精度を落とし、AQL の読み戻しが UTC iso8601 に正規化される
 
@@ -516,7 +516,7 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 含意: 「存在しない精度（午前 0 時）を付けない」は正本（Anlage の `compositions.rm_composition`）でしか成立せず、AQL の権威ストアでは午前 0 時 UTC が捏造される。紹介状の発症日（日付精度）を AQL で扱う場面（`spec/demo/` Q4 の期間 WHERE）に影響
 - 提案: `datetime_value` と並べて元の ISO 文字列（`datetime_text`）を保持し、`RmObjectBuilder` はそれを優先して DvDateTime を組む（openehr-ruby#59 の解消と併せて部分精度を往復させる）
 - 還流先: openehr-rails（＋openehr-ruby#59）
-- ステータス: **観察ログ**（起票候補）
+- ステータス: **観察ログ**。正式起票は openehr-rails の次回覚醒（#45／0.8.0）で本台帳の項番を添えて中継する（裁定 2026-09-25）。openehr-ruby 側（#58・#59）は第 2 巡マガジンで扱う（既定）
 
 ## 22. `FieldExtractor` が埋め込みルートの path を `items[at0000]` で書き、field 名を宿主アーキタイプで名前空間化し、DV_QUANTITY の units を先頭 1 つしか載せない
 
@@ -526,4 +526,4 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - Anlage 側: `Template.build_web_template` が `Opt::ElementConstraints` の対応表で path を archetype_id 述語に訂正し name を自アーキタイプで名前空間化、`units_list` を付与（撤去条件: gem が同等を載せた版へ bump）
 - 提案: 埋め込みルートは `[archetype_id]` 述語で書く（パスカード・AQL と一致）、name は自アーキタイプの concept、`units_list`（全 list item の units）を additive で載せる
 - 還流先: openehr-rails
-- ステータス: **Anlage 側で迂回済み**（起票候補）
+- ステータス: **Anlage 側で迂回済み**。正式起票は openehr-rails の次回覚醒（#45／0.8.0）で本台帳の項番を添えて中継する（裁定 2026-09-25）
