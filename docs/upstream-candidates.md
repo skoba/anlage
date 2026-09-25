@@ -434,3 +434,35 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   準拠（space書式）に修正すれば、下流（Anlage含む）でのExcludeが不要になる。
 - 起票: 未着手（openehr-rails第2巡で起票予定）。
 - ステータス: 未着手（Issue起票候補）。
+
+## 15. `OpenehrRails::Rm::RmObjectBuilder::TYPE_CLASSES` に SECTION／INSTRUCTION／ACTIVITY が無く、1 件でも含む Composition が store 全体の AQL を壊す
+
+- 発見日: 2026-09-25（jp_referral v0.1 の到達性試し打ち、`docs/reports/referral-intake-log.md` R6）
+- 対象: openehr-rails 0.7.0 `lib/openehr_rails/rm/rm_object_builder.rb:14-25`（`TYPE_CLASSES` は OBSERVATION／EVALUATION／ADMIN_ENTRY／HISTORY／POINT_EVENT／INTERVAL_EVENT／ITEM_TREE／ITEM_LIST／CLUSTER／ELEMENT のみ）、同 `:130`（`klass.new(attrs)`）
+- 実測: `GraphBuilder`／`CompositionCommitter.commit` は SECTION・INSTRUCTION・ACTIVITY ノードを **受理して永続化する**（`TypeMap::NODE_TYPES` には揃っている。`infer_type` も `activities`→ACTIVITY を持つ）が、読み出し側 `Composition#to_rm` → `RmObjectBuilder#build_node` が `TYPE_CLASSES[node.rm_type]` で nil を引き `NoMethodError: undefined method 'new' for nil`。AQL の `Dataset` は store の全 Composition を `to_rm` で実体化する（openehr 2.4.3 `lib/openehr/aql/engine/dataset.rb:105`）ため、**該当 Composition が 1 件あるだけで、無関係なテンプレートへのクエリも含め全 AQL が失敗する**（変種 2〜4 で再現。purge 後に復旧）
+- 含意: SECTION 入れ子（referral_details.v0）や INSTRUCTION（service_request）を持つテンプレートは、現行 gem では RM グラフに入れてはならない（入れると demo 経路の AQL 4 件も落ちる）。`#23` (4) の統合 spec は本項の解消が前提
+- 提案: `TYPE_CLASSES` に `SECTION`→`OpenEHR::RM::Composition::Content::Navigation::Section`、`INSTRUCTION`→`...Entry::Instruction`、`ACTIVITY`→`...Entry::Activity`（+ ACTION）を追加し、`build_node` に SECTION.items／INSTRUCTION.activities・protocol／ACTIVITY.description の組み立てを足す。書き込みと読み出しの型集合を一致させる（`TypeMap::NODE_TYPES` を単一の真実にする）。少なくとも未知型は `to_rm` で明示エラー（Composition 単位で skip）にし、store 全体を巻き込まない
+- 還流先: openehr-rails
+- ステータス: **観察ログ**（起票候補。再現手順: R6 の手写像 canonical JSON を `CompositionCommitter.commit` → 任意の AQL）
+
+## 16. `CompositionCommitter`／`GraphBuilder` が canonical JSON の `context`（EVENT_CONTEXT）を永続化しない
+
+- 発見日: 2026-09-25（同上 R6 変種 1）
+- 対象: openehr-rails 0.7.0 `lib/openehr_rails/rm/composition_committer.rb:12-21,39`（`context_start_time:` は **呼び出し側の kwarg** としてのみ受け取り、`canonical_hash["context"]` からは導出しない）、`rm_object_builder.rb:61-67`（`build_event_context` は `context_start_time` がある時だけ `start_time` と固定 `setting('other')` の EventContext を返す。`other_context` は再構築されない）
+- 実測: `context.start_time` 入りの canonical JSON を `commit(hash, uid:, owner: nil)` すると `context_start_time` 列は nil。AQL `SELECT c/context/start_time/value` は **例外なく 1 行返すが値は nil**、`WHERE c/context/start_time/value > '2026-01-01'` は 0 行。`c/context/setting/value` も nil。→ context 系パスは path 評価器（openehr）には到達するが、rails 側で値が失われている（`docs/upstream-candidates.md` 10・11 項の「エンジン到達性」とは別層の欠落）
+- Anlage 側: `Opt::CompositionBuilder` は EventContext を作らず、`Opt::RmCompositionCommitter` も `context_start_time:` を渡していない（`app/lib/opt/rm_composition_committer.rb:27`）。紹介日（契約 No.6 = context/start_time）で引く AQL は、gem 側の導出と Anlage 側の受け渡しの両方が要る
+- 提案: `CompositionCommitter` が `hash.dig("context","start_time","value")` を既定値に使う。`other_context` の ITEM_TREE を `context` 属性配下のノードとして永続化・再構築する（患者 CLUSTER を other_context に置く v0.2 案の前提）
+- 還流先: openehr-rails
+- ステータス: **観察ログ**（起票候補）
+
+## 17. `OpenehrRails::Opt::FieldExtractor` が INSTRUCTION の activities／protocol を辿らず 0 フィールドになり、`FshGenerator` の skip-and-report も発火しない
+
+- 発見日: 2026-09-25（R4 4・6 節）
+- 対象: openehr-rails 0.7.0 `FieldExtractor#entries`（jp_referral の service_request entry: `fields=0`。activities[at0001]/description[at0009] の ELEMENT at0121／at0062／at0150、protocol[at0008] の at0010／at0011 と埋め込み CLUSTER 群が抽出されない）
+- 影響（実測）:
+  - Anlage のフォーム: service_request が空 entry（`web_template` 5 entries／4 fields）。CLUSTER ルート 9 本（organisation・person・address・electronic_communication）はフォームに一切現れない
+  - `FshGenerator`／`ProfileGenerator`: leaf_count 0 のため 0.7.0 の skip 規則（「葉が 2 つ以上・component の無い資源・写像表に行なし」）に **掛からず**、`ServiceRequest` プロファイルが `component` slicing ヘッダ付きで生成される → Sushi で `No element found at path component` ×3・`code.coding.*` ×2 の 5 エラー（`docs/reports/fsh-log.md` R7 の #33 型と同種）。想定していた「skip-and-report に載る」は起きない
+  - 併せて: 単葉 EVALUATION（clinical_synopsis）は `Condition` に `value[x]` 規則で 2 エラー（rails `#38`、0.7.1 未リリース）。problem_diagnosis の at0002 が **DV_TEXT** の場合 `Condition.code only string` で 1 エラー（ProblemList.opt は DV_CODED_TEXT なので顕在化しなかった。写像表が text 葉 → CodeableConcept を扱っていない）
+- 提案: (1) `FieldExtractor` が INSTRUCTION の activities/description・protocol を ENTRY の葉として扱う（少なくとも ACTIVITY.description の ELEMENT）。(2) skip 規則に「葉 0 の非 Observation」も含める（空プロファイルを出さない）。(3) DV_TEXT 葉 → `Condition.code` は `CodeableConcept.text` へ写像するか skip
+- 還流先: openehr-rails（(3) は `#35` の写像表）
+- ステータス: **観察ログ**（起票候補。`#38` の 0.7.1 と同時に扱うのが自然）

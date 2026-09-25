@@ -298,3 +298,165 @@ R2 §2で転記待ちとしていた項目を、統括の報告どおりに転�
 （4節の`at0004`差分）と、Rule群が参照するドット付きノードIDの出現数（3節の
 10箇所に対応するOPT側の`node_id`）。必要になった時点で明示指示を受けて
 実施する。
+
+---
+
+## R4: jp_referral v0.1 の診断ドロップ（`#23` (1)、2026-09-25）
+
+### 0. 前提（Step 0）
+
+- lock 実測: openehr 2.4.2／openehr-rails 0.6.0 の旧版だったため、先に依存更新バッチを消化（`docs/reports/fsh-log.md` R8: `44a05dc`・`bbf88d0`・`6485cfc`、CI run 36111502754 success）。本 R4 以降は **openehr 2.4.3／openehr-rails 0.7.0** での実測。
+- OPT の出所: `skoba/openehr-templates-jp`@`8eebe0434f363deb71acb298f11cb1c70adbb77d`（main HEAD、2026-09-25）。`jp_referral.opt`（444,439 bytes・5,354 行、sha256 `99d474f8ab86a9980cb6d997168b89a3eed6fd4e8f02a8217dbcd1ef936d62fa`）と AD ソース `jp_referral.t.json`（551,983 bytes、sha256 `7a6a92cb101e78f45c3ab66128e6c4d6100312d13678d40592f98307b2dd2860`）。同リポジトリは working directory 外——本タスクの明示指示に基づき `gh api` で読み取りのみ（クローンせず scratch へ取得）。アーキタイプ ja 訳は翻訳プロジェクト Sprint A 由来（人間報告）。
+- ファイル素性（実測）: 生成ツールコメント無し（AD の OPT 書き出し。`MD5-CAM-1.0.1`・`sem_ver 1.2.0`・`original_author date 2026-09-21`・`lifecycle_state unmanaged`）。`<language>` ja、description details は ja／en の 2 節。`xsi:type="C_ARCHETYPE_ROOT"` **13 件**。term_bindings／constraint_bindings **0 件**。
+
+### 1. ドロップゾーン実投入（dev）
+
+`ActionDispatch::Integration::Session` で本物の controller 経路へ投入（scratch スクリプト、未コミット。ブラウザ外なので CSRF 検証のみ当該プロセスで無効化、それ以外は本番コード）:
+
+| 経路 | 結果 |
+|---|---|
+| `POST /templates/preview`（試着室、JSON） | **200** `{"template_id":"jp_referral","concept":"jp_referral","archetype_count":5,"field_count":4,"already_registered":false}` |
+| `POST /templates`（登録、JSON） | **201** `{"template_id":"jp_referral","version":"1.0.0","name":"jp_referral"}` → dev DB `templates.id=5`、active（既存 4 件はそのまま） |
+
+- 登録 template_id は **`jp_referral`**（要求どおり）。`Opt::SafeParser`（DOCTYPE 検知・サイズ上限）通過。
+- **v0 アーキタイプ `openEHR-EHR-SECTION.referral_details.v0` は通った**（パーサ・`FieldExtractor`・`PathcardExtractor` とも v0 を特別扱いせず処理）。
+- **3 分岐の報告: 「そのまま」**。AD 新築のため R3 で見た旧資産の 3 類型（テンプレ↔アーキタイプの配置ずれ・親子スロット矛盾・ドット付きコード）はいずれも無く、パッチ無しで受入可能。ただし v0.1 は既知の欠落（処方＝v0.2）と、下記 4・6 節の Anlage／gem 側の未対応を伴う。
+
+### 2. 検収レポート（`docs/design/pathcards-language-policy.md` 5 節）
+
+- チェックリスト: `<language>` code_string = ja ✓／全 term_definitions に `text`・`description` 両方あり ✓（`missing_labels` 0）／AD 上の ja 言語定義 ✓（10 アーキタイプとも term_definitions は **ja のみ**、en 節なし）。
+- **カード数 26**（8 アーキタイプ。ELEMENT のみがカード化されるため、13 ルートのうち ELEMENT を持たないルートはカードに現れない）:
+
+| カード数 | archetype_id |
+|---|---|
+| 6 | `CLUSTER.organisation.v1`（5 ルート分。名称 ×3・識別子・役割・コメント） |
+| 6 | `CLUSTER.address.v1` |
+| 5 | `INSTRUCTION.service_request.v1`（サービス名 at0121・紹介目的 at0062・備考 at0150・依頼者／受領者オーダー識別子 at0010／at0011） |
+| 3 | `CLUSTER.person.v1`（氏名 ×2・コメント） |
+| 2 | `CLUSTER.electronic_communication.v1` |
+| 2 | `EVALUATION.clinical_synopsis.v1`（要約 ×2） |
+| 1 | `EVALUATION.problem_diagnosis.v1`（プロブレム・診断の名称 at0002） |
+| 1 | `OBSERVATION.story.v1`（病歴の記述 at0004） |
+
+- **ja／未翻訳の実数**: label **26/26 ja**（`untranslated_suspect` 0）、description **26/26 ja**。`no_ja_script` 0、`fallback_marker` 0。
+- **AD 生成プレースホルダ「*(Synthesized) (en)」型の別集計: 0 件**（`*` 始まり・`(en)`・`Synthesized` を含む term_definitions は OPT 全体で 0）。翻訳漏れ／構造由来の区別が必要な項目は無かった。
+- 管理系／臨床系の比: 管理系（organisation・address・electronic_communication・person・オーダー識別子）**19/26**、臨床系（傷病名・病歴・要約 ×2・サービス名・紹介目的・備考）**7/26**。R1 の mml_referral（111/136 が管理系）と同じ偏りだが、絶対数は 1/5。
+- code_binding: 0 件（term_bindings 無し。傷病名 at0002 は DV_TEXT で ICD-11 束縛なし）。
+- **ルート名（at0000 の ja 改名）はカードに載らない**: 紹介元医療機関／紹介先医療機関／診療科／担当医／医師／傷病名／既往歴及び家族歴／症状経過及び検査結果／治療経過 は各ルートの `term_definitions at0000`（OPT XML の C_ARCHETYPE_ROOT 直下。`component_terminologies` は archetype_id で束ねるので同一アーキタイプの複数ルートでは最後の 1 件しか見えない）。R1 §4 で見た「name 固定値がカード外」と同じ構造で、R6 の検索着地に直結する。
+
+### 3. 構造（13 ルートの実配置）
+
+契約 v2.1 §2 に転記（`docs/design/referral-v2-inventory.md`）。要点: 紹介先・紹介元は **service_request の protocol[at0008]**（AD ソースでは Receiver at0142／Requester at0141 スロット）。COMPOSITION context には Extension スロット at0042 のみで患者 CLUSTER は未配置。SECTION.referral_details.v0 の items[at0002] に problem_diagnosis／story／clinical_synopsis ×2、items[at0001] に service_request。紹介目的は at0062 を改名使用（at0064 未使用）、依頼内容は at0121。
+
+### 4. フォーム生成の可否（13 ルート）
+
+- `GET /forms/jp_referral` **200**（3,805 bytes、form 1・入力 5）。
+- `web_template`: **5 entries／4 fields**——service_request は **0 フィールド**（`FieldExtractor` が INSTRUCTION の activities／protocol を辿らない、`docs/upstream-candidates.md` 17 項）、problem_diagnosis 1（at0002）、story 1（at0004）、clinical_synopsis 2（同一 key `clinical_synopsis`・同一 path で衝突）。
+- 13 ルート中、フォームに現れるのは ENTRY 4 本分の 4 フィールドのみ。CLUSTER ルート 9 本（organisation ×5・person ×3・address・electronic_communication は protocol 配下）は現れない。
+- **保存経路は 500**: `POST /compositions/jp_referral`（valid な 3 値）→ `Opt::CompositionBuilder::UnsupportedShape (entry rm_type INSTRUCTION is not supported yet)`（`app/lib/opt/composition_builder.rb:50`）。→ **`skoba/anlage#30`**。
+
+### 5. パスカード path の崩れ（`skoba/anlage#29`）
+
+26/26 カードの `identity.path` が SECTION 配下のルートを `items[at0000]` で書く（例: `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/activities[at0001]/description[at0009]/items[at0121]/value`。organisation の入れ子では `items[at0000]/items[at0000]/items[at0001]`）。`PathcardExtractor#walk`（`:52`）が入れ子ルートに `child.node_id` を使うため。at-code は正しいので §7 転記には使えるが、path は AQL に転用不可。既存 fixture は ENTRY が content 直下で顕在化しなかった。
+
+### 6. FHIR facade／FSH（0.7.0）
+
+- `ProfileGenerator#profiles`: 5 件（clinical_synopsis が同 id で 2 件）、`#skipped` **空**。`FshGenerator#to_fsh_files`: 4 ファイル、`#skipped` **空**（**service_request は skip-and-report に載らない**——葉 0 のため 0.7.0 の skip 規則に掛からない、上流 17 項）。
+- `rake fsh:export`（dev、5 テンプレート）→ `fsh:verify`（SUSHI v3.16.0）: 既存 4 件 0 Errors、**`jp_referral-1-0-0`: 8 Errors, 0 Warnings**。内訳:
+
+| FSH | Errors | 内容 |
+|---|---|---|
+| `openehr-evaluation-clinical-synopsis-v1` | 2 | `value[x]` CardRule／OnlyRule が `Condition` に無い（単葉 EVALUATION、rails `#38`＝0.7.1 未リリース。見込みどおり） |
+| `openehr-evaluation-problem-diagnosis-v1` | 1 | `code only string`: 「string は CodeableConcept に無い」（at0002 が DV_TEXT のため。ProblemList では DV_CODED_TEXT で顕在化せず——新規） |
+| `openehr-instruction-service-request-v1` | 5 | `code.coding.system`／`.code` ×2、`component` CaretValueRule ×3（葉 0 の空プロファイル——新規） |
+| `openehr-observation-story-v1` | 0 | — |
+
+### 7. カード一覧（人間の語彙レビュー用、26 枚。path は 5 節の崩れをそのまま記録）
+
+| # | archetype | at | path | ja label (lang/evidence) | description |
+|---|---|---|---|---|---|
+| 1 | INSTRUCTION.service_request.v1 | at0121 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/activities[at0001]/description[at0009]/items[at0121]/value` | サービス名 (ja) | 依頼する単一のサービスまたは活動の名称。 |
+| 2 | INSTRUCTION.service_request.v1 | at0062 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/activities[at0001]/description[at0009]/items[at0062]/value` | 紹介目的 (ja) | 依頼の理由を述べる短い語句。 |
+| 3 | INSTRUCTION.service_request.v1 | at0150 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/activities[at0001]/description[at0009]/items[at0150]/value` | 備考 (ja) | 他の項目には収まらないサービス依頼についての追加の記述。 |
+| 4 | INSTRUCTION.service_request.v1 | at0010 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0010]/value` | 依頼者オーダー識別子 (ja) | 依頼側の臨床システムが付与したローカルな識別子。 |
+| 5 | CLUSTER.organisation.v1 | at0001 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0001]/value` | 名称 (ja) | 組織の名称またはラベル（非構造情報）。 |
+| 6 | CLUSTER.address.v1 | at0001 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0001]/value` | 住所行 (ja) | 場所を特定する手がかりとなる、街区レベルまたは私書箱の関連する詳細情報をすべて表す非構造化の住所行。 |
+| 7 | CLUSTER.address.v1 | at0002 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0002]/value` | 市区町村 (ja) | 住所を含む最下位の地域の名称。 |
+| 8 | CLUSTER.address.v1 | at0003 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0003]/value` | 地区／郡 (ja) | 住所を含む地方自治体の区域または地理的区域の名称。 |
+| 9 | CLUSTER.address.v1 | at0004 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0004]/value` | 都道府県／州 (ja) | 住所を含む主要な行政区域または地理的区域の名称。 |
+| 10 | CLUSTER.address.v1 | at0005 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0005]/value` | 郵便番号 (ja) | 該当する郵便配達サービスが定める、住所を含む郵便配達区域のコード。 |
+| 11 | CLUSTER.address.v1 | at0018 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0018]/value` | コメント (ja) | 他の項目には収まらない住所についての追加の記述。 |
+| 12 | CLUSTER.electronic_communication.v1 | at0001 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0001]/value` | 種別 (ja) | 電子的な連絡先の種別または形式。 |
+| 13 | CLUSTER.electronic_communication.v1 | at0002 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0002]/value` | 値 (ja) | 「種別」に応じて連絡先を一意に表す英数字の組み合わせ。 |
+| 14 | CLUSTER.person.v1 | at0001 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0001]/value` | 氏名 (ja) | 個人の氏名（非構造情報）。 |
+| 15 | INSTRUCTION.service_request.v1 | at0011 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0011]/value` | 受領者オーダー識別子 (ja) | サービス依頼を受領する医療従事者または医療機関が、その依頼に付与したローカルな識別子。 |
+| 16 | CLUSTER.organisation.v1 | at0001 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0001]/value` | 名称 (ja) | 組織の名称またはラベル（非構造情報）。 |
+| 17 | CLUSTER.organisation.v1 | at0001 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0001]/value` | 名称 (ja) | 組織の名称またはラベル（非構造情報）。 |
+| 18 | CLUSTER.organisation.v1 | at0003 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0003]/value` | 識別子 (ja) | 組織に関連付けられた識別子。 |
+| 19 | CLUSTER.organisation.v1 | at0004 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0004]/value` | 役割 (ja) | 個人またはケア対象者に対する組織の関係または役割。 |
+| 20 | CLUSTER.person.v1 | at0001 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0000]/items[at0001]/value` | 氏名 (ja) | 個人の氏名（非構造情報）。 |
+| 21 | CLUSTER.person.v1 | at0010 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0000]/items[at0010]/value` | コメント (ja) | 他の項目には収まらない個人についての追加の記述。 |
+| 22 | CLUSTER.organisation.v1 | at0019 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/protocol[at0008]/items[at0000]/items[at0000]/items[at0019]/value` | コメント (ja) | 他の項目には収まらない組織についての追加の記述。 |
+| 23 | EVALUATION.problem_diagnosis.v1 | at0002 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/data[at0001]/items[at0002]/value` | プロブレム・診断の名称 (ja) | 特定されたプロブレムや診断の名称。 |
+| 24 | OBSERVATION.story.v1 | at0004 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/data[at0001]/events[at0002]/data[at0003]/items[at0004]/value` | 病歴の記述 (ja) | ケア対象者の語り、または医療従事者が聴取した病歴の叙述的な記述。 |
+| 25 | EVALUATION.clinical_synopsis.v1 | at0002 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/data[at0001]/items[at0002]/value` | 要約 (ja) | 臨床所見の要約、アセスメント、まとめ、または評価。 |
+| 26 | EVALUATION.clinical_synopsis.v1 | at0002 | `/content[openEHR-EHR-SECTION.referral_details.v0]/items[at0000]/data[at0001]/items[at0002]/value` | 要約 (ja) | 臨床所見の要約、アセスメント、まとめ、または評価。 |
+
+---
+
+## R5: 契約 §7 の転記 → v2.1（`#23` (2)、2026-09-25）
+
+`docs/design/referral-v2-inventory.md` を **v2.1** とした。転記元: ELEMENT の at-code はパスカード `identity.at_code`、スロット at-code は AD ソース `jp_referral.t.json` の overlay node id（`at0141.1`／`at0142.1`／`at0017.1`／`at0002.1`／`at0005.1`／`at0022.1`、referral_details の `at0001.1`／`at0002.1〜.4`）。OPT 1.4 はスロット id を保持しないため、パスカードからは転記できない（プロンプトの「path から転記」は ELEMENT 分のみ成立。スロット分は AD ソースを読んだ、と明記）。
+
+- §7: 10 項目を転記（受入 4 スロット・Service requested at0121・紹介目的 at0062・傷病名 at0002・新規 6 アーキタイプ＝v0.1 未収録・職業要素＝未確定・部門表現＝入れ子 organisation）。
+- §2: v0.1 実測骨格へ差し替え（COMPOSITION.request.v1／INSTRUCTION.service_request.v1／CLUSTER.person.v1 系／SECTION.referral_details.v0、紹介先・紹介元 = protocol[at0008] 配置）。**プロンプトの「紹介先・紹介元は context 配置」は実装と一致せず**、「AD 実装を正とする」に従い protocol 配置で記載した。判別の原理を「name 述語＋入れ子」へ改定（v2 の「名前制約に依存しない」は v0.1 で不成立）。
+- §3.1: 決定表 22 行の実装突合（一致 9／差分 2／未配置 8／別配置 1／要件待ち 1）。差分は No.8 紹介目的（at0062 改名使用）と No.12 症状経過（clinical_synopsis、v2 は story）。
+- §5: 系譜に openehr-templates-jp と翻訳プロジェクト（人間報告）を追加。
+- §10: 段階付け v0.1／v0.2／v0.3 と、v0.2 前の裁定事項 3 件（症状経過の ENTRY 型・複数出現の判別・紹介目的の at-code）。
+
+---
+
+## R6: センサーと到達性の試し打ち（Step 3、観察のみ・出題化しない、2026-09-25）
+
+### 1. `Opt::PathcardSearch`（dev DB 5 テンプレート・bigram OR）
+
+| クエリ | 全ヒット | jp_referral | 着地 |
+|---|---|---|---|
+| 既往歴 | 0 | 0 | ルート名「既往歴及び家族歴」はカード外（R4 2 節）。カードは「病歴の記述」 |
+| 紹介目的 | 1 | 1 | service_request/at0062「紹介目的」(score 3) ✓ |
+| 傷病名 | 0 | 0 | ルート名。カードは「プロブレム・診断の名称」 |
+| 主訴 | 0 | 0 | v0.1 未配置 |
+| 検体 | 0 | 0 | 未配置（laboratory_test_result は v0.3） |
+| 紹介先 | 1 | 1 | 「紹介目的」に bigram「紹介」で誤着地 (score 1)。「紹介先医療機関」はルート名でカード外 |
+| 治療経過／症状経過 | 0 | 0 | ルート名。カードは「要約」 |
+
+→ 様式11 の欄名（＝AD が at0000 に付けた名前）がそのまま検索語になるケースは、ルート名がカードに無い限り着地しない。R1 §4 と同じ構造的欠落で、`pathcards_eval_seed.yml` q18 の「既往歴→story」仮説は v0.1 でも到達不能。**出題化はしない**（本 R6 は観察のみ）。ルート名（C_ARCHETYPE_ROOT の at0000 term／name 制約）を `semantics` に載せる抽出器拡張は `docs/ideas-2027.md` 行き（スコープ規律 8）。
+
+### 2. AQL: 「紹介先医療機関で引く」と context 系パスの初実測
+
+保存経路が 500（R4 4 節）のため、実 at-code で手写像した canonical JSON を `OpenehrRails::Rm::CompositionCommitter.commit` で **直接** RM グラフへ入れ、変種ごとに AQL → purge した（scratch、dev、終了時に rm compositions=0／nodes=0 を確認。手写像は観察用で fixture にしない）。
+
+| 変種（content） | commit | `to_rm` | AQL |
+|---|---|---|---|
+| 1. context + EVALUATION 直下 | ✓ | ✓ | `c/context/start_time/value` → **1 行・値 nil**、`c/context/setting/value` → nil、`WHERE c/context/start_time/value > '2026-01-01'` → 0 行。`ev/data[at0001]/items[at0002]/value/value` → `2型糖尿病` ✓ |
+| 2. SECTION ⊃ EVALUATION | ✓ | **✗** `NoMethodError: undefined method 'new' for nil`（`rm_object_builder.rb:130`） | **全クエリ失敗**（無関係なクエリも） |
+| 3. INSTRUCTION 直下（activities + protocol の organisation ×3） | ✓ | ✗ 同上 | 同上 |
+| 4. SECTION ⊃ INSTRUCTION + EVALUATION（v0.1 実形） | ✓ | ✗ 同上 | 同上 |
+
+所見:
+
+- **context 系パスのエンジン到達性**: path 評価器は `c/context/...` を例外なく解決する（構文・ホップとも到達）。しかし rails 側 `CompositionCommitter` が canonical JSON の `context` を永続化せず（`context_start_time:` kwarg のみ）、`RmObjectBuilder` は `start_time` 無しでは EventContext を作らないため **値は常に nil**。「紹介日で引く」は現状不可。→ `docs/upstream-candidates.md` **16 項**（rails 起票候補）。
+- **「紹介先医療機関で引く」**: 実配置は protocol[at0008] なので `i/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']/items[at0001]/value/value`（name 述語）が本来のクエリだが、INSTRUCTION を含む Composition は `to_rm` で落ちるため **到達不能**（変種 3・4）。しかも該当 Composition が 1 件あるだけで store 全体の AQL（demo 経路 4 件を含む）が失敗する。→ **例外報告**: `docs/upstream-candidates.md` **15 項**（rails 起票候補、`TYPE_CLASSES` に SECTION／INSTRUCTION／ACTIVITY を追加）。Anlage 側は `#30`。
+- name 述語（`items[aid, '名前']`）自体は path 評価器が受理する（`predicate_path_text` が `"code, 'value'"` を組む、openehr 2.4.3 `path_evaluator.rb:126-133`）。SECTION／INSTRUCTION が実体化できるようになれば、変種 1 と同様に評価される見込み（**推定**。実測は 15 項解消後）。
+- dev DB 衛生: 手写像 4 件はすべて purge 済み。登録テンプレート `jp_referral`（id=5）は残置（opt-catalog「登録済み v0.1」）。
+
+### 3. FSH（`rake fsh:verify` を jp_referral で）
+
+R4 6 節に記録: 8 Errors。clinical_synopsis ×2 は #38 型（見込みどおり 2 件）、service_request は **skip-and-report に載らず** 5 エラー（葉 0 のため skip 規則不発、上流 17 項）、problem_diagnosis の DV_TEXT 葉で 1 エラー（新規）。
+
+### 4. 本 R4〜R6 の帰結（`#23` の進捗）
+
+- (1) 診断ドロップ＋検収レポート: **完了**（R4）。
+- (2) §7 転記・v2.1: **完了**（R5）。
+- (3) fixture 化・golden・保留問の出題化: 未着手。`#29`（path 崩れ）の解消前に golden を固定すると崩れた path を固定してしまうため、**#29 → (3)** の順。
+- (4) 統合 spec: フォーム保存経路（`#30`）と RM グラフ（上流 15・16 項）の両方が前提。凍結前に揃わない場合の代替（手写像 JSON の直接コミット経路で AQL 統一性を示す）は裁定事項。
