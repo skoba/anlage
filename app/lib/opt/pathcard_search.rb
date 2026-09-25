@@ -33,7 +33,11 @@ module Opt
         entry["label"]
       end
 
-      labels + descriptions + code_labels
+      # スキーマ v1.2: 祖先ルート名（様式11 の欄名 = AD がルートに与えた名前）も
+      # 索引する（skoba/anlage#31）。v1.1 カードはキーが無いので空。
+      container_labels = Array(semantics["container_labels"]).filter_map { |entry| entry["text"] }
+
+      labels + descriptions + code_labels + container_labels
     end
 
     def bigrams(text)

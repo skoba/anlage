@@ -6,7 +6,7 @@
   },
   "cards": [
     {
-      "schema_version": "1.1",
+      "schema_version": "1.2",
       "identity": {
         "template_id": "LabResultReport",
         "archetype_id": "openEHR-EHR-OBSERVATION.laboratory_test_result.v1",
@@ -32,6 +32,16 @@
             "source_lang": "en"
           }
         ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "検体検査結果",
+            "archetype_id": "openEHR-EHR-OBSERVATION.laboratory_test_result.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
         "rm_type": "DV_TEXT"
       },
       "constraints": {
@@ -46,7 +56,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.1",
+      "schema_version": "1.2",
       "identity": {
         "template_id": "LabResultReport",
         "archetype_id": "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
@@ -72,6 +82,24 @@
             "source_lang": "en"
           }
         ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "検体検査結果",
+            "archetype_id": "openEHR-EHR-OBSERVATION.laboratory_test_result.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "検査分析結果",
+            "archetype_id": "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
         "rm_type": "DV_TEXT"
       },
       "constraints": {
@@ -86,7 +114,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.1",
+      "schema_version": "1.2",
       "identity": {
         "template_id": "LabResultReport",
         "archetype_id": "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
@@ -110,6 +138,24 @@
             "untranslated_suspect": true,
             "untranslated_evidence": "fallback_marker",
             "source_lang": "en"
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "検体検査結果",
+            "archetype_id": "openEHR-EHR-OBSERVATION.laboratory_test_result.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "検査分析結果",
+            "archetype_id": "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
           }
         ],
         "rm_type": "DV_QUANTITY"

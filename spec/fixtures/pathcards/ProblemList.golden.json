@@ -6,7 +6,7 @@
   },
   "cards": [
     {
-      "schema_version": "1.1",
+      "schema_version": "1.2",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
@@ -14,11 +14,6 @@
         "at_code": "at0002"
       },
       "semantics": {
-        "rm_type": "DV_CODED_TEXT",
-        "rm_type_alternatives": [
-          "DV_TEXT",
-          "DV_CODED_TEXT"
-        ],
         "labels": [
           {
             "lang": "ja",
@@ -36,6 +31,21 @@
             "untranslated_evidence": "fallback_marker",
             "source_lang": "en"
           }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "プロブレム・診断",
+            "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_CODED_TEXT",
+        "rm_type_alternatives": [
+          "DV_TEXT",
+          "DV_CODED_TEXT"
         ]
       },
       "constraints": {
@@ -57,7 +67,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.1",
+      "schema_version": "1.2",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
@@ -65,7 +75,6 @@
         "at_code": "at0077"
       },
       "semantics": {
-        "rm_type": "DV_DATE_TIME",
         "labels": [
           {
             "lang": "ja",
@@ -83,7 +92,18 @@
             "untranslated_evidence": "fallback_marker",
             "source_lang": "en"
           }
-        ]
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "プロブレム・診断",
+            "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_DATE_TIME"
       },
       "constraints": {
         "occurrences": {
@@ -97,7 +117,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.1",
+      "schema_version": "1.2",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
@@ -105,7 +125,6 @@
         "at_code": "at0003"
       },
       "semantics": {
-        "rm_type": "DV_DATE_TIME",
         "labels": [
           {
             "lang": "ja",
@@ -123,7 +142,18 @@
             "untranslated_evidence": "fallback_marker",
             "source_lang": "en"
           }
-        ]
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "プロブレム・診断",
+            "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_DATE_TIME"
       },
       "constraints": {
         "occurrences": {
@@ -137,7 +167,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.1",
+      "schema_version": "1.2",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
@@ -145,7 +175,6 @@
         "at_code": "at0030"
       },
       "semantics": {
-        "rm_type": "DV_DATE_TIME",
         "labels": [
           {
             "lang": "ja",
@@ -163,7 +192,18 @@
             "untranslated_evidence": "fallback_marker",
             "source_lang": "en"
           }
-        ]
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "プロブレム・診断",
+            "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_DATE_TIME"
       },
       "constraints": {
         "occurrences": {
@@ -177,7 +217,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.1",
+      "schema_version": "1.2",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
@@ -185,11 +225,6 @@
         "at_code": "at0073"
       },
       "semantics": {
-        "rm_type": "DV_CODED_TEXT",
-        "rm_type_alternatives": [
-          "DV_CODED_TEXT",
-          "DV_TEXT"
-        ],
         "labels": [
           {
             "lang": "ja",
@@ -207,6 +242,21 @@
             "untranslated_evidence": "fallback_marker",
             "source_lang": "en"
           }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "プロブレム・診断",
+            "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_CODED_TEXT",
+        "rm_type_alternatives": [
+          "DV_CODED_TEXT",
+          "DV_TEXT"
         ]
       },
       "constraints": {
@@ -236,7 +286,7 @@
       "reserved": {}
     },
     {
-      "schema_version": "1.1",
+      "schema_version": "1.2",
       "identity": {
         "template_id": "ProblemList",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
@@ -244,7 +294,6 @@
         "at_code": "at0070"
       },
       "semantics": {
-        "rm_type": "DV_DATE_TIME",
         "labels": [
           {
             "lang": "ja",
@@ -262,7 +311,18 @@
             "untranslated_evidence": "fallback_marker",
             "source_lang": "en"
           }
-        ]
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "プロブレム・診断",
+            "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_DATE_TIME"
       },
       "constraints": {
         "occurrences": {

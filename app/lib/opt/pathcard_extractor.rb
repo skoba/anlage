@@ -2,7 +2,7 @@ require "digest"
 
 module Opt
   class PathcardExtractor
-    VERSION = "wp2-0.1.0"
+    VERSION = "wp2-0.2.0"
 
     Result = Struct.new(:cards, :report, keyword_init: true)
 
@@ -19,6 +19,8 @@ module Opt
       @report = {}
       @opt = opt
       @code_bindings = extract_code_bindings(opt)
+      @root_names = extract_root_names(@template.source_xml)
+      @root_occurrences = Hash.new(0)
 
       Result.new(cards: extract_cards(opt), report: @report)
     end
@@ -35,11 +37,14 @@ module Opt
         archetype_id = archetype_id_of(root)
         next [] unless archetype_id
 
-        walk(root, "/content[#{archetype_id}]", archetype_id)
+        path = "/content[#{archetype_id}]"
+        walk(root, path, archetype_id, container_labels_for(path, archetype_id, []))
       end
     end
 
-    def walk(node, path, archetype_id)
+    # containers: 祖先 C_ARCHETYPE_ROOT のテンプレート名（container_labels entry）を
+    # ルート→葉の順に積んだ配列。ELEMENT はルートになり得ないので葉には積まない。
+    def walk(node, path, archetype_id, containers)
       return [] unless node.respond_to?(:attributes) && node.attributes
 
       node.attributes.flat_map do |attribute|
@@ -55,9 +60,11 @@ module Opt
           node_path << "[#{predicate}]" if predicate
 
           if child.rm_type_name == "ELEMENT"
-            [ card_for(child, node_path, archetype_id) ]
+            [ card_for(child, node_path, archetype_id, containers) ]
           else
-            walk(child, node_path, archetype_id_of(child) || archetype_id)
+            child_archetype_id = archetype_id_of(child)
+            child_containers = child_archetype_id ? container_labels_for(node_path, child_archetype_id, containers) : containers
+            walk(child, node_path, child_archetype_id || archetype_id, child_containers)
           end
         end
       end
@@ -69,16 +76,16 @@ module Opt
       node.archetype_id.value
     end
 
-    def card_for(element, path, archetype_id)
+    def card_for(element, path, archetype_id, containers)
       {
-        "schema_version" => "1.1",
+        "schema_version" => "1.2",
         "identity" => {
           "template_id" => @template.template_id,
           "archetype_id" => archetype_id,
           "path" => "#{path}/value",
           "at_code" => element.node_id
         },
-        "semantics" => semantics_for(archetype_id, element.node_id, element),
+        "semantics" => semantics_for(archetype_id, element.node_id, element, containers),
         "constraints" => constraints_for(element, archetype_id),
         "bindings" => bindings_for(element, archetype_id),
         "capture" => {},
@@ -102,7 +109,7 @@ module Opt
       }
     end
 
-    def semantics_for(archetype_id, at_code, element)
+    def semantics_for(archetype_id, at_code, element, containers)
       term = terminology_term(archetype_id, at_code)
       text = term&.items&.fetch("text", nil)
       description = term&.items&.fetch("description", nil)
@@ -117,6 +124,7 @@ module Opt
       semantics = {
         "labels" => semantic_entries(text, archetype_id, at_code, "label"),
         "descriptions" => semantic_entries(description, archetype_id, at_code, "description"),
+        "container_labels" => containers,
         "rm_type" => rm_type_for(element)
       }
       alternatives = value_attribute_children(element)
@@ -124,6 +132,78 @@ module Opt
         semantics["rm_type_alternatives"] = alternatives.map(&:rm_type_name)
       end
       semantics
+    end
+
+    # 祖先ルート名（スキーマ v1.2 `semantics.container_labels`、skoba/anlage#31）。
+    #
+    # 取り込み元は `source_xml` の再解析（`extract_root_names`）。gem のパース結果は
+    # 各 C_ARCHETYPE_ROOT 直下の term_definitions を `component_terminologies[archetype_id]`
+    # に畳み込み、同一アーキタイプの複数埋め込み（紹介元／紹介先の organisation 等）で
+    # per-root の名前（AD の改名 = at0000 text）を失う（`skoba/openehr-ruby#58`、
+    # `docs/upstream-candidates.md` 18 項）。WP2 の「経路2」（term_bindings 再解析、#19 で
+    # 撤去）と同型の迂回。
+    # 撤去条件: openehr-ruby#58 が解消し `CArchetypeRoot` が per-root の term_definitions を
+    # 持つ版へ bump した時点で、`extract_root_names` を gem 経路へ置換する。
+    #
+    # キーは「archetype_id 述語で書いたルートの RM path」＋「同 path 内の出現順」。
+    # 前提: OPT XML の文書順（Nokogiri の xpath 結果順）と、gem がパースした
+    # attributes/children の走査順（本 walk の順）が一致すること。両者は同じ XML の
+    # 同じ要素列から作られるが、この前提が崩れると同 path の複数ルート（紹介元／紹介先）
+    # の名前が入れ替わる。spec（pathcard_extractor_spec「同一アーキタイプの複数ルート」）で
+    # 固定している。
+    def container_labels_for(path, archetype_id, parent_containers)
+      index = @root_occurrences[path]
+      @root_occurrences[path] += 1
+      text = @root_names.fetch(path, [])[index]
+
+      unless text
+        (@report[:missing_container_labels] ||= []) << {
+          "archetype_id" => archetype_id,
+          "path" => path
+        }
+        return parent_containers
+      end
+
+      entry = {
+        "lang" => @opt.original_language.code_string,
+        "text" => text,
+        "archetype_id" => archetype_id
+      }.merge(classify_translation(text))
+      parent_containers + [ entry ]
+    end
+
+    # source_xml を再解析し、C_ARCHETYPE_ROOT ごとの at0000 text を
+    # { rm_path => [text, ...（文書順）] } で返す。path の書式は walk と同じ
+    # （属性名 + `[archetype_id]` または `[node_id]`）。
+    def extract_root_names(source_xml)
+      document = Opt::SafeParser.safe_document(source_xml)
+      document.remove_namespaces!
+
+      names = Hash.new { |hash, key| hash[key] = [] }
+      document.xpath("//*[@type='C_ARCHETYPE_ROOT']").each do |root|
+        text = root.at_xpath("./term_definitions[@code='at0000']/items[@id='text']")&.text
+        names[root_rm_path(root)] << text
+      end
+      names
+    end
+
+    def root_rm_path(root)
+      segments = []
+      node = root
+      while node && node.name != "definition"
+        if node.name == "children"
+          predicate = if node["type"] == "C_ARCHETYPE_ROOT"
+                        node.at_xpath("./archetype_id/value")&.text
+          else
+                        node.at_xpath("./node_id")&.text
+          end
+          segments.unshift(predicate ? "[#{predicate}]" : "")
+        elsif node.name == "attributes"
+          segments.unshift("/#{node.at_xpath('./rm_attribute_name')&.text}")
+        end
+        node = node.parent
+      end
+      segments.join
     end
 
     def rm_type_for(element)

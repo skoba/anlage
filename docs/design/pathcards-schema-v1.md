@@ -12,8 +12,9 @@
 
 ```yaml
 pathcard:
-  schema_version: "1.1"        # additive change（v1.0からの追加のみ）。v1.0カードは
-                                # rm_type_alternatives欠落として読める（無ければ代替無し扱い）
+  schema_version: "1.2"        # additive change（v1.0→v1.1→v1.2 とも追加のみ）。v1.0カードは
+                                # rm_type_alternatives欠落として、v1.1カードは container_labels
+                                # 欠落として読める（無ければ空扱い）
 
   identity:                    # ノードの一意識別（この4つ組が実質キー）
     template_id: string        # OPTのtemplate_id
@@ -34,6 +35,13 @@ pathcard:
         source_lang: string | null           # fallback_markerの末尾(xx)から取れた原語。無ければnull
     descriptions:              # labelsと同形（descriptionにもマーカーが実在する。カード1参照）
       - { lang, text, untranslated_suspect, untranslated_evidence, source_lang }
+    container_labels:          # v1.2追加（設計判断10）。祖先 C_ARCHETYPE_ROOT（SECTION／ENTRY／CLUSTER）の
+      - lang: string           #   テンプレート名（各ルート直下 term_definitions の at0000 text。AD の改名を含む）を
+        text: string           #   ルート→葉の順に並べる。COMPOSITION 自体は含めない。content 直下 ENTRY の葉は 1 段
+        archetype_id: string   #   そのルートの archetype_id
+        untranslated_suspect: boolean        # labels と同じ 2 段階検出
+        untranslated_evidence: "fallback_marker" | "no_ja_script" | null
+        source_lang: string | null
 
   constraints:
     occurrences: { lower: integer | null, upper: integer | null }  # ELEMENT自身のoccurrences。nullは無制約側
@@ -88,6 +96,11 @@ pathcard:
    - **主型（rm_type）の選定規約**: コード化・より特異的な型を優先する（`DV_CODED_TEXT` > `DV_TEXT`等）。具体的には、代替の中に外部コード参照（`CCodeReference`、value_set_binding）を持つものがあればそれを主型とし、無ければXML出現順で最初の代替を主型とする
    - **不変条件**: 同一ノードについて、`rm_type`（主型選定）・`constraints.value`（値制約抽出）・`bindings`（束縛抽出）の3つが同じ代替を見る（`app/lib/opt/pathcard_extractor.rb`の共有ヘルパーで一本化。実装詳細は`docs/design/wp2-plan.md` 1.3節のas-built追記を参照）
    - **`constraints.value_alternatives`は v1.1では追加しない**（YAGNI。実需が出た時点でv1.2として検討する）
+10. **v1.2: container_labels 追加（2026-09-25 裁定、`skoba/anlage#31`）**: jp_referral v0.1 で「既往歴」「傷病名」「治療経過」「紹介先」が検索に着地しなかった（`docs/reports/referral-intake-log.md` R6）。様式11 の欄名は AD が各ルートの at0000 に与えた名前で、ELEMENT カードには現れない（R1 §4 の mml_referral「Past history」name 固定値と同じ構造）。v1.2 で祖先ルート名の連鎖を `semantics.container_labels` に持ち、`Opt::PathcardSearch` の bigram 索引対象に加える（`app/lib/opt/pathcard_search.rb` `searchable_texts`）。
+   - **取り込み元**: gem のパース結果は各 C_ARCHETYPE_ROOT の term_definitions を `component_terminologies[archetype_id]` に畳み込み、同一アーキタイプの複数埋め込み（紹介元／紹介先の organisation ×5）で per-root 名を失う（`skoba/openehr-ruby#58`、`docs/upstream-candidates.md` 18 項）。そのため `source_xml` を `Opt::SafeParser.safe_document` で再解析し、ルートの RM path（archetype_id 述語、#29 訂正後の形）＋同 path 内の出現順をキーに at0000 text を引く（`app/lib/opt/pathcard_extractor.rb` `extract_root_names`／`container_labels_for`）。**撤去条件**: openehr-ruby#58 解消版へ bump した時点で gem 経路へ置換。**前提**: OPT XML の文書順と gem パース結果の走査順が一致すること（spec で固定）。
+   - v1.1 の C1 条件（path 正準形）は #29 で (b)「抽出時に正準形へ正規化」に確定した（`items[at0000]` → `items[<archetype_id>]`）。カード2 実測パスの注記は歴史記録として残す。
+   - `Opt::PathcardExtractor::VERSION` は `wp2-0.2.0`。golden 3 件＋jp_referral を v1.2 で再生成（差分は `schema_version` と `container_labels` の追加のみ、`docs/reports/referral-intake-log.md` R8）。
+   - 対象外: 検索 UI での表示、スコアの重み付け（着地のみ）。
 
 ---
 

@@ -12,7 +12,7 @@ RSpec.describe Opt::PathcardExtractor do
       expect(result.cards).not_to be_empty
       expect(result.cards).to all(
         include(
-          "schema_version" => "1.1",
+          "schema_version" => "1.2",
           "identity" => be_a(Hash),
           "semantics" => include(
             "labels" => be_an(Array),
@@ -215,6 +215,8 @@ RSpec.describe Opt::PathcardExtractor do
         },
         semantics: {
           "rm_type" => "DV_QUANTITY",
+          "container_labels" => [ { "lang" => "ja", "text" => "血圧", "archetype_id" => "openEHR-EHR-OBSERVATION.blood_pressure.v2",
+                                    "untranslated_suspect" => false, "untranslated_evidence" => nil, "source_lang" => nil } ],
           "labels" => [ { "lang" => "ja", "text" => "収縮期", "untranslated_suspect" => false,
                          "untranslated_evidence" => nil, "source_lang" => nil } ],
           "descriptions" => [ { "lang" => "ja", "text" => "全身の動脈血圧での最高値 - 心機図の収縮期で測定される",
@@ -244,6 +246,10 @@ RSpec.describe Opt::PathcardExtractor do
         },
         semantics: {
           "rm_type" => "DV_QUANTITY",
+          "container_labels" => [ { "lang" => "ja", "text" => "検体検査結果", "archetype_id" => "openEHR-EHR-OBSERVATION.laboratory_test_result.v1",
+                                    "untranslated_suspect" => false, "untranslated_evidence" => nil, "source_lang" => nil },
+                                  { "lang" => "ja", "text" => "検査分析結果", "archetype_id" => "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
+                                    "untranslated_suspect" => false, "untranslated_evidence" => nil, "source_lang" => nil } ],
           "labels" => [ { "lang" => "ja", "text" => "分析結果", "untranslated_suspect" => false,
                          "untranslated_evidence" => nil, "source_lang" => nil } ],
           "descriptions" => [ { "lang" => "ja", "text" => "*The value of the analyte result. (en)",
@@ -267,6 +273,8 @@ RSpec.describe Opt::PathcardExtractor do
         semantics: {
           "rm_type" => "DV_CODED_TEXT",
           "rm_type_alternatives" => [ "DV_TEXT", "DV_CODED_TEXT" ],
+          "container_labels" => [ { "lang" => "ja", "text" => "プロブレム・診断", "archetype_id" => "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+                                    "untranslated_suspect" => false, "untranslated_evidence" => nil, "source_lang" => nil } ],
           "labels" => [ { "lang" => "ja", "text" => "プロブレム・診断名", "untranslated_suspect" => false,
                          "untranslated_evidence" => nil, "source_lang" => nil } ],
           "descriptions" => [ { "lang" => "ja", "text" => "*Identification of the problem or diagnosis, by name. (en)",
@@ -291,7 +299,7 @@ RSpec.describe Opt::PathcardExtractor do
 
         expect(card).not_to be_nil
         expect(card.slice("schema_version", "identity", "semantics", "constraints", "bindings", "capture", "reserved")).to eq(
-          "schema_version" => "1.1",
+          "schema_version" => "1.2",
           "identity" => golden.fetch(:identity),
           "semantics" => golden.fetch(:semantics),
           "constraints" => golden.fetch(:constraints),
@@ -302,7 +310,7 @@ RSpec.describe Opt::PathcardExtractor do
         expect(card.fetch("provenance").except("extracted_at")).to eq(
           "source_template_id" => template.template_id,
           "source_checksum" => template.checksum,
-          "extractor_version" => "wp2-0.1.0"
+          "extractor_version" => "wp2-0.2.0"
         )
         expect { Time.iso8601(card.dig("provenance", "extracted_at")) }.not_to raise_error
       end
@@ -386,5 +394,56 @@ RSpec.describe Opt::PathcardExtractor, "埋め込みルートの path 述語（#
     paths = cards.map { |c| c.dig("identity", "path") }
     expect(paths.size).to eq(26)
     expect(paths.grep(/\[at0000\]/)).to be_empty
+  end
+end
+
+# skoba/anlage#31（解決形 (b) enhancement、スキーマ v1.2 additive）: 祖先
+# C_ARCHETYPE_ROOT（SECTION／ENTRY／CLUSTER）のテンプレート名（各ルート直下
+# term_definitions の at0000 text、AD の改名を含む）を semantics.container_labels に
+# ルート→葉の順で持つ。取り込み元は source_xml の再解析（gem のパース結果は
+# archetype_id で畳み込まれ per-root 名を失う: openehr-ruby#58）。
+RSpec.describe Opt::PathcardExtractor, "祖先ルート名 container_labels（#31、スキーマ v1.2）" do
+  def cards_of(fixture)
+    source_xml = Rails.root.join("spec/fixtures/opt/#{fixture}").read
+    described_class.call(Template.build_from_opt_xml(source_xml)).cards
+  end
+
+  def card(cards, archetype_id, at_code, index = 0)
+    cards.select { |c| c.dig("identity", "archetype_id") == archetype_id && c.dig("identity", "at_code") == at_code }.fetch(index)
+  end
+
+  def container_texts(card)
+    Array(card.dig("semantics", "container_labels")).map { |entry| entry.fetch("text") }
+  end
+
+  it "schema_version を 1.2 にし、content 直下 ENTRY の葉には宿主ルート名 1 段を持つ" do
+    systolic = card(cards_of("CardiologyEncounter.opt"), "openEHR-EHR-OBSERVATION.blood_pressure.v2", "at0004")
+
+    expect(systolic.fetch("schema_version")).to eq("1.2")
+    expect(systolic.dig("semantics", "container_labels")).to eq([
+      { "lang" => "ja", "text" => "血圧", "archetype_id" => "openEHR-EHR-OBSERVATION.blood_pressure.v2",
+        "untranslated_suspect" => false, "untranslated_evidence" => nil, "source_lang" => nil }
+    ])
+  end
+
+  it "埋め込み CLUSTER の葉には宿主名と CLUSTER 名の 2 段を持つ（LabResultReport）" do
+    analyte = card(cards_of("LabResultReport.opt"), "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1", "at0001")
+
+    expect(container_texts(analyte)).to eq([ "検体検査結果", "検査分析結果" ])
+  end
+
+  it "jp_referral の紹介先担当医の氏名は SECTION→INSTRUCTION→組織→診療科→担当医の 5 段を持つ" do
+    name = card(cards_of("jp_referral.opt"), "openEHR-EHR-CLUSTER.person.v1", "at0001", 1)
+
+    expect(container_texts(name)).to eq([ "紹介状の詳細情報", "サービス依頼", "紹介先医療機関", "診療科", "担当医" ])
+  end
+
+  it "同一アーキタイプの複数ルートをテンプレート名で区別する（紹介元／紹介先／診療科の名称）" do
+    cards = cards_of("jp_referral.opt")
+    organisation = "openEHR-EHR-CLUSTER.organisation.v1"
+
+    expect(container_texts(card(cards, organisation, "at0001", 0)).last).to eq("紹介元医療機関")
+    expect(container_texts(card(cards, organisation, "at0001", 1)).last).to eq("紹介先医療機関")
+    expect(container_texts(card(cards, organisation, "at0001", 2)).last(2)).to eq([ "紹介先医療機関", "診療科" ])
   end
 end
