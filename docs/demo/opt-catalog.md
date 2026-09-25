@@ -48,4 +48,4 @@ openehr-railsの`demo_assets/templates/problem_list.opt`と、Anlageの
 を経由しない登録）は、`Opt::PathcardExtractor`のフックが発火しないため`templates.pathcards`
 が未生成のまま残る（`skoba/anlage#12`, WP3 explore実測、`docs/reports/wp3-log.md` R1）。
 実演相当のパスカード生成を確認したい場合は、必ずドロップゾーン経由（`POST /templates`）で
-登録すること。開発DBで生成漏れが見つかった場合は`rake pathcards:backfill`で補完できる。
+登録すること。開発DBで生成漏れが見つかった場合は`rake pathcards:backfill`で補完できる。field の導出規則（`input_kind`／`rm_type_alternatives`、`skoba/anlage#33`）を変えた後の登録済みテンプレートは、同一 checksum の再投入では再構築されないので `rake templates:rebuild_web_template`（`pathcards:backfill` と対の運用ツール）で web_template を再導出する。

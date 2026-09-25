@@ -1,7 +1,7 @@
 # 計画: 外部用語束縛の DV_CODED_TEXT がフォームで空 select になる（`skoba/anlage#33`）
 
 - Issue: `skoba/anlage#33`（problem、解決形 (a) bug）。関連: `#23`（jp_referral の受入）、`#30`（保存経路の INSTRUCTION 未対応——本件とは別）
-- 状態: **承認待ち（ゲート報告 (a)）**。承認前にコードは書かない
+- 状態: **実装済み**（2026-09-25 裁定 A〜D。A は「rm_type 書き換え」不採用→ `input_kind` を唯一の方針属性として登録時に一度だけ導出、B は coded_manual の code 未入力を validation error、C・D 承認）。as-built はコミット `94b59fd`・`99f2298`、`docs/reports/referral-intake-log.md` R12
 - 指示（2026-09-25、統括）: explore → 修正（anlage 側で可能なら anlage）→ 実ブラウザ system spec 1 本 → backlog 相互参照
 
 ## 0. 探索結果（実測、file:line）

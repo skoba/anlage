@@ -219,3 +219,15 @@ Designer／ADL Workbench／LinkEHR／HMC／Better Archetype Designer。
   受入条件（`spec/demo/` green）に関与しない。既定どおり凍結後（11/12 以降）に
   着手判断する。jp_referral 受入（`#23`）の途中で再現条件が変わった場合のみ
   例外報告で前倒しを諮る。
+
+## 13. 外部用語のコード化入力（ICD-11 検索）は WP5／`$lookup`（12 月）（2026-09-25、`#33`）
+
+- `#33` の修正で、外部値集合（`referenceSetUri`）のみの DV_CODED_TEXT は `input_kind` により
+  coded_free（DV_TEXT 代替あり → 自由記載を DV_TEXT で保存）／coded_manual（代替なし →
+  system／code の手入力必須）として扱う。**ICD-11 等を検索してコードを選ぶ入力**は
+  用語サービス接続（WP5、`$lookup`）が前提で 12 月。接続後は `Opt::InputKind.for` の
+  coded_free／coded_manual の導出を変えるだけで view／validator／builder は追随する
+  （`docs/design/issue33-plan.md` 1 節 A、裁定 A）
+- 相互参照: `docs/design/pathcards-schema-v1.md` 1 節 `bindings.display: null`（WP5 の
+  `$lookup` で解決する前提の受け皿）・`docs/design/wp2-plan.md` 5（code_string 分解は WP5 境界）・
+  `docs/upstream-candidates.md` 19 項（FieldExtractor の代替型露出）

@@ -637,3 +637,15 @@ v0.2 は clinical_synopsis の at0002 を**ルートごとに**改名してい�
 - v0.2 の再ドロップ・diff・fixture 差し替えは R10（`d48d2f2`・`6a5e37b`）で完了済み。#33（空 select）は計画 `6d1bd91` でゲート承認待ち、未着手。
 - openehr-rails **0.7.1**（`a3b27cb`、`docs/reports/fsh-log.md` R9）: jp_referral v0.2 の Sushi 8 → **0 Errors**（skipped = service_request・clinical_synopsis ×2）。#44 により jp_referral 由来 Composition が store にあっても 4 デモクエリは warn+skip で通る（実測、purge 済み）。
 - `#23` (4) の pending 例（`spec/integration/jp_referral_aql_spec.rb`）は 0.7.1 で失敗の形が `NoMethodError` → `rows` 不一致（skip される）に変わったが pending のまま。解除条件は rails #45（SECTION／INSTRUCTION の読み戻し）。
+
+---
+
+## R12: #33 実装と dev の rebuild（2026-09-25）
+
+裁定 A〜D（A は input_kind 方式へ変更）に基づき実装。コミット `94b59fd`（修正・spec・rake）・`99f2298`（実ブラウザ system spec・demo pin）。詳細は `docs/design/issue33-plan.md` と各コミットメッセージ。
+
+- Red→Green: 20 例（ValueAlternatives 2／InputKind 4／Template 3／FormValidator 3／CompositionBuilder 2／request pin 3／view partial 2／rake 1）。全 suite green（system spec 1 本は selenium_chrome_headless、ローカルでも通過）、rubocop 0。
+- 実測の訂正 2 点: 診断確度 at0073 の代替は `[DV_CODED_TEXT, DV_TEXT]`（OPT 出現順、spec の初期期待値を実測へ）。保存後の遷移先は composition ページで flash 表示は無い（system spec は「COMPOSITION」「2型糖尿病」の表示で固定）。
+- demo spec クエリ 2 に「at0002 は DV_TEXT で保存」の pin（裁定 B の是正）。4 クエリの期待値は不変。
+- **dev の rebuild 実施**: `rake templates:rebuild_web_template` → 6 テンプレート（jp_referral は superseded の v1.0.0 も含む）。再描画実測: `/forms/ProblemList`・`/forms/jp_referral` の at0002 が `<input type="text">`。input_kind の内訳は上記 runner 出力のとおり（coded_free は両テンプレートの at0002 のみ、coded_manual は現 fixture に無し）。
+- 凍結受入条件に実ブラウザ system spec を追加（`CLAUDE.md`）。backlog 13・upstream 19・opt-catalog の運用注記を同梱。

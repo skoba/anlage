@@ -478,3 +478,22 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 起票: **`skoba/openehr-ruby#58`**（2026-09-25、データ損失級として `#31`／`#48` と同格で起票）
 - 追記（2026-09-25、jp_referral v0.2、`docs/reports/referral-intake-log.md` R10 4 節）: 影響はルート名だけでなく **ELEMENT の term にも及ぶ**。v0.2 は clinical_synopsis の at0002 をルートごとに「症状経過及び検査結果」「治療経過」へ改名しているが、`component_terminologies` では後勝ちで 1 つに潰れ、Anlage のカードは 2 枚とも「治療経過」になる。Anlage 側の迂回（案 a）を ELEMENT term まで広げるかは承認待ち
 - ステータス: **起票済み**（openehr-ruby#58）。Anlage 側の迂回コードの撤去条件として参照する
+
+## 19. `FieldExtractor#entries` が value 属性の代替 RM 型（rm_type_alternatives）を field に載せず、`code_list` 空の DV_CODED_TEXT を主型にする
+
+- 発見日: 2026-09-25（`skoba/anlage#33`、`docs/design/issue33-plan.md` 0 節）
+- 対象: openehr-rails 0.7.1 `lib/openehr_rails/opt/field_extractor.rb:179-187`（`value_constraint` が
+  C_CODE_REFERENCE を持つ代替を主型に選ぶ、0.5.0 で導入）、`:200-210`（`coded_text_constraints` は
+  `code_list: []`／`value_set_uri` を返す）
+- 実測: ProblemList／jp_referral の傷病名 at0002（OR 制約 [DV_TEXT, DV_CODED_TEXT]、ICD-11 の
+  referenceSetUri）で field は `rm_type DV_CODED_TEXT, code_list [], value_set_uri …` となり、
+  DV_TEXT 代替の存在はホストアプリから見えない。Anlage は `Opt::ValueAlternatives` で OPT を
+  再走査して補っている（`app/models/template.rb` `build_web_template`）
+- 提案: `entries[].fields[].rm_type_alternatives`（value 属性の代替 RM 型、OPT 出現順）を field に
+  additive で載せる。主型選択の規約は現状維持でよい（パスカード v1.1 設計判断 9 と同じ）
+- 還流先: openehr-rails
+- 起票: 統括報告（2026-09-25）によれば rails に **0.8.0 同乗検討で起票済み**。本記録時点で
+  `gh issue list --state open` の一覧（#35〜#37・#45〜#49）に該当タイトルは見当たらず、番号は
+  未確認——確認でき次第ここに追記する
+- ステータス: **Anlage 側で迂回済み**（`Opt::ValueAlternatives`、撤去条件: 上記 field 露出を含む
+  openehr-rails へ bump した時点で `ValueAlternatives` を gem 値へ置換）
