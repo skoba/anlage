@@ -1,10 +1,10 @@
 {
   "_provenance": {
     "source_fixture": "jp_referral.opt",
-    "source_sha256": "48e20a3fbeeff74c6738c64059266ad12f453c58f73934cd0c3ecf66a4f300bb",
+    "source_sha256": "5ffc7e6dac891d9263c8360cc8380c4861b22293a59c71cc967e203322d4f924",
     "binding_origin": "CKM公開束縛由来",
-    "source_repository": "skoba/openehr-templates-jp@8eebe0434f363deb71acb298f11cb1c70adbb77d (jp_referral.opt sha256 99d474f8ab86a9980cb6d997168b89a3eed6fd4e8f02a8217dbcd1ef936d62fa; fixture adds a provenance header)",
-    "template_version": "jp_referral v0.1 (2026-09-21)"
+    "source_repository": "skoba/openehr-templates-jp@09187226bd735246a36044597935b4c891a74c7b (jp_referral.opt sha256 99abe4e3e1e5a494805764f3565593b2a0d0482f619917266ab46a22d025c659; fixture adds a provenance header)",
+    "template_version": "jp_referral v0.2 (sem_ver 0.2.0, 2026-09-25)"
   },
   "cards": [
     {
@@ -86,7 +86,7 @@
         "descriptions": [
           {
             "lang": "ja",
-            "text": "依頼の理由を述べる短い語句。",
+            "text": "依頼の理由を述べる短い語句。紹介目的。主訴(主たる訴え)を含めて記載する",
             "untranslated_suspect": false,
             "untranslated_evidence": null,
             "source_lang": null
@@ -1422,162 +1422,6 @@
       "schema_version": "1.2",
       "identity": {
         "template_id": "jp_referral",
-        "archetype_id": "openEHR-EHR-CLUSTER.person.v1",
-        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.person.v1]/items[at0010]/value",
-        "at_code": "at0010"
-      },
-      "semantics": {
-        "labels": [
-          {
-            "lang": "ja",
-            "text": "コメント",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          }
-        ],
-        "descriptions": [
-          {
-            "lang": "ja",
-            "text": "他の項目には収まらない個人についての追加の記述。",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          }
-        ],
-        "container_labels": [
-          {
-            "lang": "ja",
-            "text": "紹介状の詳細情報",
-            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          },
-          {
-            "lang": "ja",
-            "text": "サービス依頼",
-            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          },
-          {
-            "lang": "ja",
-            "text": "紹介先医療機関",
-            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          },
-          {
-            "lang": "ja",
-            "text": "診療科",
-            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          },
-          {
-            "lang": "ja",
-            "text": "担当医",
-            "archetype_id": "openEHR-EHR-CLUSTER.person.v1",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          }
-        ],
-        "rm_type": "DV_TEXT"
-      },
-      "constraints": {
-        "occurrences": {
-          "lower": 0,
-          "upper": 1
-        },
-        "value": {}
-      },
-      "bindings": [],
-      "capture": {},
-      "reserved": {}
-    },
-    {
-      "schema_version": "1.2",
-      "identity": {
-        "template_id": "jp_referral",
-        "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
-        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[at0019]/value",
-        "at_code": "at0019"
-      },
-      "semantics": {
-        "labels": [
-          {
-            "lang": "ja",
-            "text": "コメント",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          }
-        ],
-        "descriptions": [
-          {
-            "lang": "ja",
-            "text": "他の項目には収まらない組織についての追加の記述。",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          }
-        ],
-        "container_labels": [
-          {
-            "lang": "ja",
-            "text": "紹介状の詳細情報",
-            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          },
-          {
-            "lang": "ja",
-            "text": "サービス依頼",
-            "archetype_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          },
-          {
-            "lang": "ja",
-            "text": "紹介先医療機関",
-            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          },
-          {
-            "lang": "ja",
-            "text": "診療科",
-            "archetype_id": "openEHR-EHR-CLUSTER.organisation.v1",
-            "untranslated_suspect": false,
-            "untranslated_evidence": null,
-            "source_lang": null
-          }
-        ],
-        "rm_type": "DV_TEXT"
-      },
-      "constraints": {
-        "occurrences": {
-          "lower": 0,
-          "upper": 1
-        },
-        "value": {}
-      },
-      "bindings": [],
-      "capture": {},
-      "reserved": {}
-    },
-    {
-      "schema_version": "1.2",
-      "identity": {
-        "template_id": "jp_referral",
         "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
         "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0002]/value",
         "at_code": "at0002"
@@ -1619,7 +1463,11 @@
             "source_lang": null
           }
         ],
-        "rm_type": "DV_TEXT"
+        "rm_type": "DV_CODED_TEXT",
+        "rm_type_alternatives": [
+          "DV_TEXT",
+          "DV_CODED_TEXT"
+        ]
       },
       "constraints": {
         "occurrences": {
@@ -1627,6 +1475,148 @@
           "upper": 1
         },
         "value": {}
+      },
+      "bindings": [
+        {
+          "kind": "value_set_binding",
+          "system_uri": "terminology:http://id.who.int/icd/release/11/mms",
+          "code": null,
+          "display": null
+        }
+      ],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0077]/value",
+        "at_code": "at0077"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "発症日時",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "プロブレムや診断に関する徴候や症状が最初に認められた実際の日時、あるいは推定される日時。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "傷病名",
+            "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_DATE_TIME"
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {}
+      },
+      "bindings": [],
+      "capture": {},
+      "reserved": {}
+    },
+    {
+      "schema_version": "1.2",
+      "identity": {
+        "template_id": "jp_referral",
+        "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+        "path": "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-EVALUATION.problem_diagnosis.v1]/data[at0001]/items[at0073]/value",
+        "at_code": "at0073"
+      },
+      "semantics": {
+        "labels": [
+          {
+            "lang": "ja",
+            "text": "診断確度",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "descriptions": [
+          {
+            "lang": "ja",
+            "text": "診断の確定度。",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "container_labels": [
+          {
+            "lang": "ja",
+            "text": "紹介状の詳細情報",
+            "archetype_id": "openEHR-EHR-SECTION.referral_details.v0",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          },
+          {
+            "lang": "ja",
+            "text": "傷病名",
+            "archetype_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+            "untranslated_suspect": false,
+            "untranslated_evidence": null,
+            "source_lang": null
+          }
+        ],
+        "rm_type": "DV_CODED_TEXT",
+        "rm_type_alternatives": [
+          "DV_CODED_TEXT",
+          "DV_TEXT"
+        ]
+      },
+      "constraints": {
+        "occurrences": {
+          "lower": 0,
+          "upper": 1
+        },
+        "value": {
+          "code_list": [
+            {
+              "code": "at0074",
+              "label": "疑い"
+            },
+            {
+              "code": "at0075",
+              "label": "推定"
+            },
+            {
+              "code": "at0076",
+              "label": "確定"
+            }
+          ]
+        }
       },
       "bindings": [],
       "capture": {},
@@ -1702,7 +1692,7 @@
         "labels": [
           {
             "lang": "ja",
-            "text": "要約",
+            "text": "治療経過",
             "untranslated_suspect": false,
             "untranslated_evidence": null,
             "source_lang": null
@@ -1760,7 +1750,7 @@
         "labels": [
           {
             "lang": "ja",
-            "text": "要約",
+            "text": "治療経過",
             "untranslated_suspect": false,
             "untranslated_evidence": null,
             "source_lang": null

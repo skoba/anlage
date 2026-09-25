@@ -447,3 +447,24 @@ RSpec.describe Opt::PathcardExtractor, "祖先ルート名 container_labels（#3
     expect(container_texts(card(cards, organisation, "at0001", 2)).last(2)).to eq([ "紹介先医療機関", "診療科" ])
   end
 end
+
+# jp_referral v0.2（skoba/anlage#23、intake-log R10）: 傷病名 at0002 に DV_CODED_TEXT の
+# 代替と ICD-11 の referenceSetUri が加わった。スキーマ v1.1 設計判断 9 の主型規約
+# （コード参照を持つ代替を主型にする）が実 fixture で成立することを固定する。
+# fixture 差し替え時点で既に成立している性質の固定であり Red は作れない（regression pin）。
+RSpec.describe Opt::PathcardExtractor, "jp_referral v0.2 の傷病名（regression pin）" do
+  let(:diagnosis) do
+    source_xml = Rails.root.join("spec/fixtures/opt/jp_referral.opt").read
+    described_class.call(Template.build_from_opt_xml(source_xml)).cards.find do |card|
+      card.dig("identity", "archetype_id") == "openEHR-EHR-EVALUATION.problem_diagnosis.v1" && card.dig("identity", "at_code") == "at0002"
+    end
+  end
+
+  it "at0002 は [DV_TEXT, DV_CODED_TEXT] の代替を持ち、主型は DV_CODED_TEXT で ICD-11 の value_set_binding を持つ" do
+    expect(diagnosis.dig("semantics", "rm_type_alternatives")).to eq([ "DV_TEXT", "DV_CODED_TEXT" ])
+    expect(diagnosis.dig("semantics", "rm_type")).to eq("DV_CODED_TEXT")
+    expect(diagnosis.fetch("bindings")).to eq([
+      { "kind" => "value_set_binding", "system_uri" => "terminology:http://id.who.int/icd/release/11/mms", "code" => nil, "display" => nil }
+    ])
+  end
+end
