@@ -42,7 +42,32 @@ module Opt
         coded_text_error(field, raw)
       when "coded_manual"
         coded_manual_error(field)
+      when "date"
+        date_error(raw)
+      when "time"
+        time_error(raw)
+      when "datetime"
+        datetime_error(raw) || (@values["#{field['name']}__time"].present? ? time_error(@values["#{field['name']}__time"]) : nil)
       end
+    end
+
+    # skoba/anlage#35: 日付・時刻はローカルで形式検証し、ISO 部分精度の文字列のまま保存する。
+    # datetime の日付欄はブラウザの YYYY-MM-DD のほか、POST クライアントが送る完全な
+    # ISO 日時（YYYY-MM-DDThh:mm[:ss][Z|±hh:mm]）も受ける
+    DATE_PATTERN = /\A\d{4}(-\d{2}(-\d{2})?)?\z/
+    DATETIME_PATTERN = /\A\d{4}(-\d{2}(-\d{2})?)?(T\d{2}(:\d{2}(:\d{2})?)?(Z|[+-]\d{2}:?\d{2})?)?\z/
+    TIME_PATTERN = /\A\d{2}:\d{2}(:\d{2})?\z/
+
+    def date_error(raw)
+      "日付の形式が不正です（YYYY-MM-DD）" unless raw.to_s.match?(DATE_PATTERN)
+    end
+
+    def datetime_error(raw)
+      "日付の形式が不正です（YYYY-MM-DD）" unless raw.to_s.match?(DATETIME_PATTERN)
+    end
+
+    def time_error(raw)
+      "時刻の形式が不正です（HH:MM）" unless raw.to_s.match?(TIME_PATTERN)
     end
 
     # 裁定 B: raw 文字列を code に詰めた DvCodedText は存在しないコードの捏造になるので、

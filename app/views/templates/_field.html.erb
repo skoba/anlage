@@ -23,6 +23,19 @@ error ||= nil
         <option value="<%= code %>" <%= "selected" if value == code %>><%= field.dig("code_labels", code) || code %></option>
       <% end %>
     </select>
+  <% when "date" %>
+    <input type="date" id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]"
+           value="<%= value %>" <%= "disabled" if disabled %>>
+  <% when "time" %>
+    <input type="time" id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]"
+           value="<%= value %>" <%= "disabled" if disabled %>>
+  <% when "datetime" %>
+    <%# 日付が本体。時刻は任意で、無ければ日付精度のまま保存する（#35） %>
+    <input type="date" id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]"
+           value="<%= value %>" <%= "disabled" if disabled %>>
+    <label for="field_<%= field["name"] %>__time">時刻（任意）</label>
+    <input type="time" id="field_<%= field["name"] %>__time" name="values[<%= field["name"] %>__time]"
+           value="" <%= "disabled" if disabled %>>
   <% when "coded_manual" %>
     <input type="text" id="field_<%= field["name"] %>" name="values[<%= field["name"] %>]"
            value="<%= value %>" <%= "disabled" if disabled %>>

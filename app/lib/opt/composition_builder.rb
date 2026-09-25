@@ -156,6 +156,13 @@ module Opt
       when "coded_manual"
         system = @values["#{field['name']}__system"].presence || field["value_set_uri"].to_s.delete_prefix("terminology:")
         return dv_coded_text(raw_value.to_s, @values.fetch("#{field['name']}__code"), system)
+      when "date"
+        return OpenEHR::RM::DataTypes::Quantity::DateTime::DvDate.new(value: raw_value.to_s)
+      when "time"
+        return OpenEHR::RM::DataTypes::Quantity::DateTime::DvTime.new(value: raw_value.to_s)
+      when "datetime"
+        time = @values["#{field['name']}__time"]
+        return dv_date_time_partial(time.present? ? "#{raw_value}T#{time}" : raw_value.to_s)
       end
 
       case field["rm_type"]
@@ -167,10 +174,6 @@ module Opt
         dv_coded_text(field.dig("code_labels", raw_value) || raw_value, raw_value, field["terminology_id"] || "local")
       when "DV_BOOLEAN"
         OpenEHR::RM::DataTypes::Basic::DvBoolean.new(value: ActiveModel::Type::Boolean.new.cast(raw_value))
-      when "DV_DATE"
-        OpenEHR::RM::DataTypes::Quantity::DateTime::DvDate.new(value: Date.parse(raw_value).iso8601)
-      when "DV_DATE_TIME"
-        dv_date_time(Time.zone.parse(raw_value))
       else
         dv_text(raw_value.to_s)
       end
@@ -193,6 +196,19 @@ module Opt
 
     def dv_date_time(time)
       OpenEHR::RM::DataTypes::Quantity::DateTime::DvDateTime.new(value: time.iso8601)
+    end
+
+    # ISO 部分精度の文字列をそのまま DvDateTime に載せる（skoba/anlage#35）。存在しない精度
+    # （午前 0 時・秒・タイムゾーン）を付けない。
+    # openehr-ruby 2.4.3 の ISO8601DateTime は `T` と時（hh）を必須にし、日付のみ
+    # （YYYY-MM-DD）を拒否する（skoba/openehr-ruby#59）。日付のみは Opt::FormValidator で
+    # 形式検証済みなので、gem の検証を通る時刻付きの値で構築してから @value を差し替える
+    # 暫定。撤去条件: openehr-ruby#59 の解消版へ bump した時点で DvDateTime.new(value:) に戻す。
+    def dv_date_time_partial(value)
+      klass = OpenEHR::RM::DataTypes::Quantity::DateTime::DvDateTime
+      return klass.new(value: value) if value.include?("T")
+
+      klass.new(value: "#{value}T00").tap { |dv| dv.instance_variable_set(:@value, value) }
     end
   end
 end

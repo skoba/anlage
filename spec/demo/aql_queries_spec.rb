@@ -137,6 +137,9 @@ RSpec.describe "デモクエリ（フォーム保存経路経由）", type: :req
 
       result = OpenehrRails::Aql::Executor.execute(query)
 
+      # skoba/anlage#35: canonical JSON は POST された ISO 文字列のまま（Z を付けない）だが、
+      # AQL は RM グラフの date_time_value 列から読み戻すため UTC の iso8601 になる
+      # （docs/upstream-candidates.md 21 項）。ここは AQL の観測値を固定する。
       expect(result.rows).to eq([ [ "2026-03-15T00:00:00Z" ] ])
     end
   end

@@ -28,4 +28,13 @@ RSpec.describe "空欄の任意項目を含む Composition の保存（#34）", 
     expect(response.body).to include("必須項目です")
     expect(Composition.count).to eq(0)
   end
+
+  # skoba/anlage#35: 不正な日付は 500 ではなく 422 の説明
+  it "日付の形式が不正なら 422 で説明する" do
+    post template_compositions_path(template.template_id), params: { values: real_params.merge("problem_diagnosis_at0077" => "2026/03/01") }
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("日付の形式")
+    expect(Composition.count).to eq(0)
+  end
 end

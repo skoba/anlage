@@ -27,6 +27,12 @@ RSpec.describe Opt::InputKind do
     expect(kind({ "rm_type" => "DV_QUANTITY" })).to eq("number")
     expect(kind({ "rm_type" => "DV_COUNT" })).to eq("number")
     expect(kind({ "rm_type" => "DV_TEXT" })).to eq("text")
-    expect(kind({ "rm_type" => "DV_DATE_TIME" })).to eq("text")
+  end
+
+  # skoba/anlage#35: 日付・時刻はネイティブ入力（date／time／date+time の 2 入力）
+  it "DV_DATE は date、DV_TIME は time、DV_DATE_TIME は datetime" do
+    expect(kind({ "rm_type" => "DV_DATE" })).to eq("date")
+    expect(kind({ "rm_type" => "DV_TIME" })).to eq("time")
+    expect(kind({ "rm_type" => "DV_DATE_TIME" })).to eq("datetime")
   end
 end

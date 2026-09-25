@@ -104,3 +104,42 @@ RSpec.describe Opt::CompositionBuilder, "#34 空欄の要素はスキップ" do
     expect(composition.content).to be_empty
   end
 end
+
+# skoba/anlage#35: 日時は Time 経由をやめ、入力を ISO 部分精度の文字列のまま保存する。
+# 存在しない精度（午前 0 時・秒・タイムゾーン）を付けない。
+RSpec.describe Opt::CompositionBuilder, "#35 日付・時刻の部分精度保存" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!).reload }
+
+  def onset_value(values)
+    described_class.new(template, { "problem_diagnosis_at0002" => "かぜ" }.merge(values)).build
+      .content.first.data.items.find { |item| item.archetype_node_id == "at0077" }.value
+  end
+
+  it "日付のみなら 2026-09-22 のまま（DvDateTime、午前 0 時を付けない）" do
+    value = onset_value("problem_diagnosis_at0077" => "2026-09-22")
+
+    expect(value).to be_a(OpenEHR::RM::DataTypes::Quantity::DateTime::DvDateTime)
+    expect(value.value).to eq("2026-09-22")
+    expect(JSON.parse(OpenEHR::Serializer::RMJSONSerializer.new(value).serialize)["value"]).to eq("2026-09-22")
+  end
+
+  it "日付＋時刻なら 2026-09-22T14:30（秒・タイムゾーンを付けない）" do
+    value = onset_value("problem_diagnosis_at0077" => "2026-09-22", "problem_diagnosis_at0077__time" => "14:30")
+
+    expect(value.value).to eq("2026-09-22T14:30")
+  end
+
+  it "DV_DATE は DvDate、DV_TIME は DvTime を文字列のまま組む" do
+    field = template.fields.find { |f| f["name"] == "problem_diagnosis_at0077" }
+    field["rm_type"] = "DV_DATE"; field["input_kind"] = "date"
+    template.update_column(:web_template, template.web_template); template.reload
+    expect(onset_value("problem_diagnosis_at0077" => "2026-09")).to be_a(OpenEHR::RM::DataTypes::Quantity::DateTime::DvDate)
+
+    field = template.fields.find { |f| f["name"] == "problem_diagnosis_at0077" }
+    field["rm_type"] = "DV_TIME"; field["input_kind"] = "time"
+    template.update_column(:web_template, template.web_template); template.reload
+    time = onset_value("problem_diagnosis_at0077" => "14:30")
+    expect(time).to be_a(OpenEHR::RM::DataTypes::Quantity::DateTime::DvTime)
+    expect(time.value).to eq("14:30")
+  end
+end

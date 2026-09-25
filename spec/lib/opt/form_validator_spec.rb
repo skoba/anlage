@@ -77,3 +77,26 @@ RSpec.describe Opt::FormValidator, "#33 input_kind" do
     expect(described_class.call(template, { "free" => "自由記載" })).to be_valid
   end
 end
+
+# skoba/anlage#35: 日付・時刻の形式はローカルで検証する（不正値は 422 の説明に）
+RSpec.describe Opt::FormValidator, "#35 日付・時刻の形式" do
+  let(:template) do
+    Template.new(template_id: "t", web_template: { "template_id" => "t", "entries" => [ { "archetype_id" => "a", "fields" => [
+      { "name" => "dt", "label" => "発症日時", "rm_type" => "DV_DATE_TIME", "input_kind" => "datetime", "required" => false },
+      { "name" => "d", "label" => "日付", "rm_type" => "DV_DATE", "input_kind" => "date", "required" => false },
+      { "name" => "t", "label" => "時刻", "rm_type" => "DV_TIME", "input_kind" => "time", "required" => false }
+    ] } ] })
+  end
+
+  it "YYYY-MM-DD と HH:MM を受け、それ以外は形式エラー" do
+    expect(described_class.call(template, { "dt" => "2026-09-22", "dt__time" => "14:30", "d" => "2026-09", "t" => "09:05" })).to be_valid
+    result = described_class.call(template, { "dt" => "2026/09/22", "d" => "22-09-2026", "t" => "9時" })
+    expect(result.errors["dt"]).to include("日付の形式")
+    expect(result.errors["d"]).to include("日付の形式")
+    expect(result.errors["t"]).to include("時刻の形式")
+  end
+
+  it "時刻（任意）だけが不正なら日時の項目にエラーを付ける" do
+    expect(described_class.call(template, { "dt" => "2026-09-22", "dt__time" => "14時30分" }).errors["dt"]).to include("時刻の形式")
+  end
+end

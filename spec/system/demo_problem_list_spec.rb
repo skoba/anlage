@@ -15,6 +15,9 @@ RSpec.describe "デモ動線: ProblemList のフォーム入力→保存→AQL�
     visit form_path(template.template_id)
 
     fill_in "field_problem_diagnosis_at0002", with: "2型糖尿病"
+    # skoba/anlage#35: 発症日時はネイティブの日付ピッカー（type="date"）で日付だけ入れる。
+    # 時刻（任意）は空欄のまま → "2026-03-01" が日付精度のまま保存される
+    fill_in "field_problem_diagnosis_at0077", with: Date.new(2026, 3, 1)
     select "疑い", from: "field_problem_diagnosis_at0073"
     click_button "送信"
 
@@ -26,6 +29,7 @@ RSpec.describe "デモ動線: ProblemList のフォーム入力→保存→AQL�
     query = <<~AQL
       SELECT c/name/value AS composition_name,
              o/data[at0001]/items[at0002]/value/value AS diagnosis,
+             o/data[at0001]/items[at0077]/value/value AS onset,
              o/data[at0001]/items[at0073]/value/value AS certainty
       FROM EHR e CONTAINS COMPOSITION c
            CONTAINS EVALUATION o[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
@@ -34,6 +38,10 @@ RSpec.describe "デモ動線: ProblemList のフォーム入力→保存→AQL�
 
     result = OpenehrRails::Aql::Executor.execute(query)
 
-    expect(result.rows).to eq([ [ "ProblemList", "2型糖尿病", "疑い" ] ])
+    # 正本（canonical JSON）は日付精度のまま。AQL は RM グラフ（openehr-rails の
+    # date_time_value 列）から読み戻すため "…T00:00:00Z" に正規化される——精度の損失は
+    # gem 側の課題（docs/upstream-candidates.md 21 項）。壇上で見えるのは後者。
+    expect(Composition.last.rm_composition.dig("content", 0, "data", "items", 1, "value", "value")).to eq("2026-03-01")
+    expect(result.rows).to eq([ [ "ProblemList", "2型糖尿病", "2026-03-01T00:00:00Z", "疑い" ] ])
   end
 end

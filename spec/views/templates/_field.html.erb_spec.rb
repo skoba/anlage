@@ -25,4 +25,21 @@ RSpec.describe "templates/_field", type: :view do
 
     expect(rendered).to include('<option value="at0074" >疑い</option>')
   end
+
+  # skoba/anlage#35: RM 型でネイティブ入力を切り替える（ja ロケールのブラウザが年/月/日を出す）
+  it "date は type=date、time は type=time" do
+    render partial: "templates/field", locals: { field: { "name" => "d", "label" => "日付", "rm_type" => "DV_DATE", "input_kind" => "date", "required" => false }, disabled: false, value: nil, error: nil }
+    expect(rendered).to match(/<input[^>]*type="date"[^>]*name="values\[d\]"/)
+
+    render partial: "templates/field", locals: { field: { "name" => "t", "label" => "時刻", "rm_type" => "DV_TIME", "input_kind" => "time", "required" => false }, disabled: false, value: nil, error: nil }
+    expect(rendered).to match(/<input[^>]*type="time"[^>]*name="values\[t\]"/)
+  end
+
+  it "datetime は type=date と「時刻（任意）」の type=time の 2 入力" do
+    render partial: "templates/field", locals: { field: { "name" => "dt", "label" => "発症日時", "rm_type" => "DV_DATE_TIME", "input_kind" => "datetime", "required" => false }, disabled: false, value: nil, error: nil }
+
+    expect(rendered).to match(/<input[^>]*type="date"[^>]*name="values\[dt\]"/)
+    expect(rendered).to match(/<input[^>]*type="time"[^>]*name="values\[dt__time\]"/)
+    expect(rendered).to include("時刻（任意）")
+  end
 end
