@@ -49,7 +49,7 @@ gem "thruster", require: false
 # re-raises the missing-libvips LoadError with a message Rails 8.1's Active Storage
 # engine does not recognise (it only swallows /libvips/ or /image_processing/), so
 # the app cannot boot on a machine without libvips (dependabot #24, docs/backlog.md).
-gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 2.1"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
