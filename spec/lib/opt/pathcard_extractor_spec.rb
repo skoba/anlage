@@ -76,7 +76,7 @@ RSpec.describe Opt::PathcardExtractor do
           "identity" => {
             "template_id" => "LabResultReport",
             "archetype_id" => "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
-            "path" => "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[at0000]/items[at0001]/value",
+            "path" => "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1]/items[at0001]/value",
             "at_code" => "at0001"
           }
         )
@@ -239,7 +239,7 @@ RSpec.describe Opt::PathcardExtractor do
         identity: {
           "template_id" => "LabResultReport",
           "archetype_id" => "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
-          "path" => "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[at0000]/items[at0001]/value",
+          "path" => "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1]/items[at0001]/value",
           "at_code" => "at0001"
         },
         semantics: {
@@ -349,5 +349,42 @@ RSpec.describe Opt::PathcardExtractor do
         )
       end
     end
+  end
+end
+
+# skoba/anlage#29（解決形 (a) bug）: SECTION 配下・protocol 配下の埋め込み
+# C_ARCHETYPE_ROOT の path 述語が `items[at0000]` になっていた。content 直下と同じ
+# archetype_id 述語で書くこと。fixture: spec/fixtures/opt/jp_referral.opt（real、
+# 出所はファイル先頭コメント）。
+RSpec.describe Opt::PathcardExtractor, "埋め込みルートの path 述語（#29）" do
+  let(:cards) do
+    source_xml = Rails.root.join("spec/fixtures/opt/jp_referral.opt").read
+    described_class.call(Template.build_from_opt_xml(source_xml)).cards
+  end
+
+  def path_of(cards, archetype_id, at_code, index = 0)
+    cards.select { |c| c.dig("identity", "archetype_id") == archetype_id && c.dig("identity", "at_code") == at_code }
+         .fetch(index).dig("identity", "path")
+  end
+
+  it "SECTION 配下の ENTRY ルートを archetype_id 述語で書く" do
+    expect(path_of(cards, "openEHR-EHR-INSTRUCTION.service_request.v1", "at0121")).to eq(
+      "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]" \
+      "/activities[at0001]/description[at0009]/items[at0121]/value"
+    )
+  end
+
+  it "protocol 配下に多段で埋め込まれた CLUSTER ルートも archetype_id 述語で書く（紹介先の担当医）" do
+    expect(path_of(cards, "openEHR-EHR-CLUSTER.person.v1", "at0001", 1)).to eq(
+      "/content[openEHR-EHR-SECTION.referral_details.v0]/items[openEHR-EHR-INSTRUCTION.service_request.v1]" \
+      "/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1]/items[openEHR-EHR-CLUSTER.organisation.v1]" \
+      "/items[openEHR-EHR-CLUSTER.person.v1]/items[at0001]/value"
+    )
+  end
+
+  it "jp_referral v0.1 の 26 カードの path に [at0000] が現れない" do
+    paths = cards.map { |c| c.dig("identity", "path") }
+    expect(paths.size).to eq(26)
+    expect(paths.grep(/\[at0000\]/)).to be_empty
   end
 end

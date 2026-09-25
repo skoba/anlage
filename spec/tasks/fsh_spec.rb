@@ -81,14 +81,16 @@ RSpec.describe "fsh:export / fsh:verify" do
       expect(fsh_files.values.join).to include("* category contains ckm 1..1")
     end
 
-    it "spec fixture 5 件とも skip-and-report の対象（skipped）が空である" do
+    it "spec fixture 全件（6 件、jp_referral を含む）で skip-and-report の対象（skipped）が空である" do
       skipped = fixture_paths.to_h do |path|
         generator = OpenehrRails::Fhir::FshGenerator.new(Opt::SafeParser.parse(path.read))
         generator.to_fsh_files
         [ path.basename.to_s, generator.skipped ]
       end
 
-      expect(skipped.keys.size).to eq(5)
+      # jp_referral.opt（#29 で fixture 化）の service_request は葉 0 のため skip 規則に
+      # 掛からず空のまま（docs/upstream-candidates.md 17 項）。件数はその実測を固定する。
+      expect(skipped.keys.size).to eq(6)
       expect(skipped.values).to all(be_empty)
     end
   end

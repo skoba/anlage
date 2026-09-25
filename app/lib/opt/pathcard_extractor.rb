@@ -49,7 +49,10 @@ module Opt
           next [] unless child.respond_to?(:rm_type_name)
 
           node_path = child_path.dup
-          node_path << "[#{child.node_id}]" if child.respond_to?(:node_id) && child.node_id
+          # 埋め込み C_ARCHETYPE_ROOT は node_id が常に at0000 なので、content 直下
+          # （extract_cards）と同じく archetype_id を述語にする（skoba/anlage#29）。
+          predicate = archetype_id_of(child) || (child.node_id if child.respond_to?(:node_id))
+          node_path << "[#{predicate}]" if predicate
 
           if child.rm_type_name == "ELEMENT"
             [ card_for(child, node_path, archetype_id) ]

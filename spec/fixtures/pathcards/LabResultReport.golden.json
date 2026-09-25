@@ -14,7 +14,6 @@
         "at_code": "at0005"
       },
       "semantics": {
-        "rm_type": "DV_TEXT",
         "labels": [
           {
             "lang": "ja",
@@ -32,7 +31,8 @@
             "untranslated_evidence": "fallback_marker",
             "source_lang": "en"
           }
-        ]
+        ],
+        "rm_type": "DV_TEXT"
       },
       "constraints": {
         "occurrences": {
@@ -50,11 +50,10 @@
       "identity": {
         "template_id": "LabResultReport",
         "archetype_id": "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
-        "path": "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[at0000]/items[at0024]/value",
+        "path": "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1]/items[at0024]/value",
         "at_code": "at0024"
       },
       "semantics": {
-        "rm_type": "DV_TEXT",
         "labels": [
           {
             "lang": "ja",
@@ -72,7 +71,8 @@
             "untranslated_evidence": "fallback_marker",
             "source_lang": "en"
           }
-        ]
+        ],
+        "rm_type": "DV_TEXT"
       },
       "constraints": {
         "occurrences": {
@@ -90,11 +90,10 @@
       "identity": {
         "template_id": "LabResultReport",
         "archetype_id": "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1",
-        "path": "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[at0000]/items[at0001]/value",
+        "path": "/content[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]/data[at0001]/events[at0002]/data[at0003]/items[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1]/items[at0001]/value",
         "at_code": "at0001"
       },
       "semantics": {
-        "rm_type": "DV_QUANTITY",
         "labels": [
           {
             "lang": "ja",
@@ -112,7 +111,8 @@
             "untranslated_evidence": "fallback_marker",
             "source_lang": "en"
           }
-        ]
+        ],
+        "rm_type": "DV_QUANTITY"
       },
       "constraints": {
         "occurrences": {
