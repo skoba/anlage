@@ -8,7 +8,7 @@ gem "rails", "~> 8.1.3", ">= 8.1.3.1"
 # ArgumentError (wrong number of arguments (given 2, expected 1)).
 # Same pin as openehr-rails#40 / its generated-app template (0.7.0).
 # Drop once a Rails patch release carries the fix (docs/backlog.md 9項).
-gem "json", "< 3"
+gem "json", "< 4"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use sqlite3 as the database for Active Record
