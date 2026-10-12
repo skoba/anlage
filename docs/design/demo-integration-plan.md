@@ -90,7 +90,7 @@ bmi_calculation:
 ## 5. 変更 5: `demo:reset` 第二実装（第一実装は R1 で済）
 
 - サンプル Composition（裁定 D: 入れる。壇上の入力が 1 件失敗しても第 3 幕が空にならない）: `Opt::RmCompositionCommitter` 経由（フォーム保存経路と同じ値→RM グラフ）で 5 件——ProblemList 2 件（ICD-11 コード付き 1＝at0002 を coded で／自由記述 1＝DV_TEXT。代替制約の実演）、CardiologyEncounter 1、LabResultReport 1（数値 > 50）、bmi 1（170/65）。壇上入力は「1 件足す」演出。jp_referral のサンプルは 0.8.0 bump 後。spec は template_id と件数・AQL の行で固定（`demo_reset_spec` に例を追加）
-- `docs/demo/setup.md` の空欄（デモ機・オフライン・DB）は人間供給（裁定 E。本報告時点で段落は未受領）
+- `docs/demo/setup.md` 1 節は確定版（裁定 E 受領、2026-10-12）。`demo:reset` の所要はデモ機で再計測して上書き
 
 ## 6. 台本対応表（各行＝system spec 1 本の操作列）
 
@@ -103,6 +103,8 @@ bmi_calculation:
 | 2' | `/forms/ProblemList` | 既存の操作列 | 既存 | `demo_problem_list_spec`（文言のみ更新） |
 | 3 AQL | `/openehr/query` | クエリ 1（既定文字列）を実行 | height > 170 の行 | request/integration（engine は gem。spec は `OpenehrRails::Aql::Executor` で件数固定＝既存 `spec/demo/`） |
 | 4 FHIR/FSH | HTTP facade は **ProblemList のみ**（`/fhir/r5/StructureDefinition/openehr-evaluation-problem-diagnosis-v1`、カルテ記録画面の「FHIR プロファイル」リンク）。jp_referral は **FSH 出力**（`bin/rails fsh:export` → `tmp/fsh/jp_referral-1.0.0/input/fsh/*.fsh`） | リンク／コマンド | JSON／FSH ファイル | `fhir_profiles_spec`（既存）＋`spec/tasks/fsh_spec`（既存）。id 衝突は rails #55（追加裁定、`docs/backlog.md` 15） |
+
+**ビューポート pin（裁定 E）**: 全 system spec を 1280×720（`page.driver.browser.manage.window.resize_to(1280, 720)` を `rails_helper` の `js: true` before で一括）で走らせ、ナビが折り返さず・表が収まり・横スクロールが無いことを変更 1 の spec で固定する（`page.evaluate_script("document.documentElement.scrollWidth <= 1280")`）。
 
 AQL の 0.8.0 同乗分（SECTION／INSTRUCTION の読み戻しで jp_referral を AQL に出す）は 10/20 までに rails 0.8.0 が出た場合のみ追加（lock bump → `spec/integration/jp_referral_aql_spec.rb` の pending 解除を確認）。出なければ既存キャスト 4 件のまま
 
@@ -127,7 +129,7 @@ A 判定の `cases` 表現／B BMI の閾値・文言／C `editable` の意味�
 - **B**: 日本肥満学会の区分を 4.0 版の正式表記で: <18.5 低体重／18.5–25 普通体重／25–30 肥満（1度）／30–35 肥満（2度）／35–40 肥満（3度）／≥40 肥満（4度）。else で「2度以上」と畳まない。WHO 文言は採らない（日本の紹介状の語彙＝記録語彙を優先）。出典を yml コメントに 1 行
 - **C**: 承認（false＝readonly＋サーバが常に上書き、true＝提案＋blank のみ補完）。加えて「editable: true で人間が上書きした値は再計算で消さない」を system spec で pin（編集済みフラグ）
 - **D**: 入れる。ProblemList 2（ICD-11 コード付き 1・自由記述 1）、CardiologyEncounter 1、LabResultReport 1（数値 > 50）、bmi 1（170/65）。壇上入力は「1 件足す」演出。jp_referral は 0.8.0 bump 後
-- **E**: 人間供給（1 段落）。未受領
+- **E**: 受領（2026-10-12、`docs/demo/setup.md` 1 節に確定版として転記）。デモ機 Vaio Z／S14（リハ 1 で決定、予備機同梱）、WSL2＋Windows 側 Chrome、オフライン、設計解像度 **1280×720**
 - **F**: 承認、2 点修正——「記録」→「カルテ記録」、「帳票を開く」→「帳票に入力」。`docs/demo/ui-vocabulary.md` を正典に
 - **G**: 承認。語彙表と同一コミットで spec 文言を更新。CLAUDE.md に 1 行追記
 - **追加裁定（0 節 7）**: FHIR プロファイル id のアーキタイプ単位衝突は rails 起票（[skoba/openehr-rails#55](https://github.com/skoba/openehr-rails/issues/55)、`docs/upstream-candidates.md` 23 項）。凍結前は anlage 側で「テンプレート修飾 id」を暫定しない。台本では jp_referral の FHIR は FSH 出力で見せ、HTTP facade は ProblemList のみ（`docs/backlog.md` 15、6 節）

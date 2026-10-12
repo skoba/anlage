@@ -80,3 +80,12 @@ AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unrelease
 - 起票: [skoba/openehr-rails#55](https://github.com/skoba/openehr-rails/issues/55)（FHIR `profile_id` の archetype 単位衝突。裁定により次回覚醒を待たず起票）
 - 未受領: 裁定 E の 1 段落（デモ機・オフライン・DB）。届き次第 `docs/demo/setup.md` 1 節へ
 - main の CI: scan_ruby は brakeman 8.1.0（`--ensure-latest`）で `893aa7f` から赤のまま（R1 と同じ。dependabot #44 の扱いは未裁定）
+
+---
+
+## R3: 裁定 E 受領（setup.md 1 節の確定版）（2026-10-12）
+
+- `docs/demo/setup.md` 1 節を統括供給の確定版に差し替え（デモ機 Vaio Z／S14・WSL2＋Windows 側 Chrome・Ruby 4.0.7・Node 18＋sushi 3.16.0・Chromium・SQLite・オフライン・設計解像度 1280×720・荷物・復旧手順）。「要確認」「空欄」「未受領」の印を外した
+- `demo:reset` 所要の実測: 3.16 秒／2.54 秒（本開発機、2 回。デモ機で再計測して上書き）
+- plan: 9 節 E を受領に、5 節の注記を更新、6 節に **system spec のビューポート 1280×720 pin**（ナビ折返し・表幅・横スクロール無し）を追加——変更 1 の spec で固定する
+

@@ -3,17 +3,20 @@
 リハ・本番で「既知の初期状態」から始めるための手順。環境前提の空欄は人間が埋める（plan 5 節）。
 参照は **template_id** で行い、dev DB の id には依存しない（裁定 2026-10-12）。
 
-## 1. 前提
+## 1. 前提（確定版、2026-10-12 統括供給）
 
 | 項目 | 値 | 根拠 |
 |---|---|---|
-| Ruby | 4.0.7（`.ruby-version`、`Dockerfile` `ARG RUBY_VERSION`） | `893aa7f` |
-| DB | SQLite、`storage/development.sqlite3`（`config/database.yml`） | 実測 |
-| JS | importmap。gem 同梱の turbo／stimulus をピン、CDN 無し → **オフラインで動く** | `config/importmap.rb`、layout |
-| ネットワークが要る操作 | CKM URL 取り込み（台本に無い）、`rake fsh:verify`（sushi、任意） | `templates_controller.rb:162-185`、`fsh.rake:43-64` |
-| ブラウザ | Chrome／Chromium（壇上）。`js: true` system spec のローカル実行にも同じものが要る | `spec/rails_helper.rb:12` |
-| デモ機 | （空欄: 機種・OS・解像度。裁定 E で人間供給、未受領） | 人間 |
-| オフライン運用 | （空欄: 会場回線の有無・ローカルのみで走らせるか） | 人間 |
+| デモ機 | Vaio Z または Vaio S14。リハ 1（10/25）で Z を試し本番機を決定。もう一台は予備機として会場へ（両機とも本手順で同一状態にし、切替は HDMI 差し替えのみ） | 統括 |
+| 実行環境 | WSL2（Ubuntu）上で Rails、Windows 側 Chrome で `localhost:3000` | 統括 |
+| Ruby | 4.0.7（rbenv。`.ruby-version`、`Dockerfile` `ARG RUBY_VERSION`） | `893aa7f` |
+| Node／sushi | Node 18 ＋ fsh-sushi 3.16.0（`rake fsh:verify` 用、任意） | 統括、`lib/tasks/fsh.rake:50` |
+| Chromium | system spec（`js: true`）用。壇上の表示は Windows 側 Chrome | 統括、`spec/rails_helper.rb:12` |
+| DB | SQLite（development、`storage/development.sqlite3`）。`rake demo:reset` で既知状態へ。所要 **3.2 秒／2.5 秒**（本開発機で 2 回実測、2026-10-12。デモ機では再計測して上書き） | 実測 |
+| ネットワーク | **オフライン前提、外部呼び出し無し**。importmap は gem 同梱の turbo／stimulus、CDN 無し。CKM URL 取り込みと `fsh:verify` は台本に乗せない | `config/importmap.rb`、`templates_controller.rb:162-185` |
+| 表示 | 会場は 16:9・HDMI-A・解像度不明 → **設計値 1280×720**。ブラウザは 1280×720 相当（表示スケーリングで調整）、ミラーリング（複製）モード。system spec のビューポートを 1280×720 で pin（ナビ折返し・表幅・横スクロール無し） | 統括、plan 6 節 |
+| 荷物 | 予備機・HDMI ケーブル・USB-C→HDMI 変換・電源 | 統括 |
+| 復旧手順 | サーバ再起動 → `bin/rails demo:reset` → 台本の第 1 幕から | 統括 |
 
 ## 2. 初期状態を作る
 
