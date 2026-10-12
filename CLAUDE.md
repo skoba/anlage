@@ -113,6 +113,7 @@ red は例外報告として扱う（2026-08-24導入。CI整備後、凍結受�
 - マイルストーン: **2026-11-05 デモビルド凍結 ／ 2026-11-12 デモ本番**（医療情報学連合大会チュートリアル）／ **2026-12 世界公開**（OSS一式・動画・被覆レポート）
 - 11/5凍結の受入条件: `bundle exec rspec spec/demo/` green（デモクエリ全件の期待件数一致。`docs/demo/aql-queries.md`・`docs/design/demo-queries-plan.md` 5節）。**デモクエリ4件全てを実際のフォーム保存経路（POST）経由のspecで検証済み**。加えて **実ブラウザの操作列 system spec（`spec/system/demo_problem_list_spec.rb`、`js: true`）が green** であること（2026-09-25 追加。openehr-rails 0.5.0 以来の外部値集合 DV_CODED_TEXT の空 select が POST 直叩き spec では隠れていた `skoba/anlage#33` の再発防止——壇上の操作列は実ブラウザでしか検証されない）
 - `README.md`の「Current focus」節は各フェーズのゲート承認時に更新する
+- UI 文言を固定する spec は `docs/demo/ui-vocabulary.md`（正典）に追随する。文言 pin は regression pin ではなく語彙表の写しなので、語彙表と同一コミットで更新する（2026-10-12、`skoba/anlage#47` 裁定 G）
 
 ## ビルド・テストコマンド
 

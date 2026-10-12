@@ -70,3 +70,13 @@ Phase 3 の進行記録。計画: `docs/design/demo-integration-plan.md`。連�
 ### 6. 上流の状態（読み取りのみ、openehr-rails）
 
 AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unreleased に #45（SECTION/INSTRUCTION/ACTIVITY の読み戻し）・#52（rm_type_alternatives）・#49 が入っている（`CHANGELOG.md` Unreleased、PR #51/#53/#54）。リリースは未。Anlage の lock は 0.7.1。締切 10/20 までに 0.8.0 が出なければ既存キャスト（デモクエリ 4 件）のみ（plan 4 節）。
+
+---
+
+## R2: plan 承認（裁定 A〜G＋追加裁定）と文書反映（2026-10-12）
+
+- ゲート報告 (a) に対し統括が plan を承認（判断 A〜G と FHIR id 衝突の追加裁定。`docs/design/demo-integration-plan.md` 9 節に転記）。実装は 10/14〜10/24、リハ 1 10/25、順序は 7 節どおり
+- 反映した文書: plan（状態・yml の 6 区分と出典・編集済みフラグ・サンプル Composition 5 件・台本の FHIR 行・9 節）、`docs/demo/ui-vocabulary.md`（新設、正典。「カルテ記録」「帳票に入力」）、`docs/ideas-2027.md`（GDL2 評価器の差し替え点）、`CLAUDE.md`（UI 文言 spec は語彙表に追随）、`docs/backlog.md` 15・`docs/upstream-candidates.md` 23（FHIR id 衝突）、`README.md` Current focus、`docs/demo/setup.md`（D 反映、E 未受領）
+- 起票: [skoba/openehr-rails#55](https://github.com/skoba/openehr-rails/issues/55)（FHIR `profile_id` の archetype 単位衝突。裁定により次回覚醒を待たず起票）
+- 未受領: 裁定 E の 1 段落（デモ機・オフライン・DB）。届き次第 `docs/demo/setup.md` 1 節へ
+- main の CI: scan_ruby は brakeman 8.1.0（`--ensure-latest`）で `893aa7f` から赤のまま（R1 と同じ。dependabot #44 の扱いは未裁定）

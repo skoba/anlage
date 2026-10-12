@@ -60,21 +60,21 @@ Anlageが実証しようとしているのは、openEHR標準の役割の転換�
 
 ## Current focus
 
-（2026-09-25 更新。`CLAUDE.md`「READMEの『Current focus』節は各フェーズのゲート
-承認時に更新する」に沿った更新。前回記載「次は検索層（WP3）」からの追随漏れを
-まとめて反映）
+（2026-10-12 更新。Phase 3 デモ統合 `#47` の plan ゲート承認時）
 
 - 完了: 保存経路の修復（`#9`／`#10`）、WP2（パスカード抽出）、WP3（索引・
   検索層、`#12`）、WP4（検索評価ハーネス、`#14`）、FSH エクスポート
-  （`#17`、`rake fsh:export`／`fsh:verify`）
+  （`#17`、`rake fsh:export`／`fsh:verify`）、凍結前バッチ（`#32`〜`#39`）、
+  `rake demo:reset` 第一実装（`#47`）
 - 11/5 凍結の受入条件（`bundle exec rspec spec/demo/` green、デモクエリ 4 件を
-  POST 経路の spec で検証済み）は **充足済み**
-- 依存: openehr 2.4.3／openehr-rails 0.7.0（2026-09-25。FHIR facade の
-  `Condition.component` 問題が解消し、Sushi 検証は fixture 5 件とも 0 Errors、
-  [`docs/reports/fsh-log.md`](docs/reports/fsh-log.md) R8）
-- **次**: jp_referral（診療情報提供書 v2）の受入 `#23`——初版 OPT の診断ドロップ
-  → 骨格契約 §7 の at-code 転記（v2.1）→ fixture 化 → 統合 spec
-  （[`docs/reports/referral-intake-log.md`](docs/reports/referral-intake-log.md)）
+  POST 経路の spec で検証済み、実ブラウザ system spec green）は **充足済み**
+- 依存: openehr 2.4.3／openehr-rails 0.7.1、Ruby 4.0.7
+- **次**: Phase 3 デモ統合 `#47`（実装 10/14〜10/24、リハ 1 10/25）——
+  共通ナビ・保存後の次アクション → 取り込み画面 → UI 語彙（`docs/demo/ui-vocabulary.md`）
+  → BMI 自動計算（`config/form_behaviors.yml`）→ `demo:reset` 第二実装
+  （[`docs/design/demo-integration-plan.md`](docs/design/demo-integration-plan.md)、
+  [`docs/reports/demo-integration-log.md`](docs/reports/demo-integration-log.md)）。
+  jp_referral の受入 `#23` (4) は rails 0.8.0（#45）待ち
 
 ## 進行の追い方
 

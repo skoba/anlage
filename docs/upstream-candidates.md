@@ -527,3 +527,14 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 提案: 埋め込みルートは `[archetype_id]` 述語で書く（パスカード・AQL と一致）、name は自アーキタイプの concept、`units_list`（全 list item の units）を additive で載せる
 - 還流先: openehr-rails
 - ステータス: **Anlage 側で迂回済み**。正式起票は openehr-rails の次回覚醒（#45／0.8.0）で本台帳の項番を添えて中継する（裁定 2026-09-25）
+
+## 23. FHIR `profile_id` が archetype_id だけから id を作り、同じアーキタイプを使う 2 テンプレートの StructureDefinition が衝突する
+
+- 発見日: 2026-10-12（`skoba/anlage#47` explore、`docs/reports/demo-integration-log.md` R1 5 節）
+- 対象: openehr-rails 0.7.1 `lib/openehr_rails/fhir/profile_generator.rb:203-204`（`"openehr-#{archetype_id.delete_prefix('openEHR-EHR-').parameterize.dasherize}"`）、`fsh_generator.rb:203`（同じ）
+- 実測: `ProfileGenerator.new(opt).profiles.map { _1[:id] }` → ProblemList `["openehr-evaluation-problem-diagnosis-v1"]`、jp_referral `["openehr-evaluation-problem-diagnosis-v1", "openehr-observation-story-v1"]`。両テンプレートの problem_diagnosis は制約が違う（jp_referral は at0002 の ICD-11 束縛・at0077 を持つ）のに同 id
+- Anlage 側: facade は先勝ち（`fhir/profiles_controller.rb:24-29`）。凍結前は暫定しない（`docs/backlog.md` 15）
+- 提案: id／url／name をテンプレートで修飾する（またはオプション）。JSON と FSH は 1 つの表から導出する
+- 還流先: openehr-rails
+- ステータス: **起票済み** [skoba/openehr-rails#55](https://github.com/skoba/openehr-rails/issues/55)（2026-10-12、裁定により次回覚醒を待たず起票）
+

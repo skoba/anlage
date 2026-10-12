@@ -237,3 +237,10 @@ Designer／ADL Workbench／LinkEHR／HMC／Better Archetype Designer。
 - 精度セレクタ（年／年月／年月日）: 「2020 年頃発症」を `2020`（年精度）として正しく表す UI。#35 は `type="date"`（年月日）＋時刻（任意）までで、年・年月の入力経路は無い（validator・builder は `YYYY`／`YYYY-MM` を既に受ける）。前提: openehr-ruby#59（DvDateTime の日付のみ）と `docs/upstream-candidates.md` 21 項（RM グラフの datetime 列が部分精度を落とす）の解消
 - DV_DURATION（ISO 8601 duration）・DV_INTERVAL（下限／上限）の入力欄。現 fixture に該当要素は無い
 - 帳票パイプライン（10 月）の `capture.rules`（`docs/design/pathcards-schema-v1.md` 1 節 `era_date` 等）と同じ節で設計する
+
+## 15. FHIR StructureDefinition id のアーキタイプ単位衝突は gem 側（rails #55）、凍結前は anlage で暫定しない（2026-10-12、`#47` 追加裁定）
+
+- 実測: `OpenehrRails::Fhir::ProfileGenerator#profile_id`（0.7.1 `profile_generator.rb:203-204`、FSH も同じ）は archetype_id だけから id を作るため、ProblemList と jp_referral の problem_diagnosis は同 id `openehr-evaluation-problem-diagnosis-v1`。anlage の facade（`app/controllers/fhir/profiles_controller.rb:24-29`）は全 active テンプレートを平坦化して先勝ちで返す
+- 裁定: 問題は gem の profiles 設計なので rails に起票（[skoba/openehr-rails#55](https://github.com/skoba/openehr-rails/issues/55)、`docs/upstream-candidates.md` 23 項）。**凍結前は anlage 側で「テンプレート修飾 id」を暫定しない**
+- 台本への影響: jp_referral の FHIR は FSH 出力（`rake fsh:export`、テンプレートごとに別プロジェクト）で見せ、HTTP facade は ProblemList のみ（`docs/design/demo-integration-plan.md` 6 節）
+

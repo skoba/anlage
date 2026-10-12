@@ -12,7 +12,7 @@
 | JS | importmap。gem 同梱の turbo／stimulus をピン、CDN 無し → **オフラインで動く** | `config/importmap.rb`、layout |
 | ネットワークが要る操作 | CKM URL 取り込み（台本に無い）、`rake fsh:verify`（sushi、任意） | `templates_controller.rb:162-185`、`fsh.rake:43-64` |
 | ブラウザ | Chrome／Chromium（壇上）。`js: true` system spec のローカル実行にも同じものが要る | `spec/rails_helper.rb:12` |
-| デモ機 | （空欄: 機種・OS・解像度） | 人間 |
+| デモ機 | （空欄: 機種・OS・解像度。裁定 E で人間供給、未受領） | 人間 |
 | オフライン運用 | （空欄: 会場回線の有無・ローカルのみで走らせるか） | 人間 |
 
 ## 2. 初期状態を作る
@@ -31,7 +31,7 @@ bin/rails server
 - `compositions`＝0、`openehr_rm_*`／`openehr_ehrs`＝0
 - 何度実行しても同じ（リハの合間に打ち直してよい）。production では abort
 
-（plan の第二実装で追加予定: AQL 幕の既知データ＝サンプル Composition の投入。裁定 D）
+（plan の第二実装で追加: AQL 幕の既知データ＝サンプル Composition 5 件（ProblemList 2・CardiologyEncounter 1・LabResultReport 1・bmi 1）。裁定 D、2026-10-12）
 
 ## 3. 壇上で使うファイル
 

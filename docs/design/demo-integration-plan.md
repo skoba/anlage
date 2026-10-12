@@ -1,7 +1,7 @@
 # 計画: Phase 3 デモ統合 — 4 幕＋パスカード検索を壇上で一本の流れとして歩ける（`skoba/anlage#47`）
 
 - Issue: `skoba/anlage#47`（goal）。関連: `#30`（jp_referral の保存経路、preview_only の根拠）、`#39`（CompositionReader、対応済み）、`#23`（jp_referral 受入）
-- 状態: **承認待ち（ゲート報告 (a)、10/13 目途）**。承認前にコードは書かない（CLAUDE.md 規律 1）。例外は裁定 2026-10-12 で先行実装した `rake demo:reset` 第一実装（`docs/reports/demo-integration-log.md` R1 3 節）
+- 状態: **承認済み（2026-10-12、裁定 A〜G＋追加裁定。9 節）**。実装 10/14〜10/24、リハ 1 10/25。先行実装は `rake demo:reset` 第一実装（`docs/reports/demo-integration-log.md` R1 3 節）。語彙の正典は `docs/demo/ui-vocabulary.md`
 - 日程: 実装 10/14〜10/24、リハ 1 10/25、凍結 11/5。AQL の 0.8.0 同乗は締切 10/20
 - 変更は 6 種に限定: **共通ナビ／保存後の次アクション／取り込み画面／UI 語彙表の一括適用／BMI form_behaviors／demo:reset**。新機能は BMI のみ。各場面を実ブラウザ system spec 1 本で固定する（台本対応表の行＝spec の操作列）
 
@@ -19,8 +19,8 @@
 
 ## 1. 変更 1: 共通ナビ＋flash（layout）と保存後の次アクション
 
-- layout に `<nav>`（テンプレート／記録一覧／パスカード検索／AQL 照会）と flash 表示を足す。AQL は `/openehr/query` への外部リンク（engine 側 nav は gem のまま）
-- `compositions/show`: 見出し「記録: <テンプレート名>」、flash「保存しました」、次アクション（同じ帳票をもう 1 件 `/forms/:template_id`／記録一覧／AQL 照会／FHIR プロファイル `/fhir/r5/StructureDefinition/<先頭 id>`）。canonical JSON は折りたたみ（`<details>`）
+- layout に `<nav>`（テンプレート／カルテ記録一覧／パスカード検索／AQL 照会）と flash 表示を足す。AQL は `/openehr/query` への外部リンク（engine 側 nav は gem のまま）
+- `compositions/show`: 見出し「カルテ記録: <テンプレート名>」、flash「保存しました」、次アクション（同じ帳票にもう 1 件入力 `/forms/:template_id`／カルテ記録一覧／AQL 照会／FHIR プロファイル `/fhir/r5/StructureDefinition/<先頭 id>`）。canonical JSON は折りたたみ（`<details>`）
 - spec: `spec/system/demo_save_next_actions_spec.rb`（js: true。CardiologyEncounter を保存 → flash と 4 リンクが見える → 「もう 1 件」で帳票に戻る）＋request spec（layout の nav が全画面に出る）
 
 ## 2. 変更 2: 取り込み画面
@@ -31,13 +31,13 @@
 - 版の並記: `Template.build_web_template` が `sem_ver` を web_template に載せる（`opt.description.other_details["sem_ver"]`、無ければ nil）。カード・試着室・supersede 文に「登録版 v1.0.0／テンプレート版 0.2.0」。既登録分は `demo:reset`（dev）または `templates:rebuild_web_template` で追随
 - spec: `opt_dropzone_spec`（文言更新＋受付表示＋版の並記）、Template spec（`sem_ver`）、view spec（オーバーレイの class 切替は JS なので system spec 側で `have_css("#dropzone_overlay.visible", visible: false)` は使わず、CSS の存在は `spec/requests` で stylesheet 本文を読む pin で足りる）
 
-## 3. 変更 3: UI 語彙表の一括適用（成果物 `docs/demo/ui-vocabulary.md`）
+## 3. 変更 3: UI 語彙表の一括適用（正典 `docs/demo/ui-vocabulary.md`、裁定 F で確定）
 
 | 対象 | 画面見出し | ボタン／ラベル | 台本での呼び名 | 現状（置換元） |
 |---|---|---|---|---|
 | テンプレート（OPT） | テンプレートの取り込み | ファイルを選択／URLから取り込む／登録／破棄 | テンプレート | Templates／試着室／Drop the .opt file…／Drop an .opt file anywhere… |
-| 帳票（フォーム） | <テンプレート名> | 帳票を開く／保存 | 帳票 | Open form／送信 |
-| 記録（Composition） | 記録一覧／記録: <テンプレート名> | 保存しました | 記録 | Compositions／composition／Registered:／登録しました |
+| 帳票（フォーム） | <テンプレート名> | 帳票に入力／保存 | 帳票 | Open form／送信 |
+| カルテ記録（Composition） | カルテ記録一覧／カルテ記録: <テンプレート名> | 保存しました | カルテ記録（「カルテ記録として保存」） | Compositions／composition／Registered:／登録しました |
 | パスカード | パスカード検索 | 探したい項目／検索 | パスカード | Pathcard search／Query／Search／Template／Archetype／Node |
 | AQL 照会 | （gem の console） | AQL 照会（nav） | AQL 照会 | AQL Query |
 | FHIR プロファイル | — | FHIR プロファイル（リンク） | FHIR プロファイル | — |
@@ -45,13 +45,15 @@
 | 空状態 | — | テンプレートが未登録です。OPT ファイルを選択して取り込んでください | — | No templates registered yet… |
 | 取り込み結果 | 記入済みの帳票／アーキタイプ（テンプレートではありません） | 閉じる | — | 記入済みフォーム／ADLアーキタイプ |
 
-- 適用は 1 コミット（view と spec の文言を同時に）。語彙表の確定（特に「帳票」「記録」）はゲート判断 F
+- 適用は 1 コミット（view と spec の文言を同時に。裁定 G: 文言 pin は regression pin ではなく語彙表の写しなので語彙表と同一コミットで更新）。CLAUDE.md に「UI 文言を固定する spec は `docs/demo/ui-vocabulary.md` に追随する」を追記済み
 
 ## 4. 変更 4: BMI form_behaviors（新機能はこれだけ）
 
 - 宣言 `config/form_behaviors.yml`（template_id → behaviors）:
 
 ```yaml
+# 帳票の振る舞い（skoba/anlage#47）。rules は GDL2 の rule/when と同型で、12 月の GDL 評価器導入時は
+# この yml を GDL2 ガイドラインへ差し替える（docs/ideas-2027.md）。式は安全サブセットのみ（plan 4 節）
 bmi_calculation:
   - target: body_mass_index
     inputs: [height, body_weight]
@@ -61,28 +63,34 @@ bmi_calculation:
     editable: false        # 画面は readonly、サーバが常に再計算（権威）
   - target: body_mass_index_at0013
     inputs: [body_mass_index]
-    cases:                  # 判定は値域 → 文言（GDL2 の rule/when と同型）
+    # 出典: 日本肥満学会「肥満症診療ガイドライン」の肥満度分類（BMI 区分、4.0 版の表記）。WHO 文言は採らない
+    cases:
       - when: "body_mass_index < 18.5"
         value: 低体重
       - when: "body_mass_index < 25"
         value: 普通体重
       - when: "body_mass_index < 30"
         value: 肥満（1度）
-      - else: 肥満（2度以上）
+      - when: "body_mass_index < 35"
+        value: 肥満（2度）
+      - when: "body_mass_index < 40"
+        value: 肥満（3度）
+      - else: 肥満（4度）
     on: input
     editable: true         # 提案。空欄のときだけサーバが埋め、編集済みは尊重
 ```
 
 - 式は GDL2 互換の安全サブセット: 数値・識別子（inputs 名）・`+ - * / ^`・括弧・`round(x, n)`・比較 `< <= > >= == !=`。`eval` は使わず `Opt::Formula`（再帰下降、トークン集合を閉じる）で評価。未知の識別子・関数は `Opt::Formula::Error`
 - サーバ: `Opt::FormBehaviors.apply(template, values)` を `CompositionsController#create` の `FormValidator` の**前**に通す（`compositions_controller.rb:21`）。`editable: false` の target は inputs が揃えば上書き、`editable: true` は blank のときだけ埋める。builder は変えない（値は values に入って従来経路で保存される）
+- 編集済みフラグ（裁定 C 追加）: `editable: true` の target を人間が書き換えたら、クライアントは hidden `values[<target>__edited]=1` を立て、以後の再計算でその target を上書きしない（壇上で判定を手で直した直後に身長を直しても提案が戻らない）。サーバも `__edited` が立っていれば blank 補完をしない。system spec で pin
 - クライアント: `app/javascript/controllers/form_behaviors_controller.js`。`forms/show` が `data-form-behaviors-rules-value` に yml 由来 JSON を出し、`input` イベントで同じ式を JS 側の小評価器で計算して target に書く。**評価器は 2 実装**（Ruby／JS）になるので、yml の式例を両方で同じ値にする spec（Ruby: unit、JS: system spec で画面値）を置く。GDL2 評価器本体は 12 月（`docs/ideas-2027.md` へ退避）
 - spec: `spec/lib/opt/formula_spec.rb`（四則・累乗・round・比較・エラー）、`spec/lib/opt/form_behaviors_spec.rb`（bmi: 170/65 → 22.5・普通体重、editable の挙動）、request（POST で body_mass_index を書き換えても再計算値で保存）、`spec/system/demo_bmi_spec.rb`（js: 170/65 入力 → 22.5 と判定が即時表示 → 保存 → AQL で height>170 は 0 行、>=170 で 1 行）
-- 判断: (A) 判定の表現を `cases` にしてよいか（`formula` だけでは文言を返せない）、(B) 閾値と文言＝日本肥満学会（18.5／25／30）か WHO 文言か、(C) `editable` の意味（上記）
+- 裁定済み（9 節）: (A) `cases` 承認、(B) 日本肥満学会の 6 区分を正式表記で（else で畳まない）、(C) 上記＋編集済みフラグ
 
 ## 5. 変更 5: `demo:reset` 第二実装（第一実装は R1 で済）
 
-- サンプル Composition: AQL 幕の既知データとして `spec/demo/aql_queries_spec.rb` と同じ投入（bmi 165/170/180、ProblemList 診断確度 3 件・認識日時 2 件）を `Opt::RmCompositionCommitter` 経由で入れる → デモクエリ 4 件の期待件数が初期状態で成立。判断 (D): 投入するか（壇上で入力して見せるなら 0 件のままが分かりやすい）
-- `docs/demo/setup.md` の空欄（デモ機・オフライン・DB）を人間が埋める（判断 (E)）
+- サンプル Composition（裁定 D: 入れる。壇上の入力が 1 件失敗しても第 3 幕が空にならない）: `Opt::RmCompositionCommitter` 経由（フォーム保存経路と同じ値→RM グラフ）で 5 件——ProblemList 2 件（ICD-11 コード付き 1＝at0002 を coded で／自由記述 1＝DV_TEXT。代替制約の実演）、CardiologyEncounter 1、LabResultReport 1（数値 > 50）、bmi 1（170/65）。壇上入力は「1 件足す」演出。jp_referral のサンプルは 0.8.0 bump 後。spec は template_id と件数・AQL の行で固定（`demo_reset_spec` に例を追加）
+- `docs/demo/setup.md` の空欄（デモ機・オフライン・DB）は人間供給（裁定 E。本報告時点で段落は未受領）
 
 ## 6. 台本対応表（各行＝system spec 1 本の操作列）
 
@@ -94,7 +102,7 @@ bmi_calculation:
 | 2 帳票 | `/forms/bmi_calculation` | 身長 170・体重 65 | BMI 22.5・判定「普通体重」が自動、保存 → 記録画面に flash と次アクション | `demo_bmi_spec` |
 | 2' | `/forms/ProblemList` | 既存の操作列 | 既存 | `demo_problem_list_spec`（文言のみ更新） |
 | 3 AQL | `/openehr/query` | クエリ 1（既定文字列）を実行 | height > 170 の行 | request/integration（engine は gem。spec は `OpenehrRails::Aql::Executor` で件数固定＝既存 `spec/demo/`） |
-| 4 FHIR/FSH | `/fhir/r5/StructureDefinition/openehr-observation-story-v1`、`tmp/fsh/jp_referral-1.0.0/input/fsh/` | 記録画面の「FHIR プロファイル」リンク／`bin/rails fsh:export` | JSON／FSH ファイル | `fhir_profiles_spec`（既存）＋`spec/tasks/fsh_spec`（既存） |
+| 4 FHIR/FSH | HTTP facade は **ProblemList のみ**（`/fhir/r5/StructureDefinition/openehr-evaluation-problem-diagnosis-v1`、カルテ記録画面の「FHIR プロファイル」リンク）。jp_referral は **FSH 出力**（`bin/rails fsh:export` → `tmp/fsh/jp_referral-1.0.0/input/fsh/*.fsh`） | リンク／コマンド | JSON／FSH ファイル | `fhir_profiles_spec`（既存）＋`spec/tasks/fsh_spec`（既存）。id 衝突は rails #55（追加裁定、`docs/backlog.md` 15） |
 
 AQL の 0.8.0 同乗分（SECTION／INSTRUCTION の読み戻しで jp_referral を AQL に出す）は 10/20 までに rails 0.8.0 が出た場合のみ追加（lock bump → `spec/integration/jp_referral_aql_spec.rb` の pending 解除を確認）。出なければ既存キャスト 4 件のまま
 
@@ -109,12 +117,18 @@ AQL の 0.8.0 同乗分（SECTION／INSTRUCTION の読み戻しで jp_referral �
 
 各コミットは Red→Green、`Refs #47`。DoD: 10/25 リハ 1 までに 6 節の全行が CI green（Chromium 導入後はローカルでも）。`History` 相当は Anlage に無いので log R2〜 に記録
 
-## 8. 承認が要る判断（ゲート）
+## 8. 承認が要った判断（ゲート、2026-10-12 に裁定済み → 9 節）
 
-- **A** 判定の `cases` 表現（4 節）
-- **B** BMI の閾値・文言（日本肥満学会 18.5／25／30 を既定案）
-- **C** `editable` の意味（false＝readonly＋サーバ上書き、true＝提案＋blank のみ補完）
-- **D** reset にサンプル Composition を入れるか（入れると AQL 幕が初期状態で成立、入れないと壇上入力で見せる）
-- **E** setup.md の空欄（デモ機・オフライン・DB）
-- **F** 語彙表の確定（「帳票」「記録」「テンプレートの取り込み」）
-- **G** 試着室の改名で spec 4 本の文言を更新してよいか（regression pin ではなく文言追随）
+A 判定の `cases` 表現／B BMI の閾値・文言／C `editable` の意味／D reset のサンプル Composition／E setup.md の空欄／F 語彙表／G 試着室改名に伴う spec 文言の更新
+
+## 9. 裁定（2026-10-12、統括）
+
+- **A**: 承認。「GDL2 の rule/when と同型」を yml 冒頭コメントと `docs/ideas-2027.md` に残す（12 月の GDL 評価器への差し替え点）
+- **B**: 日本肥満学会の区分を 4.0 版の正式表記で: <18.5 低体重／18.5–25 普通体重／25–30 肥満（1度）／30–35 肥満（2度）／35–40 肥満（3度）／≥40 肥満（4度）。else で「2度以上」と畳まない。WHO 文言は採らない（日本の紹介状の語彙＝記録語彙を優先）。出典を yml コメントに 1 行
+- **C**: 承認（false＝readonly＋サーバが常に上書き、true＝提案＋blank のみ補完）。加えて「editable: true で人間が上書きした値は再計算で消さない」を system spec で pin（編集済みフラグ）
+- **D**: 入れる。ProblemList 2（ICD-11 コード付き 1・自由記述 1）、CardiologyEncounter 1、LabResultReport 1（数値 > 50）、bmi 1（170/65）。壇上入力は「1 件足す」演出。jp_referral は 0.8.0 bump 後
+- **E**: 人間供給（1 段落）。未受領
+- **F**: 承認、2 点修正——「記録」→「カルテ記録」、「帳票を開く」→「帳票に入力」。`docs/demo/ui-vocabulary.md` を正典に
+- **G**: 承認。語彙表と同一コミットで spec 文言を更新。CLAUDE.md に 1 行追記
+- **追加裁定（0 節 7）**: FHIR プロファイル id のアーキタイプ単位衝突は rails 起票（[skoba/openehr-rails#55](https://github.com/skoba/openehr-rails/issues/55)、`docs/upstream-candidates.md` 23 項）。凍結前は anlage 側で「テンプレート修飾 id」を暫定しない。台本では jp_referral の FHIR は FSH 出力で見せ、HTTP facade は ProblemList のみ（`docs/backlog.md` 15、6 節）
+- 実装順は 7 節どおり: 保存後動線＋ナビ → 取り込み画面 → 語彙 → BMI → reset 第二実装
