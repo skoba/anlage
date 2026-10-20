@@ -159,3 +159,21 @@ RSpec.describe Template, "#38 埋め込み CLUSTER の field" do
     expect(template.web_template["form_capability"]).to eq("saveable")
   end
 end
+
+# skoba/anlage#47 変更 1: カルテ記録画面の次アクション「FHIR プロファイル」のリンク先。
+# id は facade（`/fhir/r5/StructureDefinition/:id`）と同じ ProfileGenerator から導く
+# （実測値は docs/reports/demo-integration-log.md R1 5 節）。
+RSpec.describe Template, "#47 fhir_profile_ids" do
+  def template_of(fixture)
+    Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture}").read)
+  end
+
+  it "ProblemList は problem_diagnosis の 1 本" do
+    expect(template_of("ProblemList.opt").fhir_profile_ids).to eq([ "openehr-evaluation-problem-diagnosis-v1" ])
+  end
+
+  it "patient_blood_pressure.v1 は OPT のエントリ順に 2 本" do
+    expect(template_of("patient_blood_pressure.opt").fhir_profile_ids)
+      .to eq([ "openehr-observation-heart-rate-pulse-v1", "openehr-observation-blood-pressure-v1" ])
+  end
+end

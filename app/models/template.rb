@@ -85,6 +85,11 @@ class Template < ApplicationRecord
     (web_template || {})["form_capability_reason"]
   end
 
+  # facade（Fhir::ProfilesController）と同じ ProfileGenerator から導く（skoba/anlage#47）
+  def fhir_profile_ids
+    OpenehrRails::Fhir::ProfileGenerator.new(OpenehrRails::Opt.parse(source_xml)).profiles.map { _1[:id] }
+  end
+
   # ENTRY 自身のルート（インスタンス）の term_definitions。同一アーキタイプの複数 ENTRY
   # （clinical_synopsis ×2）は entries の並び＝文書順で出現順に結ぶ。埋め込み CLUSTER
   # ルート配下の field は gem のラベルのまま（現 fixture に複数インスタンスの例が無い）。
