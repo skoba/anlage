@@ -163,3 +163,14 @@ AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unrelease
 - js 以外 192 examples, 0 failures, 3 pending。dev の `bin/rails demo:reset` 3.14 秒／2.80 秒（2 回、`templates=5 compositions=5 rm_compositions=6`）。`docs/demo/setup.md` を更新
 - 文書: `docs/demo/aql-queries.md` 5 節、`docs/demo/setup.md` 2 節、plan 5 節、`docs/upstream-candidates.md` 25 項
 
+
+---
+
+## R11: 変更 4（BMI form_behaviors、4 薄切り）（2026-10-20）
+
+- 1/4 `Opt::Formula`: Red `uninitialized constant` → Green。初回 Green で `-2 ^ 2` が 4 になった（単項マイナスを累乗より強く結合させていた）→ 文法を `unary := "-" unary | power`、`power := primary ("^" unary)?` に直して 5 例 green（右結合 `2 ^ 3 ^ 2 = 512`、未知の識別子・関数・記号は `Opt::Formula::Error`）
+- 2/4 `Opt::FormBehaviors`＋`config/form_behaviors.yml`（plan 4 節の宣言そのまま）: Red `uninitialized constant` → Green 15 例（170/65 → 22.5・普通体重、editable: false の上書き、editable: true の空欄のみ補完、`__edited` で埋めず values から除く、inputs 欠けは不計算、日本肥満学会 6 区分の境界 8 点〔「未満」で切る〕、宣言無しは不変、`rules_for`）
+- 3/4 controller: Red（送った BMI 99 がそのまま保存）→ `CompositionsController#create` で `FormValidator` の前に `FormBehaviors.apply` → Green。既存デモクエリ 1（BMI 21.6・判定 "normal" を送る）は BMI が再計算値に置き換わるだけで件数不変
+- 4/4 クライアント: request spec（帳票が rules を data 属性で渡す）は**ローカルで Red** → 実装中に発見: **YAML 1.1 では鍵 `on:` が真偽値 `true` になる**（plan 4 節の宣言のままだと rules の鍵が `true`）→ `"on":` と引用、`rules_for` の spec に `"on" => "input"` を足して pin。system spec `demo_bmi_spec`（170/65 → 22.5 readonly・普通体重 → 保存 → AQL `> 170` 0 行／`>= 170` 1 行。判定を手で直した後に身長を 180 に直しても判定は手の値のまま、BMI は 20.1）は **CI で Red**（ブランチ `change4-bmi-client`、draft PR #55、run `39439469971`: 予定の 3 failures）→ Green（run `39439764042`、226 examples, 0 failures, 3 pending）。一時コミットは squash
+- 評価器は Ruby（`app/lib/opt/formula.rb`）と JS（`form_behaviors_controller.js` の `evaluateFormula`）の 2 実装。同じ値になることは BMI の 2 例（22.5／20.1）で画面値として固定。丸めは JS 側も Ruby の `Float#round` と同じく 0 から遠い側
+- #47 の受入 (6) を満たす
