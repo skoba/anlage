@@ -7,7 +7,8 @@
 |---|---|---|---|---|
 | テンプレート（OPT） | テンプレートの取り込み | ファイルを選択／URLから取り込む／登録／破棄 | テンプレート | Templates／試着室／Drop the .opt file to try it on／Drop an .opt file anywhere, or click to choose |
 | 帳票（フォーム） | <テンプレート名> | 帳票に入力／保存 | 帳票 | Open form／送信 |
-| カルテ記録（Composition） | カルテ記録一覧／カルテ記録: <テンプレート名> | 保存しました（flash） | カルテ記録（「カルテ記録として保存」） | Compositions／composition／Registered:／登録しました |
+| カルテ記録（Composition） | カルテ記録一覧／カルテ記録: <テンプレート名> | 保存しました（flash）／保存日時／同じ帳票にもう 1 件入力・カルテ記録一覧・AQL 照会・FHIR プロファイル（次アクション）／canonical JSON（折りたたみ） | カルテ記録（「カルテ記録として保存」） | Compositions／composition／Registered:／登録しました |
+| 共通ナビ（layout） | — | テンプレート／カルテ記録一覧／パスカード検索／AQL 照会 | — | （無し） |
 | パスカード | パスカード検索 | 探したい項目／検索 | パスカード | Pathcard search／Query／Search／Template／Archetype／Node |
 | AQL 照会 | （openehr-rails engine の console、文言は gem のまま） | AQL 照会（nav のリンク名） | AQL 照会 | AQL Query |
 | FHIR プロファイル | — | FHIR プロファイル（カルテ記録画面のリンク） | FHIR プロファイル | — |

@@ -1,4 +1,18 @@
-<h1><%= @composition.template.template_id %></h1>
-<p>Registered: <%= @composition.created_at %></p>
+<% template = @composition.template %>
+<h1>カルテ記録: <%= template.web_template["concept"] || template.template_id %></h1>
+<p>保存日時: <%= @composition.created_at %></p>
 
-<pre><%= JSON.pretty_generate(@composition.rm_composition) %></pre>
+<%# skoba/anlage#47: 保存後の次アクション（文言は docs/demo/ui-vocabulary.md） %>
+<nav id="next_actions">
+  <%= link_to "同じ帳票にもう 1 件入力", form_path(template.template_id) %>
+  <%= link_to "カルテ記録一覧", compositions_path %>
+  <%= link_to "AQL 照会", openehr_rails.query_console_path %>
+  <% if (profile_id = template.fhir_profile_ids.first) %>
+    <%= link_to "FHIR プロファイル", "/fhir/r5/StructureDefinition/#{profile_id}" %>
+  <% end %>
+</nav>
+
+<details>
+  <summary>canonical JSON</summary>
+  <pre><%= JSON.pretty_generate(@composition.rm_composition) %></pre>
+</details>

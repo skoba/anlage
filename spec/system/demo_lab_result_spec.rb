@@ -13,6 +13,9 @@ RSpec.describe "デモ動線: LabResultReport のフォーム入力→保存→A
     fill_in "field_laboratory_test_analyte_at0001__units", with: "mg/dL"
     click_button "送信"
 
+    # skoba/anlage#47 変更 1: 保存後は flash とカルテ記録画面。canonical JSON は折りたたみを開いて見る
+    expect(page).to have_css("#flash", text: "保存しました")
+    find("summary", text: "canonical JSON").click
     expect(page).to have_content("COMPOSITION")
     expect(Composition.count).to eq(1)
 

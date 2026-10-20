@@ -31,6 +31,6 @@ class CompositionsController < ApplicationController
       rm_composition: commit.canonical_hash,
       uid: commit.uid
     )
-    redirect_to composition_path(composition), notice: "登録しました"
+    redirect_to composition_path(composition), notice: "保存しました"
   end
 end

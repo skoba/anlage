@@ -22,6 +22,7 @@ RSpec.describe "OPT-driven forms", type: :system do
     click_button "送信"
 
     expect(Composition.count).to eq(1)
-    expect(page).to have_content("COMPOSITION")
+    expect(page).to have_css("#flash", text: "保存しました")
+    expect(page).to have_css("h1", text: "カルテ記録: COLNEC Patient Blood Pressure.v0")
   end
 end
