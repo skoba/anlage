@@ -13,13 +13,13 @@ RSpec.describe "OPT-driven forms", type: :system do
     fill_in "field_blood_pressure_systolic", with: "9999"
     fill_in "field_blood_pressure_diastolic", with: "80"
     fill_in "field_heart_rate_pulse", with: "70"
-    click_button "送信"
+    click_button "保存"
 
     expect(page).to have_content("以下である必要があります")
     expect(Composition.count).to eq(0)
 
     fill_in "field_blood_pressure_systolic", with: "120"
-    click_button "送信"
+    click_button "保存"
 
     expect(Composition.count).to eq(1)
     expect(page).to have_css("#flash", text: "保存しました")

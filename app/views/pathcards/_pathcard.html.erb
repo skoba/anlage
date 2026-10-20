@@ -5,14 +5,15 @@
                         Array(pathcard.dig("semantics", "descriptions")) %>
   <h2><%= label&.fetch("text", nil) || identity.fetch("at_code") %></h2>
   <dl>
-    <dt>Template</dt>
+    <dt>テンプレート</dt>
     <dd><%= identity.fetch("template_id") %></dd>
-    <dt>Archetype</dt>
+    <dt>アーキタイプ</dt>
     <dd><%= identity.fetch("archetype_id") %></dd>
-    <dt>Node</dt>
+    <dt>ノード</dt>
     <dd><%= identity.fetch("at_code") %></dd>
   </dl>
+  <%= link_to "帳票に入力", form_path(identity.fetch("template_id")) %>
   <% if semantic_entries.any? { |entry| entry["untranslated_suspect"] } %>
-    <p class="pathcard-warning">Untranslated text suspected</p>
+    <p class="pathcard-warning">未翻訳の疑いがあります</p>
   <% end %>
 </article>

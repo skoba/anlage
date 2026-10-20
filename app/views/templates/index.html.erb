@@ -1,11 +1,11 @@
-<h1>Templates</h1>
+<h1>テンプレートの取り込み</h1>
 
 <div data-controller="dropzone"
      data-dropzone-preview-url-value="<%= templates_preview_path %>"
      data-dropzone-register-url-value="<%= templates_path %>"
      data-action="dragover@window->dropzone#dragover dragenter@window->dropzone#dragenter dragleave@window->dropzone#dragleave drop@window->dropzone#drop">
 
-  <div data-dropzone-target="overlay" id="dropzone_overlay">Drop the .opt file to try it on</div>
+  <div data-dropzone-target="overlay" id="dropzone_overlay">ドロップして取り込む</div>
 
   <%# skoba/anlage#47 変更 2: 主導線は「ファイルを選択」。ドラッグ＆ドロップはページ全体（@window）で受ける %>
   <button type="button" id="dropzone_hint" data-action="click->dropzone#browse">ファイルを選択</button>
@@ -26,7 +26,7 @@
 
   <div id="catalog">
     <% if @templates.empty? %>
-      <p id="empty_notice">No templates registered yet. Drop an OPT file to get started.</p>
+      <p id="empty_notice">テンプレートが未登録です。OPT ファイルを選択して取り込んでください</p>
     <% end %>
     <%= render @templates %>
   </div>

@@ -19,7 +19,7 @@ RSpec.describe "デモ動線: ProblemList のフォーム入力→保存→AQL�
     # 時刻（任意）は空欄のまま → "2026-03-01" が日付精度のまま保存される
     fill_in "field_problem_diagnosis_at0077", with: Date.new(2026, 3, 1)
     select "疑い", from: "field_problem_diagnosis_at0073"
-    click_button "送信"
+    click_button "保存"
 
     # 保存後はカルテ記録画面へ遷移し flash が出る（skoba/anlage#47 変更 1）。
     # canonical JSON は折りたたみ（<details>）を開いて見る——壇上と同じ操作

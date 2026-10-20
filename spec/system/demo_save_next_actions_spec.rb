@@ -17,7 +17,7 @@ RSpec.describe "デモ動線: 保存後の次アクション（実ブラウザ�
 
     fill_in "field_blood_pressure_at0004", with: "120"
     fill_in "field_blood_pressure_at0005", with: "80"
-    click_button "送信"
+    click_button "保存"
 
     expect(page).to have_css("#flash", text: "保存しました")
     expect(page).to have_css("h1", text: "カルテ記録: CardiologyEncounter")

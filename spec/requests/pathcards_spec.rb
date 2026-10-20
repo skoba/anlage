@@ -30,6 +30,6 @@ RSpec.describe "Pathcard search", type: :request do
     get "/pathcards/search", params: { q: "analyte" }
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Untranslated text suspected")
+    expect(response.body).to include("未翻訳の疑いがあります")
   end
 end

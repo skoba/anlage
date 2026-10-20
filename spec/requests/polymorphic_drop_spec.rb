@@ -22,7 +22,7 @@ RSpec.describe "Polymorphic dropzone", type: :request do
       post templates_preview_path, params: { file: upload(file.path, filename: "composition.json", type: "application/json") }
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("記入済みフォーム")
+      expect(response.body).to include("記入済みの帳票")
       expect(response.body).to include('value="42.0"')
       expect(Template.count).to eq(1) # no new template registered
     end
@@ -51,7 +51,7 @@ RSpec.describe "Polymorphic dropzone", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("openEHR-EHR-CLUSTER.exam-uterine_cervix.v1")
-      expect(response.body).to include("テンプレート化しますか")
+      expect(response.body).to include("テンプレートではありません")
       expect(Template.count).to eq(0)
     end
   end

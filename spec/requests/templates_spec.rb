@@ -21,7 +21,7 @@ RSpec.describe "Templates", type: :request do
     it "renders the (empty) catalog" do
       get templates_path
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("No templates registered yet")
+      expect(response.body).to include("テンプレートが未登録です")
     end
   end
 

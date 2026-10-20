@@ -113,7 +113,7 @@ export default class extends Controller {
     const entries = JSON.parse(this.parseEntriesTarget.textContent)
     for (const entry of entries) {
       const line = document.createElement("p")
-      line.textContent = `archetype検出: ${entry.concept}（${entry.field_count}フィールド）`
+      line.textContent = `アーキタイプ検出: ${entry.concept}（${entry.field_count} 項目）`
       this.parseLogTarget.appendChild(line)
       await this.delay(LOG_LINE_DELAY_MS)
     }

@@ -1,9 +1,9 @@
-<h1>Pathcard search</h1>
+<h1>パスカード検索</h1>
 
 <%= form_with url: pathcards_search_path, method: :get do |form| %>
-  <%= form.label :q, "Query" %>
+  <%= form.label :q, "探したい項目" %>
   <%= form.search_field :q, value: @query %>
-  <%= form.submit "Search" %>
+  <%= form.submit "検索" %>
 <% end %>
 
 <section id="pathcard-results">

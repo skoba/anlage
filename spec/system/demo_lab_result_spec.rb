@@ -11,7 +11,7 @@ RSpec.describe "デモ動線: LabResultReport のフォーム入力→保存→A
     fill_in "field_laboratory_test_analyte_at0024", with: "空腹時血糖"
     fill_in "field_laboratory_test_analyte_at0001", with: "98"
     fill_in "field_laboratory_test_analyte_at0001__units", with: "mg/dL"
-    click_button "送信"
+    click_button "保存"
 
     # skoba/anlage#47 変更 1: 保存後は flash とカルテ記録画面。canonical JSON は折りたたみを開いて見る
     expect(page).to have_css("#flash", text: "保存しました")

@@ -10,7 +10,7 @@ RSpec.describe "デモ動線: テンプレートの取り込み（実ブラウ�
 
   it "jp_referral.opt を受け付けると、受付表示・取り込みプレビュー・版の並記を経て登録できる" do
     visit templates_path
-    expect(page).to have_content("No templates registered yet")
+    expect(page).to have_content("テンプレートが未登録です")
     expect(page).to have_button("ファイルを選択")
 
     attach_file("opt_file_input", jp_referral_path.to_s, visible: false)
@@ -18,7 +18,7 @@ RSpec.describe "デモ動線: テンプレートの取り込み（実ブラウ�
     # 受付直後からファイル名と状態が出て、プレビューが開いた後は確認待ちになる
     expect(page).to have_css("#queue_status", text: "受付: jp_referral.opt")
     expect(page).to have_css("h2", text: "テンプレートの取り込み: jp_referral")
-    expect(page).to have_content("archetype検出") # 解析ログの再生（フォームより先に出る）
+    expect(page).to have_content("アーキタイプ検出") # 解析ログの再生（フォームより先に出る）
     expect(page).to have_css("#version_label", text: "登録版 v1.0.0／テンプレート版 0.2.0")
     expect(page).to have_button("登録")
     expect(page).to have_css("#queue_status", text: "受付: jp_referral.opt（確認待ち）")
@@ -26,7 +26,7 @@ RSpec.describe "デモ動線: テンプレートの取り込み（実ブラウ�
     click_button "登録"
 
     expect(page).to have_css("#catalog .template-card .version-label", text: "登録版 v1.0.0／テンプレート版 0.2.0")
-    expect(page).not_to have_content("No templates registered yet")
+    expect(page).not_to have_content("テンプレートが未登録です")
     expect(page).not_to have_css("#queue_status", text: "受付")
   end
 

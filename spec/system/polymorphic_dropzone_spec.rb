@@ -17,7 +17,7 @@ RSpec.describe "Polymorphic dropzone (composition/ADL)", type: :system, js: true
     visit templates_path
     attach_file("opt_file_input", composition_file.path, visible: false)
 
-    expect(page).to have_content("記入済みフォーム")
+    expect(page).to have_content("記入済みの帳票")
     expect(page).to have_button("閉じる")
     expect(page).not_to have_button("登録")
   end
@@ -26,7 +26,7 @@ RSpec.describe "Polymorphic dropzone (composition/ADL)", type: :system, js: true
     visit templates_path
     attach_file("opt_file_input", adl_path.to_s, visible: false)
 
-    expect(page).to have_content("テンプレート化しますか")
+    expect(page).to have_content("テンプレートではありません")
     expect(page).not_to have_button("登録")
   end
 end
