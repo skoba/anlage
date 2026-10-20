@@ -1,0 +1,27 @@
+# 帳票の振る舞い（skoba/anlage#47 変更 4）。rules は GDL2 の rule/when と同型で、12 月の GDL 評価器導入時は
+# この yml を GDL2 ガイドラインへ差し替える（docs/ideas-2027.md）。式は安全サブセットのみ（Opt::Formula、
+# plan 4 節）。サーバ（Opt::FormBehaviors）が権威、クライアント（form_behaviors_controller.js）は即時表示。
+bmi_calculation:
+  - target: body_mass_index
+    inputs: [height, body_weight]
+    formula: "body_weight / (height / 100) ^ 2"   # kg, cm → kg/m2（units は select の先頭 kg/m2 を前提）
+    round: 1
+    on: input
+    editable: false        # 画面は readonly、サーバが常に再計算（権威）
+  - target: body_mass_index_at0013
+    inputs: [body_mass_index]
+    # 出典: 日本肥満学会「肥満症診療ガイドライン」の肥満度分類（BMI 区分、4.0 版の表記）。WHO 文言は採らない
+    cases:
+      - when: "body_mass_index < 18.5"
+        value: 低体重
+      - when: "body_mass_index < 25"
+        value: 普通体重
+      - when: "body_mass_index < 30"
+        value: 肥満（1度）
+      - when: "body_mass_index < 35"
+        value: 肥満（2度）
+      - when: "body_mass_index < 40"
+        value: 肥満（3度）
+      - else: 肥満（4度）
+    on: input
+    editable: true         # 提案。空欄のときだけサーバが埋め、編集済み（<target>__edited）は尊重
