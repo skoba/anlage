@@ -85,5 +85,9 @@ RSpec.configure do |config|
   # system specs default to rack_test (no browser needed); opt into a
   # real headless browser per-example with `js: true`.
   config.before(:each, type: :system) { driven_by :rack_test }
-  config.before(:each, type: :system, js: true) { driven_by Capybara.javascript_driver }
+  # skoba/anlage#47 裁定 E: 壇上の設計解像度 1280×720 で全 js spec を走らせる
+  config.before(:each, type: :system, js: true) do
+    driven_by Capybara.javascript_driver
+    page.driver.browser.manage.window.resize_to(1280, 720)
+  end
 end
