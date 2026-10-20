@@ -98,3 +98,12 @@ AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unrelease
 - `jp_referral_aql_spec` 構造骨格: pending のまま。ただし失敗点が移った——上流 15 項（to_rm の NoMethodError）は解消し、`CONTAINS INSTRUCTION … AND EVALUATION` は束縛まで通る。新たに `items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']` が 2 件に fan-out（openehr 2.4.3 `path_evaluator.rb:117-118` が ArchetypePredicate の name 値を捨てる）→ 上流候補 24 項（openehr-ruby）。pending 理由を 24 項に付け替え
 - 含意（第 3 幕）: name 述語を使う jp_referral の AQL は 0.8.0 でも壇上に出せない。第 3 幕に jp_referral を入れるか（入れるなら name 述語を使わないクエリ形）は裁定待ち
 - 全 suite（ローカル）: 177 examples, 8 failures, 3 pending。8 件は全て `js: true` の system spec で chromedriver 127.0.0.1:9515 への接続拒否（Chromium 未導入、既知の環境要因）。判定は CI の `test` ジョブ
+
+---
+
+## R5: scan_ruby 緑化（裁定、2026-10-20）
+
+- 裁定: dependabot #44 と同内容を直接コミットし、`--ensure-latest` を外す（凍結中の外部要因 red の排除）。残りの dependabot PR は superseded でクローズ
+- `bundle update brakeman --conservative`: 8.0.6 → 8.1.0（`Gemfile.lock` の差分は #44 と同一。sha256 `cfa9e521…fdc17e07`）
+- `--ensure-latest` は `ci.yml` ではなく `bin/brakeman:5`（Rails 既定 binstub の `ARGV.unshift`）にあった。そこを外して理由コメント 1 行に置き換えた（`ci.yml` は `bin/brakeman --no-pager` のまま）
+- ローカル: `bin/brakeman --no-pager` → No warnings found、`bin/bundler-audit` → No vulnerabilities found

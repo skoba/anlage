@@ -2,6 +2,6 @@
 require "rubygems"
 require "bundler/setup"
 
-ARGV.unshift("--ensure-latest")
+# --ensure-latest は外す: 新版公開だけで CI が赤になる外部要因を凍結期間（2026-11-05〜）に持ち込まない（skoba/anlage#47 log R5）
 
 load Gem.bin_path("brakeman", "brakeman")
