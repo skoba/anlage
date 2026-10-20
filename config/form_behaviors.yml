@@ -6,7 +6,7 @@ bmi_calculation:
     inputs: [height, body_weight]
     formula: "body_weight / (height / 100) ^ 2"   # kg, cm → kg/m2（units は select の先頭 kg/m2 を前提）
     round: 1
-    on: input
+    "on": input            # YAML 1.1 では素の on が true になるので引用する
     editable: false        # 画面は readonly、サーバが常に再計算（権威）
   - target: body_mass_index_at0013
     inputs: [body_mass_index]
@@ -23,5 +23,5 @@ bmi_calculation:
       - when: "body_mass_index < 40"
         value: 肥満（3度）
       - else: 肥満（4度）
-    on: input
+    "on": input            # YAML 1.1 では素の on が true になるので引用する
     editable: true         # 提案。空欄のときだけサーバが埋め、編集済み（<target>__edited）は尊重

@@ -63,7 +63,7 @@ RSpec.describe Opt::FormBehaviors do
     rules = described_class.rules_for("bmi_calculation")
 
     expect(rules.map { _1["target"] }).to eq(%w[body_mass_index body_mass_index_at0013])
-    expect(rules.first).to include("inputs" => %w[height body_weight], "formula" => "body_weight / (height / 100) ^ 2", "round" => 1, "editable" => false)
+    expect(rules.first).to include("inputs" => %w[height body_weight], "formula" => "body_weight / (height / 100) ^ 2", "round" => 1, "editable" => false, "on" => "input")
     expect(described_class.rules_for("ProblemList")).to eq([])
   end
 end

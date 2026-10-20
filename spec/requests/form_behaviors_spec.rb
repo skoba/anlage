@@ -28,4 +28,19 @@ RSpec.describe "POST /compositions/bmi_calculation（form_behaviors）", type: :
     expect(values.filter_map { _1["magnitude"] }).to contain_exactly(170.0, 65.0, 22.5)
     expect(values.filter_map { _1["value"] }).to eq([ "普通体重" ])
   end
+
+  it "帳票は振る舞いの宣言（yml の写し）をクライアントへ渡す" do
+    get form_path(template.template_id)
+
+    form = Nokogiri::HTML(response.body).at_css("form[data-controller~='form-behaviors']")
+    expect(JSON.parse(form["data-form-behaviors-rules-value"])).to eq(Opt::FormBehaviors.rules_for("bmi_calculation"))
+    expect(form["data-action"]).to include("input->form-behaviors#recalculate")
+  end
+
+  it "振る舞いを宣言していない帳票には controller を付けない" do
+    problem_list = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!)
+    get form_path(problem_list.template_id)
+
+    expect(Nokogiri::HTML(response.body).at_css("[data-controller~='form-behaviors']")).to be_nil
+  end
 end
