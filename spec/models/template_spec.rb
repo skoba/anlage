@@ -177,3 +177,20 @@ RSpec.describe Template, "#47 fhir_profile_ids" do
       .to eq([ "openehr-observation-heart-rate-pulse-v1", "openehr-observation-blood-pressure-v1" ])
   end
 end
+
+# skoba/anlage#47 変更 2: 登録版（registry 連番 version）と並記する OPT 自身の版。
+# 出所は OPT の description/other_details[@id="sem_ver"]（Archetype Designer が書く）。
+RSpec.describe Template, "#47 sem_ver" do
+  def sem_ver_of(fixture)
+    Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture}").read).sem_ver
+  end
+
+  it "jp_referral は 0.2.0、ProblemList は 0.2.1（other_details の sem_ver）" do
+    expect(sem_ver_of("jp_referral.opt")).to eq("0.2.0")
+    expect(sem_ver_of("ProblemList.opt")).to eq("0.2.1")
+  end
+
+  it "sem_ver を持たない OPT（patient_blood_pressure）は nil" do
+    expect(sem_ver_of("patient_blood_pressure.opt")).to be_nil
+  end
+end

@@ -71,6 +71,7 @@ class Template < ApplicationRecord
     web_template = {
       "template_id" => opt.template_id.value,
       "concept" => opt.concept,
+      "sem_ver" => opt.description&.other_details&.dig("sem_ver").presence,
       "entries" => extractor.entries.map { |entry| serialize_entry(entry, constraints, instance_terms(entry, terms, root_occurrences), terms) }
     }
     # 保存可否は登録時に一度だけ判定（skoba/anlage#36）
@@ -83,6 +84,11 @@ class Template < ApplicationRecord
 
   def form_capability_reason
     (web_template || {})["form_capability_reason"]
+  end
+
+  # OPT 自身の版（other_details の sem_ver）。登録版 version と並記する（skoba/anlage#47）
+  def sem_ver
+    (web_template || {})["sem_ver"]
   end
 
   # facade（Fhir::ProfilesController）と同じ ProfileGenerator から導く（skoba/anlage#47）
