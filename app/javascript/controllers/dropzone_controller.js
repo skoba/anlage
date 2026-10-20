@@ -78,14 +78,12 @@ export default class extends Controller {
       return
     }
 
-    this.queueStatusTarget.textContent = this.queue.length > 0
-      ? `残り${this.queue.length}件を後ほど確認します`
-      : ""
     await this.preview(source)
   }
 
   async preview(source) {
     this.pendingSource = source
+    this.showStatus(source, "解析中…")
 
     const response = await fetch(this.previewUrlValue, {
       method: "POST",
@@ -94,6 +92,14 @@ export default class extends Controller {
     })
     this.fittingRoomTarget.innerHTML = await response.text()
     await this.revealParseLog()
+    this.showStatus(source, "確認待ち")
+  }
+
+  // skoba/anlage#47 変更 2: 受付直後からファイル名と状態を出す（壇上で「受け付けた」が見える）
+  showStatus(source, state) {
+    const name = source.kind === "url" ? source.url : source.file.name
+    const rest = this.queue.length > 0 ? ` 残り${this.queue.length}件を後ほど確認します` : ""
+    this.queueStatusTarget.textContent = `受付: ${name}（${state}）${rest}`
   }
 
   // Plays back the (already-complete) parse result as a "detecting
