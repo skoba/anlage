@@ -12,7 +12,7 @@
 | Ruby | 4.0.7（rbenv。`.ruby-version`、`Dockerfile` `ARG RUBY_VERSION`） | `893aa7f` |
 | Node／sushi | Node 18 ＋ fsh-sushi 3.16.0（`rake fsh:verify` 用、任意） | 統括、`lib/tasks/fsh.rake:50` |
 | Chromium | system spec（`js: true`）用。壇上の表示は Windows 側 Chrome | 統括、`spec/rails_helper.rb:12` |
-| DB | SQLite（development、`storage/development.sqlite3`）。`rake demo:reset` で既知状態へ。所要 **3.2 秒／2.5 秒**（本開発機で 2 回実測、2026-10-12。デモ機では再計測して上書き） | 実測 |
+| DB | SQLite（development、`storage/development.sqlite3`）。`rake demo:reset` で既知状態へ。所要 **3.1 秒／2.8 秒**（サンプル投入込み、本開発機で 2 回実測、2026-10-20。デモ機では再計測して上書き） | 実測 |
 | ネットワーク | **オフライン前提、外部呼び出し無し**。importmap は gem 同梱の turbo／stimulus、CDN 無し。CKM URL 取り込みと `fsh:verify` は台本に乗せない | `config/importmap.rb`、`templates_controller.rb:162-185` |
 | 表示 | 会場は 16:9・HDMI-A・解像度不明 → **設計値 1280×720**。ブラウザは 1280×720 相当（表示スケーリングで調整）、ミラーリング（複製）モード。system spec のビューポートを 1280×720 で pin（ナビ折返し・表幅・横スクロール無し） | 統括、plan 6 節 |
 | 荷物 | 予備機・HDMI ケーブル・USB-C→HDMI 変換・電源 | 統括 |
@@ -23,7 +23,7 @@
 ```sh
 bundle install
 bin/rails db:prepare          # 初回・schema 更新時
-bin/rails demo:reset          # fixture 5 件を active で登録、Composition・RM グラフを空にする
+bin/rails demo:reset          # fixture 5 件を active で登録、記録を消してサンプルのカルテ記録だけにする
 bin/rails server
 ```
 
@@ -31,10 +31,9 @@ bin/rails server
 
 - `Template.active` = CardiologyEncounter／LabResultReport／ProblemList／bmi_calculation／**patient_blood_pressure.v1**（template_id はファイル名と一致しない）、全て v1.0.0・saveable・pathcards 生成済み
 - superseded 無し、jp_referral 無し（第 1 幕で壇上登録する）
-- `compositions`＝0、`openehr_rm_*`／`openehr_ehrs`＝0
+- サンプルのカルテ記録（`Demo::SampleCompositions`、裁定 D 2026-10-12・裁定 2026-10-20）: `compositions`＝5（ProblemList 2〔「2型糖尿病」ICD-11 5A11 付き・「高血圧症」自由記述〕・CardiologyEncounter 1〔120/80〕・LabResultReport 1〔空腹時血糖 98 mg/dL〕・bmi_calculation 1〔170 cm／65 kg〕）、RM グラフの Composition＝6（上の 5＋jp_referral 1〔「2型糖尿病」5A11 付き、テンプレート未登録のまま RM グラフにだけ入る〕）
+- デモクエリ 5（`docs/demo/aql-queries.md` 5 節）は初期状態で 3 件、壇上で 1 件足すと 4 件
 - 何度実行しても同じ（リハの合間に打ち直してよい）。production では abort
-
-（plan の第二実装で追加: AQL 幕の既知データ＝サンプル Composition 5 件（ProblemList 2・CardiologyEncounter 1・LabResultReport 1・bmi 1）。裁定 D、2026-10-12）
 
 ## 3. 壇上で使うファイル
 

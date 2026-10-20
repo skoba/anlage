@@ -547,3 +547,13 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 提案: `predicate_path_text` の ArchetypePredicate 分岐を NodePredicate と同形にする（String 値なら `"#{archetype_id}, '#{value}'"`、Parameter は未対応エラー）。WHERE 側（`contains_resolver.rb:150`）の扱いも併せて確認
 - 還流先: openehr-ruby
 - ステータス: **起票済み** [skoba/openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60)（2026-10-20、裁定により即起票。openehr-ruby `docs/backlog.md` Round 2 magazine 首位群 `96eb4e2`）
+
+## 25. AQL の SELECT で COMPOSITION の `archetype_details/template_id/value` に到達できない
+
+- 発見日: 2026-10-20（`skoba/anlage#47` 変更 5、`docs/reports/demo-integration-log.md` R10）
+- 対象: openehr 2.4.3 `lib/openehr/aql/engine/path_evaluator.rb`（`archetype_details` は `path_attributes` 宣言にも `ALLOWED_TERMINAL_HOPS`〔magnitude/name/value〕にも無い）
+- 実測: `SELECT c/archetype_details/template_id/value …` → `OpenehrRails::Aql::UnsupportedFeature: unsupported path attribute "archetype_details" on a OpenEHR::RM::Composition::Composition`
+- 含意: 横断クエリで出所テンプレートを並記できない。anlage は Composition 名（`c/name/value`）で代替（デモクエリ 5）。10 項（defining_code）・#48（events/time）と同じ「終端ホップの許可リスト」の類。openEHR の AQL 仕様では `archetype_details/template_id/value` は一般的な射影
+- 還流先: openehr-ruby（#49 の設計議論〔ホップ拡張方針〕に事例として足すのが自然）
+- ステータス: 観察
+

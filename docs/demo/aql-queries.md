@@ -96,7 +96,29 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
 - 期待件数: **1件**（期間内の1件のみ。実測確認済み: `docs/reports/demo-queries-log.md` R4）
 - **凍結受入条件に算入可能**
 
+## 5. テンプレート横断の傷病名（第 3 幕の横串一貫性、`skoba/anlage#47`）
+
+- 由来: 裁定 2026-10-20（例外報告 R4 への裁定 1）。同じ `openEHR-EHR-EVALUATION.problem_diagnosis.v1` を使う
+  ProblemList と jp_referral が **1 本の AQL で同時に引ける**ことの実演
+- 状態: **spec 化済み**（`spec/demo/cross_template_query_spec.rb`）
+- クエリ:
+  ```
+  SELECT c/name/value AS composition_name,
+         ev/data[at0001]/items[at0002]/value/value AS diagnosis
+  FROM EHR e CONTAINS COMPOSITION c
+       CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+  WHERE ev/data[at0001]/items[at0002]/value/value MATCHES {"2型糖尿病", "高血圧症"}
+  ```
+- 投入: 1〜4 と違いフォーム POST だけでは作れない（jp_referral のフォーム保存は #30 で未対応）。
+  `rake demo:reset` の初期状態（`Demo::SampleCompositions`）を使い、壇上の「1 件足す」はフォーム POST
+- 期待件数: 初期状態で **3 件**（ProblemList「2型糖尿病」〔ICD-11 5A11 付き〕・「高血圧症」、jp_referral「2型糖尿病」〔5A11 付き〕）、
+  フォームから「2型糖尿病」を 1 件足すと **4 件**
+- 出所の並記は Composition 名（`c/name/value`）。`c/archetype_details/template_id/value` は現行エンジンで
+  `unsupported path attribute "archetype_details"`（`docs/upstream-candidates.md` 25 項）
+- **質疑応答用 1 行**: 「紹介先医療機関で引く」（`items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']`）は
+  name 述語の欠落（[openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60)）の解消後（12 月）
+
 ---
 
-全4クエリとも供給済み・spec化完了。`bundle exec rspec spec/demo/`がgreenであることが
+全4クエリとも供給済み・spec化完了（5 は 2026-10-20 追加、初期状態依存）。`bundle exec rspec spec/demo/`がgreenであることが
 `docs/design/demo-queries-plan.md` 5節の凍結受入条件。

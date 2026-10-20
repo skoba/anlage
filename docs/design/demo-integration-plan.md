@@ -91,6 +91,7 @@ bmi_calculation:
 
 - サンプル Composition（裁定 D: 入れる。壇上の入力が 1 件失敗しても第 3 幕が空にならない）: `Opt::RmCompositionCommitter` 経由（フォーム保存経路と同じ値→RM グラフ）で 5 件——ProblemList 2 件（ICD-11 コード付き 1＝at0002 を coded で／自由記述 1＝DV_TEXT。代替制約の実演）、CardiologyEncounter 1、LabResultReport 1（数値 > 50）、bmi 1（170/65）。壇上入力は「1 件足す」演出。**jp_referral 1 件**（裁定 2026-10-20: 傷病名 at0002 に ICD-11 コード付き）を追加し、3 幕の横断クエリが初期状態で「2 テンプレート・3 件」（ProblemList 2＋jp_referral 1）を返すようにする。jp_referral はフォーム保存経路が #30 で未対応のため、`OpenehrRails::Rm::CompositionCommitter` による直接コミット（`#23` (4) 裁定 C と同じ経路）。spec は template_id と件数・AQL の行で固定（`demo_reset_spec` に例を追加）
 - `docs/demo/setup.md` 1 節は確定版（裁定 E 受領、2026-10-12）。`demo:reset` の所要はデモ機で再計測して上書き
+- → 2026-10-20 実装（log R10）。ICD-11 付きの ProblemList は、at0002 が coded_free でフォーム経路は DV_TEXT しか作らないため、フォーム経路の canonical の at0002 だけを DV_CODED_TEXT に差し替えて直接コミット。jp_referral はテンプレート未登録のまま RM グラフにだけ入れる（カルテ記録一覧には出ない）
 
 ## 6. 台本対応表（各行＝system spec 1 本の操作列）
 

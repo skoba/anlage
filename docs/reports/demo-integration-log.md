@@ -149,3 +149,17 @@ AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unrelease
 - system spec の文言追随（「送信」→「保存」4 本、demo_intake の空状態・解析ログ、polymorphic 2 例）はブランチ `change3-vocab`（draft PR #53）で CI 判定 → run `39437772748` green（198 examples, 0 failures, 3 pending）。main は fast-forward
 - 台本 6 節「検索」行の 1 行変更（パスカードから帳票へのリンク「帳票に入力」）も同じコミットで入れた（ui_vocabulary_spec で pin）
 - 対象外として残した英語: `POST /templates` の二重登録通知（`already registered as …`、JSON API の `notice`、`templates_spec.rb:194` が pin）とアップロードエラーのメッセージ。壇上の操作列には出ない（プレビューの段階で「登録済み」を出すため）
+
+---
+
+## R10: 変更 5（demo:reset 第二実装・デモクエリ 5）（2026-10-20）
+
+- 順序は裁定どおり 3 → 5（変更 4 BMI は最後）
+- 実測（scratchpad の使い捨て spec）: (1) `SELECT c/archetype_details/template_id/value …` → `unsupported path attribute "archetype_details" on a …Composition`（上流候補 25 項として記録）。出所の並記は `c/name/value`（Composition 名＝テンプレート名）で代替 (2) ProblemList「高血圧症」（フォーム経路）＋「2型糖尿病」（at0002 を DV_CODED_TEXT 5A11 に差し替えて直接コミット）＋jp_referral 骨格で、横断クエリが `[["ProblemList","高血圧症"],["ProblemList","2型糖尿病"],["jp_referral","2型糖尿病"]]`
+- **裁定 D との差**: 「ICD-11 コード付き 1＝at0002 を coded で」は `Opt::RmCompositionCommitter`（フォーム経路）では作れない。ProblemList の at0002 は `coded_free` で、builder は常に DV_TEXT にする（`composition_builder.rb:185`）。フォーム経路の canonical の at0002 だけを DV_CODED_TEXT に差し替えて直接コミットした（Anlage の `compositions` にも同じ canonical で 1 行入れ、カルテ記録一覧に出る）
+- jp_referral のサンプル: テンプレートは初期状態に含めない（第 1 幕で壇上登録）ので、RM グラフにだけ直接コミット（カルテ記録一覧には出ない）。骨格は `jp_referral_aql_spec` から `spec/fixtures/compositions/jp_referral/skeleton.canonical.json` に切り出して共有（Refactor コミット、spec の結果は不変）。傷病名は reset 側で DV_CODED_TEXT 5A11 に差し替える
+- Red: `demo_reset_spec`（サンプル 5＋RM 6・傷病名 3 種）と `spec/demo/cross_template_query_spec.rb`（初期 3 件・1 件足して 4 件）で 4 failures → Green: `Demo::SampleCompositions.load!`（`app/lib/demo/sample_compositions.rb`）を reset の transaction 内で呼ぶ
+- Green 途中の発見: フォーム経路の Composition は RM の `template_id` 列が nil。`Opt::CompositionBuilder#build` がルートに `archetype_details` を付けず、`archetype_node_id` に template_id を入れている（`composition_builder.rb:35-37`）→ (b) 課題 [#54](https://github.com/skoba/anlage/issues/54)。spec は RM 側を `name_value` で見る形にした。凍結前に直すかは裁定事項
+- js 以外 192 examples, 0 failures, 3 pending。dev の `bin/rails demo:reset` 3.14 秒／2.80 秒（2 回、`templates=5 compositions=5 rm_compositions=6`）。`docs/demo/setup.md` を更新
+- 文書: `docs/demo/aql-queries.md` 5 節、`docs/demo/setup.md` 2 節、plan 5 節、`docs/upstream-candidates.md` 25 項
+
