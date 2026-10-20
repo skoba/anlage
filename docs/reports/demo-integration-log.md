@@ -116,3 +116,14 @@ AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unrelease
 - 実測（scratchpad の使い捨て spec、構造骨格を直接コミット → `to_rm`）: `protocol.items_at_path("/items[openEHR-EHR-CLUSTER.organisation.v1]")` → 2 件、`"…organisation.v1, '紹介先医療機関']"` → 1 件（RM 側は name で絞れる）。`SELECT ev/data[at0001]/items[at0002]/value/value … CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]` → `[["2型糖尿病"]]`（name 述語なしなら jp_referral を AQL で読める＝3' 行の前提）
 - 起票: [skoba/openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60)（bug）。openehr-ruby `docs/backlog.md` Round 2 magazine に首位群の行を追加（docs のみの越境、openehr-ruby master `96eb4e2`）
 - 未決（設計上の自明な選択として plan 5 節に記載）: jp_referral のサンプルはフォーム保存経路（#30 で未対応）ではなく `CompositionCommitter` の直接コミット
+
+---
+
+## R7: 変更 1（共通ナビ・flash・保存後の次アクション）（2026-10-20）
+
+- TODO: (1) `Template#fhir_profile_ids` (2) layout の nav が全画面に (3) 保存後のカルテ記録画面（flash・見出し・次アクション 4・JSON 折りたたみ） (4) 実ブラウザの操作列＋1280×720 pin (5) 既存 spec と語彙表の追随
+- (1) Red: `NoMethodError`（2 例）→ Green: facade と同じ `ProfileGenerator.new(OpenehrRails::Opt.parse(source_xml)).profiles` の id。ProblemList `["openehr-evaluation-problem-diagnosis-v1"]`、patient_blood_pressure.v1 は heart-rate-pulse → blood-pressure の順（R1 5 節の実測と一致）
+- (2)(3) Red: `spec/requests/demo_navigation_spec.rb` 4 例が全て失敗（nav 不在・`#flash` 不在・次アクション `[]`・`details > pre` 不在）→ Green: layout に `nav#app_nav`（AQL 照会は `openehr_rails.query_console_path`＝`/openehr/query`）と `#flash`、flash を「保存しました」、`compositions/show` に見出し・保存日時・`nav#next_actions`・`<details>`
+- (5) rack_test の `forms_spec` は JSON 文字列ではなく flash と見出しで確認する形へ。実ブラウザの `demo_problem_list_spec`／`demo_lab_result_spec` は summary「canonical JSON」を開いてから JSON を見る（閉じた `<details>` の中は不可視）。語彙表に共通ナビ・次アクション・保存日時・canonical JSON を追記
+- (4) `spec/system/demo_save_next_actions_spec.rb`（CardiologyEncounter: 保存 → flash・見出し・次アクション 4 → nav が 1 行・横スクロール無し〔JSON を開いても〕→「もう 1 件」で空の帳票へ）、`rails_helper` の js before で `resize_to(1280, 720)`。横スクロールの判定は plan の `<= 1280` ではなく `scrollWidth > window.innerWidth`（ウィンドウ枠の分だけ内寸が 1280 より狭くなり得るため）
+- Red の扱い: ローカルは Chromium 不在に加え chromedriver が `libnspr4.so` を読めず起動しない。spec を main ではなくブランチ `change1-system-spec`（draft PR #51）に載せて CI で判定 → run `39433188399` green（184 examples, 0 failures, 3 pending）。**CI で red にならなかったので、(4) は (2)(3) の Red で駆動済みの挙動を実ブラウザで固定する pin**（実装を先に壊して red を作ることはしていない）。main は同ブランチへ fast-forward
