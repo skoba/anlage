@@ -174,3 +174,24 @@ AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unrelease
 - 4/4 クライアント: request spec（帳票が rules を data 属性で渡す）は**ローカルで Red** → 実装中に発見: **YAML 1.1 では鍵 `on:` が真偽値 `true` になる**（plan 4 節の宣言のままだと rules の鍵が `true`）→ `"on":` と引用、`rules_for` の spec に `"on" => "input"` を足して pin。system spec `demo_bmi_spec`（170/65 → 22.5 readonly・普通体重 → 保存 → AQL `> 170` 0 行／`>= 170` 1 行。判定を手で直した後に身長を 180 に直しても判定は手の値のまま、BMI は 20.1）は **CI で Red**（ブランチ `change4-bmi-client`、draft PR #55、run `39439469971`: 予定の 3 failures）→ Green（run `39439764042`、226 examples, 0 failures, 3 pending）。一時コミットは squash
 - 評価器は Ruby（`app/lib/opt/formula.rb`）と JS（`form_behaviors_controller.js` の `evaluateFormula`）の 2 実装。同じ値になることは BMI の 2 例（22.5／20.1）で画面値として固定。丸めは JS 側も Ruby の `Float#round` と同じく 0 から遠い側
 - #47 の受入 (6) を満たす
+
+---
+
+## R12: 台本「検索」行の system spec と台本対応表の充足（2026-10-20）
+
+- 実測（scratchpad、jp_referral と ProblemList を登録して `Opt::PathcardSearch`）: 「既往歴」→ jp_referral at0004「病歴の記述」／「傷病名」→ jp_referral at0002「プロブレム・診断の名称」・at0077・at0073（ProblemList のカードはこの語では当たらない）
+- `spec/system/demo_pathcard_search_spec.rb`: 検索 → カード → 「帳票に入力」→ `/forms/jp_referral` が閲覧専用（「保存は未対応（#30）」、保存ボタン無し）。挙動は変更 3 までに実装済みのため **pin**（ブランチ `script-search-spec`、draft PR #56、run `39440313208` green、227 examples, 0 failures, 3 pending）
+- 台本対応表（plan 6 節）の各行と spec:
+
+| 幕 | spec | 状態 |
+|---|---|---|
+| 1 取り込み | `spec/system/demo_intake_spec.rb` | green（R8、Red は CI） |
+| 検索・1' 閲覧専用 | `spec/system/demo_pathcard_search_spec.rb` | green（本節、pin） |
+| 2 帳票（BMI） | `spec/system/demo_bmi_spec.rb` | green（R11、Red は CI） |
+| 2 保存後の次アクション | `spec/system/demo_save_next_actions_spec.rb` | green（R7、pin） |
+| 2' ProblemList | `spec/system/demo_problem_list_spec.rb` | green（文言追随） |
+| 3 AQL | `spec/demo/aql_queries_spec.rb`（1〜4） | green |
+| 3' 横断 AQL | `spec/demo/cross_template_query_spec.rb`（5） | green（R10） |
+| 4 FHIR／FSH | `spec/requests/fhir_profiles_spec.rb`・`spec/tasks/fsh_spec.rb`（既存） | green |
+
+- 3 幕の AQL コンソール（`/openehr/query`、gem の画面）そのものを操作する system spec は無い（plan 6 節どおり、件数は `Executor` で固定）。壇上の打鍵はリハ 1 で確かめる
