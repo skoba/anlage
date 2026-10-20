@@ -1,0 +1,299 @@
+{
+  "_type": "COMPOSITION",
+  "archetype_node_id": "openEHR-EHR-COMPOSITION.request.v1",
+  "name": {
+    "_type": "DV_TEXT",
+    "value": "jp_referral"
+  },
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": {
+      "_type": "ARCHETYPE_ID",
+      "value": "openEHR-EHR-COMPOSITION.request.v1"
+    },
+    "rm_version": "1.0.4",
+    "template_id": {
+      "_type": "TEMPLATE_ID",
+      "value": "jp_referral"
+    }
+  },
+  "language": {
+    "_type": "CODE_PHRASE",
+    "code_string": "ja",
+    "terminology_id": {
+      "_type": "TERMINOLOGY_ID",
+      "value": "ISO_639-1"
+    }
+  },
+  "territory": {
+    "_type": "CODE_PHRASE",
+    "code_string": "JP",
+    "terminology_id": {
+      "_type": "TERMINOLOGY_ID",
+      "value": "ISO_3166-1"
+    }
+  },
+  "category": {
+    "_type": "DV_CODED_TEXT",
+    "value": "event",
+    "defining_code": {
+      "_type": "CODE_PHRASE",
+      "code_string": "433",
+      "terminology_id": {
+        "_type": "TERMINOLOGY_ID",
+        "value": "openehr"
+      }
+    }
+  },
+  "composer": {
+    "_type": "PARTY_IDENTIFIED",
+    "name": "unknown"
+  },
+  "content": [
+    {
+      "_type": "SECTION",
+      "archetype_node_id": "openEHR-EHR-SECTION.referral_details.v0",
+      "name": {
+        "_type": "DV_TEXT",
+        "value": "紹介状の詳細情報"
+      },
+      "archetype_details": {
+        "_type": "ARCHETYPED",
+        "archetype_id": {
+          "_type": "ARCHETYPE_ID",
+          "value": "openEHR-EHR-SECTION.referral_details.v0"
+        },
+        "rm_version": "1.0.4",
+        "template_id": {
+          "_type": "TEMPLATE_ID",
+          "value": "jp_referral"
+        }
+      },
+      "items": [
+        {
+          "_type": "INSTRUCTION",
+          "archetype_node_id": "openEHR-EHR-INSTRUCTION.service_request.v1",
+          "name": {
+            "_type": "DV_TEXT",
+            "value": "サービス依頼"
+          },
+          "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": {
+              "_type": "ARCHETYPE_ID",
+              "value": "openEHR-EHR-INSTRUCTION.service_request.v1"
+            },
+            "rm_version": "1.0.4",
+            "template_id": {
+              "_type": "TEMPLATE_ID",
+              "value": "jp_referral"
+            }
+          },
+          "narrative": {
+            "_type": "DV_TEXT",
+            "value": "精査依頼"
+          },
+          "activities": [
+            {
+              "_type": "ACTIVITY",
+              "archetype_node_id": "at0001",
+              "name": {
+                "_type": "DV_TEXT",
+                "value": "現在のアクティビティ"
+              },
+              "action_archetype_id": "/.*/",
+              "description": {
+                "_type": "ITEM_TREE",
+                "archetype_node_id": "at0009",
+                "name": {
+                  "_type": "DV_TEXT",
+                  "value": "Tree"
+                },
+                "items": [
+                  {
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0121",
+                    "name": {
+                      "_type": "DV_TEXT",
+                      "value": "サービス名"
+                    },
+                    "value": {
+                      "_type": "DV_TEXT",
+                      "value": "外来紹介"
+                    }
+                  },
+                  {
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0062",
+                    "name": {
+                      "_type": "DV_TEXT",
+                      "value": "紹介目的"
+                    },
+                    "value": {
+                      "_type": "DV_TEXT",
+                      "value": "精査加療のお願い"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "protocol": {
+            "_type": "ITEM_TREE",
+            "archetype_node_id": "at0008",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "Tree"
+            },
+            "items": [
+              {
+                "_type": "CLUSTER",
+                "archetype_node_id": "openEHR-EHR-CLUSTER.organisation.v1",
+                "name": {
+                  "_type": "DV_TEXT",
+                  "value": "紹介元医療機関"
+                },
+                "archetype_details": {
+                  "_type": "ARCHETYPED",
+                  "archetype_id": {
+                    "_type": "ARCHETYPE_ID",
+                    "value": "openEHR-EHR-CLUSTER.organisation.v1"
+                  },
+                  "rm_version": "1.0.4",
+                  "template_id": {
+                    "_type": "TEMPLATE_ID",
+                    "value": "jp_referral"
+                  }
+                },
+                "items": [
+                  {
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0001",
+                    "name": {
+                      "_type": "DV_TEXT",
+                      "value": "名称"
+                    },
+                    "value": {
+                      "_type": "DV_TEXT",
+                      "value": "Aクリニック"
+                    }
+                  }
+                ]
+              },
+              {
+                "_type": "CLUSTER",
+                "archetype_node_id": "openEHR-EHR-CLUSTER.organisation.v1",
+                "name": {
+                  "_type": "DV_TEXT",
+                  "value": "紹介先医療機関"
+                },
+                "archetype_details": {
+                  "_type": "ARCHETYPED",
+                  "archetype_id": {
+                    "_type": "ARCHETYPE_ID",
+                    "value": "openEHR-EHR-CLUSTER.organisation.v1"
+                  },
+                  "rm_version": "1.0.4",
+                  "template_id": {
+                    "_type": "TEMPLATE_ID",
+                    "value": "jp_referral"
+                  }
+                },
+                "items": [
+                  {
+                    "_type": "ELEMENT",
+                    "archetype_node_id": "at0001",
+                    "name": {
+                      "_type": "DV_TEXT",
+                      "value": "名称"
+                    },
+                    "value": {
+                      "_type": "DV_TEXT",
+                      "value": "X病院"
+                    }
+                  },
+                  {
+                    "_type": "CLUSTER",
+                    "archetype_node_id": "openEHR-EHR-CLUSTER.organisation.v1",
+                    "name": {
+                      "_type": "DV_TEXT",
+                      "value": "診療科"
+                    },
+                    "archetype_details": {
+                      "_type": "ARCHETYPED",
+                      "archetype_id": {
+                        "_type": "ARCHETYPE_ID",
+                        "value": "openEHR-EHR-CLUSTER.organisation.v1"
+                      },
+                      "rm_version": "1.0.4",
+                      "template_id": {
+                        "_type": "TEMPLATE_ID",
+                        "value": "jp_referral"
+                      }
+                    },
+                    "items": [
+                      {
+                        "_type": "ELEMENT",
+                        "archetype_node_id": "at0001",
+                        "name": {
+                          "_type": "DV_TEXT",
+                          "value": "名称"
+                        },
+                        "value": {
+                          "_type": "DV_TEXT",
+                          "value": "内科"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "_type": "EVALUATION",
+          "archetype_node_id": "openEHR-EHR-EVALUATION.problem_diagnosis.v1",
+          "name": {
+            "_type": "DV_TEXT",
+            "value": "傷病名"
+          },
+          "archetype_details": {
+            "_type": "ARCHETYPED",
+            "archetype_id": {
+              "_type": "ARCHETYPE_ID",
+              "value": "openEHR-EHR-EVALUATION.problem_diagnosis.v1"
+            },
+            "rm_version": "1.0.4",
+            "template_id": {
+              "_type": "TEMPLATE_ID",
+              "value": "jp_referral"
+            }
+          },
+          "data": {
+            "_type": "ITEM_TREE",
+            "archetype_node_id": "at0001",
+            "name": {
+              "_type": "DV_TEXT",
+              "value": "structure"
+            },
+            "items": [
+              {
+                "_type": "ELEMENT",
+                "archetype_node_id": "at0002",
+                "name": {
+                  "_type": "DV_TEXT",
+                  "value": "プロブレム・診断の名称"
+                },
+                "value": {
+                  "_type": "DV_TEXT",
+                  "value": "2型糖尿病"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
