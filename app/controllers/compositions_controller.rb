@@ -9,7 +9,8 @@ class CompositionsController < ApplicationController
 
   def create
     @template = Template.active.find_by!(template_id: params[:template_id])
-    values = (params[:values] || {}).to_unsafe_h
+    # skoba/anlage#47 変更 4: 帳票の振る舞い（config/form_behaviors.yml）はサーバが権威
+    values = Opt::FormBehaviors.apply(@template, (params[:values] || {}).to_unsafe_h)
 
     # skoba/anlage#36: 閲覧専用テンプレートへの POST は 500 ではなく説明付きの 422
     if @template.preview_only?
