@@ -127,3 +127,15 @@ AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unrelease
 - (5) rack_test の `forms_spec` は JSON 文字列ではなく flash と見出しで確認する形へ。実ブラウザの `demo_problem_list_spec`／`demo_lab_result_spec` は summary「canonical JSON」を開いてから JSON を見る（閉じた `<details>` の中は不可視）。語彙表に共通ナビ・次アクション・保存日時・canonical JSON を追記
 - (4) `spec/system/demo_save_next_actions_spec.rb`（CardiologyEncounter: 保存 → flash・見出し・次アクション 4 → nav が 1 行・横スクロール無し〔JSON を開いても〕→「もう 1 件」で空の帳票へ）、`rails_helper` の js before で `resize_to(1280, 720)`。横スクロールの判定は plan の `<= 1280` ではなく `scrollWidth > window.innerWidth`（ウィンドウ枠の分だけ内寸が 1280 より狭くなり得るため）
 - Red の扱い: ローカルは Chromium 不在に加え chromedriver が `libnspr4.so` を読めず起動しない。spec を main ではなくブランチ `change1-system-spec`（draft PR #51）に載せて CI で判定 → run `39433188399` green（184 examples, 0 failures, 3 pending）。**CI で red にならなかったので、(4) は (2)(3) の Red で駆動済みの挙動を実ブラウザで固定する pin**（実装を先に壊して red を作ることはしていない）。main は同ブランチへ fast-forward
+
+---
+
+## R8: 変更 2（取り込み画面）（2026-10-20）
+
+- TODO: (a) `Template#sem_ver` (b) カード・プレビュー・supersede 文の版並記 (c) プレビュー見出し＋説明 1 行 (d) CSS・「ファイルを選択」主導線・ページ全体のドロップ (e) 受付表示（JS）
+- (a) Red: `NoMethodError`（2 例）→ Green: `opt.description.other_details["sem_ver"].presence` を web_template に。fixture の実測: jp_referral 0.2.0／ProblemList 0.2.1／LabResultReport 0.2.0／bmi_calculation 0.2.0／CardiologyEncounter 0.1.0／patient_blood_pressure は要素無し → nil
+- (b)(c)(d) Red: `spec/requests/template_intake_spec.rb` 6 例が全て失敗（見出し「試着室」・`#version_label` 不在・supersede 文が `v1.0.0` のみ・カードに `.version-label` 不在・`button#dropzone_hint` 不在・CSS 空）→ Green: `TemplatesHelper#version_label`（「登録版 v1.0.0／テンプレート版 0.2.0」、sem_ver 無しは登録版のみ）、supersede 時の登録予定版は `next_version`、ドロップは `@window`（layout に controller を上げない）、`application.css` に `#dropzone_overlay`（既定 none／`.visible` で fixed・inset 0・`pointer-events: none`）・ボタン・カード枠のみ。CSS は asset パスの本文で pin
+- (e) `opt_dropzone_spec` → `demo_intake_spec` に改名・拡張（台本 1 幕、jp_referral.opt）。**Red は CI で確認**: ブランチ `change2-intake`（draft PR #52）に spec だけの一時コミットを push → run `39436740715` red（`#queue_status` が空で「受付: jp_referral.opt」が見つからない、1 failure）。Green: `showStatus` で受付直後「受付: <名前>（解析中…）」→ プレビュー後「（確認待ち）」→ 登録／破棄で次へ（残り件数は同じ行に続ける）。一時コミットは Green と squash し main には残さない
+- 1 回目の Green（run `39436895531`）は spec 側の不備で red: 空になった `<p id="queue_status">` は高さ 0 で Capybara が不可視とみなし `exact_text: ""` が見つからない → `not_to have_css(…, text: "受付")` に修正 → run `39437122540` green（192 examples, 0 failures, 3 pending）
+- 判断: plan は「試着室表示で消す」だったが、プレビュー中は「確認待ち」を残し、登録／破棄で消す形にした（壇上でいま何を確認しているかが見え、spec が一瞬の表示を追わずに済む）
+- 変更 3 に送ったもの: 一覧の h1「Templates」・空状態文・オーバーレイ文言「Drop the .opt file to try it on」・「archetype検出」・カードの「Open form」（語彙表の置換元。一括適用で扱う）
