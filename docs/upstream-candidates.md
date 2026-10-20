@@ -546,4 +546,4 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 含意: PATHABLE 側は name で絞れる（`rm/common/archetyped.rb:98-111` `select_by_predicate` が `segment.name` を比較）ので、評価器が値を path 文字列へ渡すだけで足りる見込み。同アーキタイプを name で区別するテンプレート（jp_referral の紹介元／紹介先）は、現行では AQL で引けない
 - 提案: `predicate_path_text` の ArchetypePredicate 分岐を NodePredicate と同形にする（String 値なら `"#{archetype_id}, '#{value}'"`、Parameter は未対応エラー）。WHERE 側（`contains_resolver.rb:150`）の扱いも併せて確認
 - 還流先: openehr-ruby
-- ステータス: 観察（再現手順・file:line は揃った。起票は裁定待ち）
+- ステータス: **起票済み** [skoba/openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60)（2026-10-20、裁定により即起票。openehr-ruby `docs/backlog.md` Round 2 magazine 首位群 `96eb4e2`）

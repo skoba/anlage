@@ -107,3 +107,12 @@ AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unrelease
 - `bundle update brakeman --conservative`: 8.0.6 → 8.1.0（`Gemfile.lock` の差分は #44 と同一。sha256 `cfa9e521…fdc17e07`）
 - `--ensure-latest` は `ci.yml` ではなく `bin/brakeman:5`（Rails 既定 binstub の `ARGV.unshift`）にあった。そこを外して理由コメント 1 行に置き換えた（`ci.yml` は `bin/brakeman --no-pager` のまま）
 - ローカル: `bin/brakeman --no-pager` → No warnings found、`bin/bundler-audit` → No vulnerabilities found
+
+---
+
+## R6: 例外報告（R4）への裁定と上流 24 項の起票（2026-10-20）
+
+- 裁定: 第 3 幕に jp_referral を name 述語なしの「傷病名で引く」横断クエリで入れる／上流 24 項は即起票／変更 5 に jp_referral 1 件（ICD-11 コード付き）。plan 6 節 3' 行・5 節・9 節に転記
+- 実測（scratchpad の使い捨て spec、構造骨格を直接コミット → `to_rm`）: `protocol.items_at_path("/items[openEHR-EHR-CLUSTER.organisation.v1]")` → 2 件、`"…organisation.v1, '紹介先医療機関']"` → 1 件（RM 側は name で絞れる）。`SELECT ev/data[at0001]/items[at0002]/value/value … CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]` → `[["2型糖尿病"]]`（name 述語なしなら jp_referral を AQL で読める＝3' 行の前提）
+- 起票: [skoba/openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60)（bug）。openehr-ruby `docs/backlog.md` Round 2 magazine に首位群の行を追加（docs のみの越境、openehr-ruby master `96eb4e2`）
+- 未決（設計上の自明な選択として plan 5 節に記載）: jp_referral のサンプルはフォーム保存経路（#30 で未対応）ではなく `CompositionCommitter` の直接コミット

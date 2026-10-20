@@ -89,7 +89,7 @@ bmi_calculation:
 
 ## 5. 変更 5: `demo:reset` 第二実装（第一実装は R1 で済）
 
-- サンプル Composition（裁定 D: 入れる。壇上の入力が 1 件失敗しても第 3 幕が空にならない）: `Opt::RmCompositionCommitter` 経由（フォーム保存経路と同じ値→RM グラフ）で 5 件——ProblemList 2 件（ICD-11 コード付き 1＝at0002 を coded で／自由記述 1＝DV_TEXT。代替制約の実演）、CardiologyEncounter 1、LabResultReport 1（数値 > 50）、bmi 1（170/65）。壇上入力は「1 件足す」演出。jp_referral のサンプルは 0.8.0 bump 後。spec は template_id と件数・AQL の行で固定（`demo_reset_spec` に例を追加）
+- サンプル Composition（裁定 D: 入れる。壇上の入力が 1 件失敗しても第 3 幕が空にならない）: `Opt::RmCompositionCommitter` 経由（フォーム保存経路と同じ値→RM グラフ）で 5 件——ProblemList 2 件（ICD-11 コード付き 1＝at0002 を coded で／自由記述 1＝DV_TEXT。代替制約の実演）、CardiologyEncounter 1、LabResultReport 1（数値 > 50）、bmi 1（170/65）。壇上入力は「1 件足す」演出。**jp_referral 1 件**（裁定 2026-10-20: 傷病名 at0002 に ICD-11 コード付き）を追加し、3 幕の横断クエリが初期状態で「2 テンプレート・3 件」（ProblemList 2＋jp_referral 1）を返すようにする。jp_referral はフォーム保存経路が #30 で未対応のため、`OpenehrRails::Rm::CompositionCommitter` による直接コミット（`#23` (4) 裁定 C と同じ経路）。spec は template_id と件数・AQL の行で固定（`demo_reset_spec` に例を追加）
 - `docs/demo/setup.md` 1 節は確定版（裁定 E 受領、2026-10-12）。`demo:reset` の所要はデモ機で再計測して上書き
 
 ## 6. 台本対応表（各行＝system spec 1 本の操作列）
@@ -102,11 +102,14 @@ bmi_calculation:
 | 2 帳票 | `/forms/bmi_calculation` | 身長 170・体重 65 | BMI 22.5・判定「普通体重」が自動、保存 → 記録画面に flash と次アクション | `demo_bmi_spec` |
 | 2' | `/forms/ProblemList` | 既存の操作列 | 既存 | `demo_problem_list_spec`（文言のみ更新） |
 | 3 AQL | `/openehr/query` | クエリ 1（既定文字列）を実行 | height > 170 の行 | request/integration（engine は gem。spec は `OpenehrRails::Aql::Executor` で件数固定＝既存 `spec/demo/`） |
+| 3' 横断 AQL（裁定 2026-10-20） | `/openehr/query` | 「傷病名で引く」1 本: `FROM COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1] WHERE ev/data[at0001]/items[at0002]/value/value MATCHES …`（ProblemList の Q1 と同型、name 述語なし） | ProblemList と jp_referral の行が 1 本の AQL で同時に出る（template_id で出所を並記）。初期状態で 2 テンプレート・3 件 | `spec/demo/` に例を追加（`Executor` で件数・template_id を固定）。「紹介先医療機関で引く」（name 述語）は上流 24 項＝[openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60) の解消後（12 月） |
 | 4 FHIR/FSH | HTTP facade は **ProblemList のみ**（`/fhir/r5/StructureDefinition/openehr-evaluation-problem-diagnosis-v1`、カルテ記録画面の「FHIR プロファイル」リンク）。jp_referral は **FSH 出力**（`bin/rails fsh:export` → `tmp/fsh/jp_referral-1.0.0/input/fsh/*.fsh`） | リンク／コマンド | JSON／FSH ファイル | `fhir_profiles_spec`（既存）＋`spec/tasks/fsh_spec`（既存）。id 衝突は rails #55（追加裁定、`docs/backlog.md` 15） |
 
 **ビューポート pin（裁定 E）**: 全 system spec を 1280×720（`page.driver.browser.manage.window.resize_to(1280, 720)` を `rails_helper` の `js: true` before で一括）で走らせ、ナビが折り返さず・表が収まり・横スクロールが無いことを変更 1 の spec で固定する（`page.evaluate_script("document.documentElement.scrollWidth <= 1280")`）。
 
 AQL の 0.8.0 同乗分（SECTION／INSTRUCTION の読み戻しで jp_referral を AQL に出す）は 10/20 までに rails 0.8.0 が出た場合のみ追加（lock bump → `spec/integration/jp_referral_aql_spec.rb` の pending 解除を確認）。出なければ既存キャスト 4 件のまま
+
+→ 2026-10-20: 0.8.0 に同乗（log R4）。`jp_referral_aql_spec` の pending は上流 24 項（openehr-ruby#60、name 述語）で残る。jp_referral は 3' 行の name 述語なしの横断クエリで第 3 幕に入れる（裁定 2026-10-20、9 節）
 
 ## 7. コミット分割と順序（摩擦の大きい順）
 
@@ -134,3 +137,11 @@ A 判定の `cases` 表現／B BMI の閾値・文言／C `editable` の意味�
 - **G**: 承認。語彙表と同一コミットで spec 文言を更新。CLAUDE.md に 1 行追記
 - **追加裁定（0 節 7）**: FHIR プロファイル id のアーキタイプ単位衝突は rails 起票（[skoba/openehr-rails#55](https://github.com/skoba/openehr-rails/issues/55)、`docs/upstream-candidates.md` 23 項）。凍結前は anlage 側で「テンプレート修飾 id」を暫定しない。台本では jp_referral の FHIR は FSH 出力で見せ、HTTP facade は ProblemList のみ（`docs/backlog.md` 15、6 節）
 - 実装順は 7 節どおり: 保存後動線＋ナビ → 取り込み画面 → 語彙 → BMI → reset 第二実装
+
+### 追加裁定（2026-10-20、統括）
+
+- **順序**: 0.8.0 bump → scan_ruby 緑化 → 変更 1 → 2 → 3 → 5 → 4（BMI は最後）。日程: 10/21 bump・scan_ruby・変更 1／10/22 変更 2／10/23 変更 3・5／10/24 変更 4／10/25 予備／**10/26 リハ 1**（Vaio Z、1 日後ろ倒し）／10/27–31 リハ修正（新規着手なし）／11/1–4 凍結総点検 → 11/5 凍結タグ
+- **scan_ruby**: brakeman 8.1.0 を直接コミットし、`--ensure-latest` を外す（実体は `bin/brakeman`、log R5）。dependabot の残り PR は superseded でクローズ
+- **第 3 幕の jp_referral**: (ii) name 述語を使わない「傷病名で引く」横断クエリで入れる（6 節 3' 行）。狙いは骨格契約の横串一貫性の実演（同じ problem_diagnosis を使う 2 テンプレートが 1 本の AQL で引ける）と、jp_referral が AQL で読める事実の提示
+- **上流 24 項**: 即起票（[skoba/openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60)、bug）。openehr-ruby の Round 2 magazine 首位群に追加。anlage の spec は pending のまま
+- **変更 5**: jp_referral 1 件（ICD-11 コード付き）を追加（5 節）
