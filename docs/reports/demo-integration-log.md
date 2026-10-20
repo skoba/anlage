@@ -139,3 +139,13 @@ AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unrelease
 - 1 回目の Green（run `39436895531`）は spec 側の不備で red: 空になった `<p id="queue_status">` は高さ 0 で Capybara が不可視とみなし `exact_text: ""` が見つからない → `not_to have_css(…, text: "受付")` に修正 → run `39437122540` green（192 examples, 0 failures, 3 pending）
 - 判断: plan は「試着室表示で消す」だったが、プレビュー中は「確認待ち」を残し、登録／破棄で消す形にした（壇上でいま何を確認しているかが見え、spec が一瞬の表示を追わずに済む）
 - 変更 3 に送ったもの: 一覧の h1「Templates」・空状態文・オーバーレイ文言「Drop the .opt file to try it on」・「archetype検出」・カードの「Open form」（語彙表の置換元。一括適用で扱う）
+
+---
+
+## R9: 変更 3（UI 語彙表の一括適用）（2026-10-20）
+
+- 語彙表を先に直した: 置き換え先が表に無かった置換元に置き換え先を決めて追記（オーバーレイ「ドロップして取り込む」、解析ログ「アーキタイプ検出: <名前>（<N> 項目）」、要約「アーキタイプ数・項目数」、「帳票プレビュー」、カルテ記録の空状態「カルテ記録はまだありません。」、パスカードの項目名「テンプレート・アーキタイプ・ノード」と警告「未翻訳の疑いがあります」、ADL の説明文）。**正典への追記なので確認を求める**
+- Red: `spec/requests/ui_vocabulary_spec.rb`（6 例）と旧文言 pin の書き換え（request 4 本）で 10 failures → Green: view 10 ファイル＋`dropzone_controller.js` の解析ログ。js 以外 189 examples, 0 failures
+- system spec の文言追随（「送信」→「保存」4 本、demo_intake の空状態・解析ログ、polymorphic 2 例）はブランチ `change3-vocab`（draft PR #53）で CI 判定 → run `39437772748` green（198 examples, 0 failures, 3 pending）。main は fast-forward
+- 台本 6 節「検索」行の 1 行変更（パスカードから帳票へのリンク「帳票に入力」）も同じコミットで入れた（ui_vocabulary_spec で pin）
+- 対象外として残した英語: `POST /templates` の二重登録通知（`already registered as …`、JSON API の `notice`、`templates_spec.rb:194` が pin）とアップロードエラーのメッセージ。壇上の操作列には出ない（プレビューの段階で「登録済み」を出すため）
