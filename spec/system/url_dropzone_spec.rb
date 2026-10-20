@@ -12,7 +12,7 @@ RSpec.describe "URL-driven OPT import", type: :system, js: true do
     fill_in placeholder: "https://ckm.openehr.org/...", with: "https://ckm.openehr.org/templates/patient_blood_pressure.opt"
     click_button "URLから取り込む"
 
-    expect(page).to have_content("試着室")
+    expect(page).to have_content("テンプレートの取り込み")
     click_button "登録"
 
     expect(page).to have_css("#catalog .template-card")

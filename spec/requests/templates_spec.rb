@@ -43,7 +43,7 @@ RSpec.describe "Templates", type: :request do
       post templates_preview_path, params: { file: upload(opt_path) }
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("試着室")
+      expect(response.body).to include("テンプレートの取り込み")
       expect(response.body).to include('data-action="click->dropzone#register"')
       expect(response.body).to include('data-action="click->dropzone#discard"')
     end

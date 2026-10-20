@@ -1,4 +1,7 @@
-<h2>試着室: <%= @template.template_id %></h2>
+<h2>テンプレートの取り込み: <%= @template.web_template["concept"] || @template.template_id %></h2>
+<p>登録前に中身を確認します。</p>
+<% registering_version = @superseding ? ::Template.next_version(@superseding.version) : @template.version %>
+<p id="version_label"><%= version_label(registering_version, @template.sem_ver) %></p>
 
 <% if @existing %>
   <p class="already-registered">登録済みです（v<%= @existing.version %>）。</p>
@@ -17,9 +20,9 @@
     <% if @superseding %>
       <div id="version_diff">
         <p>
-          <%= @superseding.template_id %> は既に v<%= @superseding.version %> として登録済みです。
+          <%= @superseding.template_id %> は既に <%= version_label(@superseding.version, @superseding.sem_ver) %> として登録済みです。
           内容が変更されています。承認すると
-          v<%= ::Template.next_version(@superseding.version) %> として新規登録し、
+          <%= version_label(registering_version, @template.sem_ver) %> として新規登録し、
           旧バージョンは superseded になります。
         </p>
         <% if @diff.any_changes? %>

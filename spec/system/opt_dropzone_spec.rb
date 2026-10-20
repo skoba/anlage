@@ -13,7 +13,7 @@ RSpec.describe "OPT dropzone", type: :system, js: true do
 
     attach_file("opt_file_input", opt_path.to_s, visible: false)
 
-    expect(page).to have_content("試着室")
+    expect(page).to have_content("テンプレートの取り込み")
     expect(page).to have_content("archetype検出") # the parse-log reveal, before the form appears
     expect(page).to have_button("登録")
 

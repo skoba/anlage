@@ -3,14 +3,13 @@
 <div data-controller="dropzone"
      data-dropzone-preview-url-value="<%= templates_preview_path %>"
      data-dropzone-register-url-value="<%= templates_path %>"
-     data-action="dragover->dropzone#dragover dragenter->dropzone#dragenter dragleave->dropzone#dragleave drop->dropzone#drop">
+     data-action="dragover@window->dropzone#dragover dragenter@window->dropzone#dragenter dragleave@window->dropzone#dragleave drop@window->dropzone#drop">
 
   <div data-dropzone-target="overlay" id="dropzone_overlay">Drop the .opt file to try it on</div>
 
-  <div id="dropzone_hint" data-action="click->dropzone#browse">
-    Drop an .opt file anywhere, or click to choose
-    (.opt / .xml to register, .json composition or .adl archetype to inspect)
-  </div>
+  <%# skoba/anlage#47 変更 2: 主導線は「ファイルを選択」。ドラッグ＆ドロップはページ全体（@window）で受ける %>
+  <button type="button" id="dropzone_hint" data-action="click->dropzone#browse">ファイルを選択</button>
+  <p class="dropzone-help">.opt / .xml は登録、.json（Composition）・.adl（アーキタイプ）は中身の確認。ページのどこにでもドロップできます</p>
   <input type="file" id="opt_file_input" accept=".opt,.xml,.json,.adl" multiple hidden
          data-dropzone-target="fileInput"
          data-action="change->dropzone#fileSelected">

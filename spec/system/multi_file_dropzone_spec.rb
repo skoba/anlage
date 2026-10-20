@@ -14,7 +14,7 @@ RSpec.describe "Multi-file OPT dropzone", type: :system, js: true do
 
     attach_file("opt_file_input", [ opt_path.to_s, opt_path.to_s ], visible: false)
 
-    expect(page).to have_content("試着室")
+    expect(page).to have_content("テンプレートの取り込み")
     expect(page).to have_content("残り1件")
 
     click_button "登録"
