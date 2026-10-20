@@ -443,7 +443,7 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 含意: SECTION 入れ子（referral_details.v0）や INSTRUCTION（service_request）を持つテンプレートは、現行 gem では RM グラフに入れてはならない（入れると demo 経路の AQL 4 件も落ちる）。`#23` (4) の統合 spec は本項の解消が前提
 - 提案: `TYPE_CLASSES` に `SECTION`→`OpenEHR::RM::Composition::Content::Navigation::Section`、`INSTRUCTION`→`...Entry::Instruction`、`ACTIVITY`→`...Entry::Activity`（+ ACTION）を追加し、`build_node` に SECTION.items／INSTRUCTION.activities・protocol／ACTIVITY.description の組み立てを足す。書き込みと読み出しの型集合を一致させる（`TypeMap::NODE_TYPES` を単一の真実にする）。少なくとも未知型は `to_rm` で明示エラー（Composition 単位で skip）にし、store 全体を巻き込まない
 - 還流先: openehr-rails
-- ステータス: **緩和済み（0.7.1、rails #44）／読み戻しは rails #45 待ち**。0.7.1 は該当 Composition を warn（`openehr-rails AQL: skipping composition uid=…`）付きで skip し、store の他の Composition へのクエリは通る（`docs/reports/fsh-log.md` R9 で実測）。SECTION／INSTRUCTION／ACTIVITY の `to_rm` は #45（次 minor）。再現手順: R6 の手写像 canonical JSON を `CompositionCommitter.commit` → 任意の AQL
+- ステータス: **解消（0.8.0、rails #45。2026-10-20 Anlage で lock bump・実測: jp_referral 構造骨格の `CONTAINS INSTRUCTION ... AND EVALUATION` が束縛まで通る。後続の阻害は 24 項）**。以下は 0.7.1 時点の記録: **緩和済み（0.7.1、rails #44）／読み戻しは rails #45 待ち**。0.7.1 は該当 Composition を warn（`openehr-rails AQL: skipping composition uid=…`）付きで skip し、store の他の Composition へのクエリは通る（`docs/reports/fsh-log.md` R9 で実測）。SECTION／INSTRUCTION／ACTIVITY の `to_rm` は #45（次 minor）。再現手順: R6 の手写像 canonical JSON を `CompositionCommitter.commit` → 任意の AQL
 
 ## 16. `CompositionCommitter`／`GraphBuilder` が canonical JSON の `context`（EVENT_CONTEXT）を永続化しない
 
@@ -538,3 +538,12 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 還流先: openehr-rails
 - ステータス: **起票済み** [skoba/openehr-rails#55](https://github.com/skoba/openehr-rails/issues/55)（2026-10-12、裁定により次回覚醒を待たず起票）
 
+## 24. AQL の path 評価が ArchetypePredicate の name 値（`[openEHR-EHR-CLUSTER.x.v1, '名前']`）を捨て、同アーキタイプの兄弟に fan-out する
+
+- 発見日: 2026-10-20（openehr-rails 0.8.0 への lock bump、`docs/reports/demo-integration-log.md` R4）
+- 対象: openehr 2.4.3 `lib/openehr/aql/engine/path_evaluator.rb:115-119`（`predicate_path_text` が `Model::ArchetypePredicate` に対し `predicate.archetype_id` だけを返す。`NodePredicate` は `node_predicate_path_text` で `"#{code}, '#{value}'"` を付ける）。パーサは値を保持している（`parser.rb:184` `ArchetypePredicate.new(archetype_id:, value:)`）。openehr-ruby master `a02fa1d` も同じ
+- 実測: `spec/integration/jp_referral_aql_spec.rb` の構造骨格（実 at-code、protocol 配下に organisation CLUSTER 2 件＝紹介元／紹介先）に `i/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']/items[at0001]/value/value` → `ExecutionError: path segment "items[...]" matched 2 items (fan-out SELECT paths are not yet supported)`（`path_evaluator.rb:96`）
+- 含意: PATHABLE 側は name で絞れる（`rm/common/archetyped.rb:98-111` `select_by_predicate` が `segment.name` を比較）ので、評価器が値を path 文字列へ渡すだけで足りる見込み。同アーキタイプを name で区別するテンプレート（jp_referral の紹介元／紹介先）は、現行では AQL で引けない
+- 提案: `predicate_path_text` の ArchetypePredicate 分岐を NodePredicate と同形にする（String 値なら `"#{archetype_id}, '#{value}'"`、Parameter は未対応エラー）。WHERE 側（`contains_resolver.rb:150`）の扱いも併せて確認
+- 還流先: openehr-ruby
+- ステータス: 観察（再現手順・file:line は揃った。起票は裁定待ち）
