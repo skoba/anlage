@@ -207,3 +207,13 @@ AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unrelease
 - 結果: 環境変数なしの `bundle exec rspec` が 227 examples, 0 failures, 3 pending（33 秒）。CI（ubuntu-latest、snap の chromium は無い想定）は従来どおり selenium-manager 経路のまま
 - 運用: 以後、system spec の Red はローカルで確認できる（R7・R8・R11 のブランチ＋CI 方式は不要）。デモ機（WSL2）も snap 版なら同じ設定で動く（`docs/demo/setup.md` 1・4 節）
 
+
+---
+
+## R14: Phase 3 報告への裁定の反映（2026-10-21）
+
+- 裁定 1〜5 を plan 9 節（追加裁定 2026-10-21）に転記
+- 1: 「帳票プレビュー」→「帳票の確認」。`ui_vocabulary_spec` を先に書き換えて Red（`expected ["帳票プレビュー"] to include "帳票の確認"`）→ view → 語彙表、同一コミット。全 suite 227 examples, 0 failures（ローカル、実ブラウザ込み）
+- 2: 台本の注記を plan 6 節 3' 行と `docs/demo/aql-queries.md` 5 節に（ICD-11 付きはフォーム経路で作れない＝WP5／`$lookup` の既知制限、`docs/backlog.md` 13。壇上で足すのは自由記述）
+- 3: #54 本文に時期（凍結後・12 月の最初の修正候補）と台帳 25 項との関係を追記。台帳 25 項に #54 への相互参照
+- 5: #47 受入 (1) の本文をサンプル入りの初期状態に更新、(2)〜(6) にチェック。(1) は本文更新のみ（裁定どおり）、(7) はリハ 1 待ち

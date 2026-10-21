@@ -103,7 +103,7 @@ bmi_calculation:
 | 2 帳票 | `/forms/bmi_calculation` | 身長 170・体重 65 | BMI 22.5・判定「普通体重」が自動、保存 → 記録画面に flash と次アクション | `demo_bmi_spec` |
 | 2' | `/forms/ProblemList` | 既存の操作列 | 既存 | `demo_problem_list_spec`（文言のみ更新） |
 | 3 AQL | `/openehr/query` | クエリ 1（既定文字列）を実行 | height > 170 の行 | request/integration（engine は gem。spec は `OpenehrRails::Aql::Executor` で件数固定＝既存 `spec/demo/`） |
-| 3' 横断 AQL（裁定 2026-10-20） | `/openehr/query` | 「傷病名で引く」1 本: `FROM COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1] WHERE ev/data[at0001]/items[at0002]/value/value MATCHES …`（ProblemList の Q1 と同型、name 述語なし） | ProblemList と jp_referral の行が 1 本の AQL で同時に出る（template_id で出所を並記）。初期状態で 2 テンプレート・3 件 | `spec/demo/` に例を追加（`Executor` で件数・template_id を固定）。「紹介先医療機関で引く」（name 述語）は上流 24 項＝[openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60) の解消後（12 月） |
+| 3' 横断 AQL（裁定 2026-10-20） | `/openehr/query` | 「傷病名で引く」1 本: `FROM COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1] WHERE ev/data[at0001]/items[at0002]/value/value MATCHES …`（ProblemList の Q1 と同型、name 述語なし） | ProblemList と jp_referral の行が 1 本の AQL で同時に出る（template_id で出所を並記）。初期状態で 2 テンプレート・3 件 | `spec/demo/` に例を追加（`Executor` で件数・template_id を固定）。「紹介先医療機関で引く」（name 述語）は上流 24 項＝[openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60) の解消後（12 月）。**注記（裁定 2026-10-21）**: ICD-11 コード付きの傷病名は `demo:reset` のサンプルにだけある。フォーム経路ではコード付きを作れない（at0002 は coded_free で DV_TEXT 保存）——WP5／`$lookup`（12 月）の既知制限（`docs/backlog.md` 13）。壇上で「1 件足す」のは自由記述 |
 | 4 FHIR/FSH | HTTP facade は **ProblemList のみ**（`/fhir/r5/StructureDefinition/openehr-evaluation-problem-diagnosis-v1`、カルテ記録画面の「FHIR プロファイル」リンク）。jp_referral は **FSH 出力**（`bin/rails fsh:export` → `tmp/fsh/jp_referral-1.0.0/input/fsh/*.fsh`） | リンク／コマンド | JSON／FSH ファイル | `fhir_profiles_spec`（既存）＋`spec/tasks/fsh_spec`（既存）。id 衝突は rails #55（追加裁定、`docs/backlog.md` 15） |
 
 **ビューポート pin（裁定 E）**: 全 system spec を 1280×720（`page.driver.browser.manage.window.resize_to(1280, 720)` を `rails_helper` の `js: true` before で一括）で走らせ、ナビが折り返さず・表が収まり・横スクロールが無いことを変更 1 の spec で固定する（`page.evaluate_script("document.documentElement.scrollWidth <= 1280")`）。
@@ -146,3 +146,12 @@ A 判定の `cases` 表現／B BMI の閾値・文言／C `editable` の意味�
 - **第 3 幕の jp_referral**: (ii) name 述語を使わない「傷病名で引く」横断クエリで入れる（6 節 3' 行）。狙いは骨格契約の横串一貫性の実演（同じ problem_diagnosis を使う 2 テンプレートが 1 本の AQL で引ける）と、jp_referral が AQL で読める事実の提示
 - **上流 24 項**: 即起票（[skoba/openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60)、bug）。openehr-ruby の Round 2 magazine 首位群に追加。anlage の spec は pending のまま
 - **変更 5**: jp_referral 1 件（ICD-11 コード付き）を追加（5 節）
+
+### 追加裁定（2026-10-21、統括。Phase 3 報告への回答）
+
+1. 語彙表の追記: 承認。「帳票プレビュー」のみ「帳票の確認」に（「プレビュー」は語彙表が避けた外来語。「確認待ち」と語が揃う）
+2. ICD-11 付きサンプルの直接コミット: 承認（自由記述 1 件とコード付き 1 件が同じ AQL で返る＝代替制約の実演は守られている）。「フォーム経路ではコード付きを作れない」は WP5／`$lookup`（12 月）の既知制限として台本に注記（6 節 3' 行）
+3. anlage#54: 凍結後。台帳 25 項と同根として #54 本文で相互参照し、12 月の最初の修正候補に
+4. 受付表示は「登録か破棄で消す」: 承認
+5. #47 受入 (1) の本文を実装に合わせて更新、(2)〜(6) にチェック: 承認
+

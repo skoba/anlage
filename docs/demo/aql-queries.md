@@ -109,7 +109,7 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
        CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
   WHERE ev/data[at0001]/items[at0002]/value/value MATCHES {"2型糖尿病", "高血圧症"}
   ```
-- 投入: 1〜4 と違いフォーム POST だけでは作れない（jp_referral のフォーム保存は #30 で未対応）。
+- 投入: 1〜4 と違いフォーム POST だけでは作れない（jp_referral のフォーム保存は #30 で未対応。ICD-11 コード付きの傷病名もフォーム経路では作れない——ProblemList の at0002 は coded_free で DV_TEXT 保存、WP5／`$lookup`〔12 月〕の既知制限、`docs/backlog.md` 13）。
   `rake demo:reset` の初期状態（`Demo::SampleCompositions`）を使い、壇上の「1 件足す」はフォーム POST
 - 期待件数: 初期状態で **3 件**（ProblemList「2型糖尿病」〔ICD-11 5A11 付き〕・「高血圧症」、jp_referral「2型糖尿病」〔5A11 付き〕）、
   フォームから「2型糖尿病」を 1 件足すと **4 件**

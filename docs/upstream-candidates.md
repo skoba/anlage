@@ -555,5 +555,6 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 実測: `SELECT c/archetype_details/template_id/value …` → `OpenehrRails::Aql::UnsupportedFeature: unsupported path attribute "archetype_details" on a OpenEHR::RM::Composition::Composition`
 - 含意: 横断クエリで出所テンプレートを並記できない。anlage は Composition 名（`c/name/value`）で代替（デモクエリ 5）。10 項（defining_code）・#48（events/time）と同じ「終端ホップの許可リスト」の類。openEHR の AQL 仕様では `archetype_details/template_id/value` は一般的な射影
 - 還流先: openehr-ruby（#49 の設計議論〔ホップ拡張方針〕に事例として足すのが自然）
+- 関連: [anlage#54](https://github.com/skoba/anlage/issues/54)（同根: フォーム経路の Composition はルートに archetype_details を持たず、RM 側の template_id も nil。本項が解消しても、#54 が残る限りフォーム経路の記録の template_id は引けない）。裁定 2026-10-21 で #54 は凍結後・12 月の最初の修正候補
 - ステータス: 観察
 
