@@ -29,11 +29,11 @@ RSpec.describe "UI 語彙（docs/demo/ui-vocabulary.md）", type: :request do
       expect(doc.at_css(".template-card a").text.strip).to eq("帳票に入力")
     end
 
-    it "取り込みプレビュー: 要約は「アーキタイプ数・項目数」、フォームは「帳票プレビュー」" do
+    it "取り込みプレビュー: 要約は「アーキタイプ数・項目数」、フォームは「帳票の確認」" do
       post templates_preview_path, params: { file: Rack::Test::UploadedFile.new(Rails.root.join("spec/fixtures/opt/ProblemList.opt").to_s, "text/xml") }
 
       expect(texts("#fitting_room_content dt")).to eq(%w[アーキタイプ数 項目数])
-      expect(texts("#fitting_room_content h3")).to include("帳票プレビュー")
+      expect(texts("#fitting_room_content h3")).to include("帳票の確認")
     end
   end
 
