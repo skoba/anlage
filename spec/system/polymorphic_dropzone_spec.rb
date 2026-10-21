@@ -10,7 +10,8 @@ RSpec.describe "Polymorphic dropzone (composition/ADL)", type: :system, js: true
     rm_composition = Opt::CompositionBuilder.new(template, values).build
     json = OpenEHR::Serializer::RMJSONSerializer.new(rm_composition).serialize
 
-    composition_file = Tempfile.new([ "composition", ".json" ])
+    # ブラウザから読めるよう tmp/ に置く（snap 版 Chromium は自分専用の /tmp を持ち、システムの /tmp が見えない）
+    composition_file = Tempfile.new([ "composition", ".json" ], Rails.root.join("tmp"))
     composition_file.write(json)
     composition_file.flush
 

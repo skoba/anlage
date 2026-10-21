@@ -11,7 +11,7 @@
 | 実行環境 | WSL2（Ubuntu）上で Rails、Windows 側 Chrome で `localhost:3000` | 統括 |
 | Ruby | 4.0.7（rbenv。`.ruby-version`、`Dockerfile` `ARG RUBY_VERSION`） | `893aa7f` |
 | Node／sushi | Node 18 ＋ fsh-sushi 3.16.0（`rake fsh:verify` 用、任意） | 統括、`lib/tasks/fsh.rake:50` |
-| Chromium | system spec（`js: true`）用。壇上の表示は Windows 側 Chrome | 統括、`spec/rails_helper.rb:12` |
+| Chromium | system spec（`js: true`）用。壇上の表示は Windows 側 Chrome。snap 版（`chromium-browser`）は snap 同梱の chromedriver（`/snap/bin/chromium.chromedriver`）を `rails_helper` が自動で使う（selenium-manager の chromedriver とは組めない） | 統括、`spec/rails_helper.rb` |
 | DB | SQLite（development、`storage/development.sqlite3`）。`rake demo:reset` で既知状態へ。所要 **3.1 秒／2.8 秒**（サンプル投入込み、本開発機で 2 回実測、2026-10-20。デモ機では再計測して上書き） | 実測 |
 | ネットワーク | **オフライン前提、外部呼び出し無し**。importmap は gem 同梱の turbo／stimulus、CDN 無し。CKM URL 取り込みと `fsh:verify` は台本に乗せない | `config/importmap.rb`、`templates_controller.rb:162-185` |
 | 表示 | 会場は 16:9・HDMI-A・解像度不明 → **設計値 1280×720**。ブラウザは 1280×720 相当（表示スケーリングで調整）、ミラーリング（複製）モード。system spec のビューポートを 1280×720 で pin（ナビ折返し・表幅・横スクロール無し） | 統括、plan 6 節 |
@@ -48,4 +48,4 @@ bundle exec rspec                 # 実ブラウザ system spec を含む全 sui
 bin/rails demo:reset              # 打ち直し
 ```
 
-Chromium が無い機では `bundle exec rspec --tag '~js'` と CI（`test` ジョブ）の green で代替する。
+Chromium が無い機では `bundle exec rspec --tag '~js'` と CI（`test` ジョブ）の green で代替する。開発機は 2026-10-21 に snap 版 Chromium が入り、全 suite がローカルで通る（227 examples、約 33 秒）。

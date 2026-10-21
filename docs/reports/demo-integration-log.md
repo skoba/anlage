@@ -195,3 +195,15 @@ AQL の 0.8.0 同乗分: openehr-rails master `84244cd`、0.7.1 以降 Unrelease
 | 4 FHIR／FSH | `spec/requests/fhir_profiles_spec.rb`・`spec/tasks/fsh_spec.rb`（既存） | green |
 
 - 3 幕の AQL コンソール（`/openehr/query`、gem の画面）そのものを操作する system spec は無い（plan 6 節どおり、件数は `Executor` で固定）。壇上の打鍵はリハ 1 で確かめる
+
+---
+
+## R13: ローカルの実ブラウザ spec の復旧（2026-10-21）
+
+- 開発機に snap 版 Chromium（`/usr/bin/chromium-browser` → snap `chromium` rev 3559、chromedriver 155.0.8059.79 同梱）が入り、selenium-manager の chromedriver（155.0.8059.84、`~/.cache/selenium`）も共有ライブラリが揃って起動するようになった
+- 素のまま `--tag js`: 12 examples, 12 failures、24 分 22 秒。原因は `SessionNotCreatedError: DevToolsActivePort file doesn't exist`（snap の閉じ込めの下で、外部の chromedriver が起動した Chromium と通信できない）
+- 対処 1: snap 同梱の chromedriver を使う。selenium-webdriver 4.49.0 の `common/driver_finder.rb:62` が `SE_CHROMEDRIVER`（`chrome/service.rb:27`）を読む。`rails_helper` で「未設定かつ `/snap/bin/chromium.chromedriver` が実行可能ならそれを使う」→ 1 例 1.9 秒で通過
+- 対処 2: 残る 1 件 `polymorphic_dropzone_spec:7` は `InvalidArgumentError: File not found : /tmp/composition….json`。snap の Chromium は自分専用の `/tmp` を持ち、spec が `/tmp` に作った Tempfile が見えない → Tempfile を `Rails.root/tmp` に作る
+- 結果: 環境変数なしの `bundle exec rspec` が 227 examples, 0 failures, 3 pending（33 秒）。CI（ubuntu-latest、snap の chromium は無い想定）は従来どおり selenium-manager 経路のまま
+- 運用: 以後、system spec の Red はローカルで確認できる（R7・R8・R11 のブランチ＋CI 方式は不要）。デモ機（WSL2）も snap 版なら同じ設定で動く（`docs/demo/setup.md` 1・4 節）
+

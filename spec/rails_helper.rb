@@ -10,6 +10,12 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 require 'rspec/rails'
 require 'capybara/rspec'
 Capybara.javascript_driver = :selenium_chrome_headless
+# snap 版 Chromium（Ubuntu／WSL2 の chromium-browser）は selenium-manager が落とす chromedriver と組むと
+# `DevToolsActivePort file doesn't exist` でセッションが作れない。snap 同梱の chromedriver があり、
+# 明示指定（SE_CHROMEDRIVER、selenium-webdriver の driver_finder.rb が読む）が無ければそれを使う
+# （2026-10-21、docs/reports/demo-integration-log.md R13）。
+SNAP_CHROMEDRIVER = "/snap/bin/chromium.chromedriver"
+ENV["SE_CHROMEDRIVER"] ||= SNAP_CHROMEDRIVER if File.executable?(SNAP_CHROMEDRIVER)
 # `.adl` ドロップの `POST /templates/preview` は ADL パース（Treetop）を同期実行する
 # ため、1リクエストの所要時間が負荷状況で大きく振れる。実測レンジは静穏時 724ms、
 # CPU 8並列 busy loop 下 2793ms、開発機移行の検収時（並行セッションが別 suite と
