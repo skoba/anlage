@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 8.1.3", ">= 8.1.3.1"
+gem "rails", "~> 8.1.4"
 # json 3.0 (2026-09-08) changed JSON.parse's arity; ActiveSupport::JSON.decode as of
 # activesupport 8.1.3.1 still passes its options positionally, so every json-column
 # read (templates.web_template / pathcards, compositions) raises
