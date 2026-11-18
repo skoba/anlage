@@ -9,7 +9,7 @@
 | 帳票（フォーム） | <テンプレート名> | 帳票に入力（カード・パスカードのリンク）／保存（送信ボタン） | 帳票 | Open form／送信 |
 | カルテ記録（Composition） | カルテ記録一覧／カルテ記録: <テンプレート名> | 空状態「カルテ記録はまだありません。」／保存しました（flash）／保存日時／同じ帳票にもう 1 件入力・カルテ記録一覧・AQL 照会・FHIR プロファイル（次アクション）／canonical JSON（折りたたみ） | カルテ記録（「カルテ記録として保存」） | Compositions／composition／Registered:／登録しました |
 | 共通ナビ（layout） | — | テンプレート／カルテ記録一覧／パスカード検索／AQL 照会 | — | （無し） |
-| パスカード | パスカード検索 | 探したい項目／検索／カードの項目名「テンプレート・アーキタイプ・ノード」／警告「未翻訳の疑いがあります」／帳票に入力（カードのリンク） | パスカード | Pathcard search／Query／Search／Template／Archetype／Node |
+| パスカード | パスカード検索 | 探したい項目／検索／カードの項目名「テンプレート・アーキタイプ・ノード・アーキタイプパス」（アーキタイプパスは所属アーキタイプを根としたパス。導出できないカードには行を出さない。裁定 R-20261116-1、`skoba/anlage#64`）／警告「未翻訳の疑いがあります」／帳票に入力（カードのリンク） | パスカード | Pathcard search／Query／Search／Template／Archetype／Node |
 | AQL 照会 | （openehr-rails engine の console、文言は gem のまま） | AQL 照会（nav のリンク名） | AQL 照会 | AQL Query |
 | FHIR プロファイル | — | FHIR プロファイル（カルテ記録画面のリンク） | FHIR プロファイル | — |
 | FSH | — | — | FSH 出力（`rake fsh:export`） | — |

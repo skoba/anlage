@@ -63,7 +63,7 @@ RSpec.describe "UI 語彙（docs/demo/ui-vocabulary.md）", type: :request do
       expect(texts("body > h1")).to eq([ "パスカード検索" ])
       expect(doc.at_css("label[for=q]").text.strip).to eq("探したい項目")
       expect(doc.at_css("input[type=submit]")["value"]).to eq("検索")
-      expect(texts(".pathcard dt").uniq).to eq(%w[テンプレート アーキタイプ ノード])
+      expect(texts(".pathcard dt").uniq).to eq(%w[テンプレート アーキタイプ ノード アーキタイプパス])
       expect(doc.css(".pathcard a").map { [ _1.text.strip, _1["href"] ] }.uniq).to eq([ [ "帳票に入力", "/forms/CardiologyEncounter" ] ])
     end
   end

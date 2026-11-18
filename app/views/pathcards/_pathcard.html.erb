@@ -1,6 +1,7 @@
 <article class="pathcard">
   <% identity = pathcard.fetch("identity") %>
   <% label = pathcard.dig("semantics", "labels", 0) %>
+  <% archetype_path = Opt::Pathcard.archetype_path(pathcard) %>
   <% semantic_entries = Array(pathcard.dig("semantics", "labels")) +
                         Array(pathcard.dig("semantics", "descriptions")) %>
   <h2><%= label&.fetch("text", nil) || identity.fetch("at_code") %></h2>
@@ -11,6 +12,10 @@
     <dd><%= identity.fetch("archetype_id") %></dd>
     <dt>ノード</dt>
     <dd><%= identity.fetch("at_code") %></dd>
+    <% if archetype_path %>
+      <dt>アーキタイプパス</dt>
+      <dd><code class="archetype-path"><%= archetype_path %></code></dd>
+    <% end %>
   </dl>
   <%= link_to "帳票に入力", form_path(identity.fetch("template_id")) %>
   <% if semantic_entries.any? { |entry| entry["untranslated_suspect"] } %>
