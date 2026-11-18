@@ -74,3 +74,15 @@ gem ごとに `bundle update --conservative <gem>` を 1 回、1 コミット。
 - `bundle exec rspec`: 勧告分の更新後、および勧告なしの各 gem の追加後に 236 examples, 0 failures, 3 pending
   （js の system spec を含む。worktree をホーム配下に置いたので snap 版 Chromium の `attach_file` も通る）。
 - 合否は PR の CI（4 ジョブ）で決める。結果は R2。
+
+## R2: push・PR・CI（2026-11-18）
+
+- push: ブランチ `chore/65-security-updates`、`ab61c7b..c7ae035`（16 コミット）。PR `skoba/anlage#66`（base `main`）。
+- CI run `44277355358`（`c7ae035`、pull_request）: **green**。`scan_ruby` pass・`scan_js` pass・`lint` pass・`test` pass。
+  `scan_ruby` が green になったのは 11/7 以降で初めて。
+- マージは人間。マージ後に閉じてよい dependabot PR:
+  - #58（sqlite3 2.10.2）・#59（bootsnap 1.26.1）・#62（solid_queue 1.7.2）・#63（rspec-rails 8.1.0）: 主題の gem が同じ版で入った。
+  - #60（selenium-webdriver 4.52.0）: 本ブランチは 4.53.0 で、主題を追い越した。
+  - #61（rails 8.1.4.1）: lock 上の版は入った。**`Gemfile` の制約の書き換えだけが残る**ので、
+    制約も書き換えるなら #61 を残し、書き換えないなら閉じる（人間の判断）。
+  - いずれも dependabot が自動で閉じるか rebase する可能性がある。
