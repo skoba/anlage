@@ -71,3 +71,17 @@ pin した例（期待値は golden の identity.path からの実測）:
   worktree を `/tmp` 配下に置いたため snap 版 Chromium がファイルを読めない（`File not found`）。
   本変更を外したベースラインでも同じ 5 件が落ちる。合否は CI（クリーンな checkout）で決める（追補の条件 3）。
 - `bin/rubocop`: 112 files, 0 offenses。
+
+## R2: push と CI（2026-11-18）
+
+- push: `210bd85..e35ea51`（`569dbbd`・`202c8c9`・`49e4327`・`e35ea51`）。
+- CI run `44265803663`（`e35ea51`）: **red**。内訳は `test` success・`lint` success・`scan_js` success・**`scan_ruby` failure**。
+  - `test` はクリーンな checkout での全 suite（js の system spec を含む）で、本変更の合否はここで green。
+  - `scan_ruby` は bundler-audit の「Vulnerabilities found!」。Gemfile.lock 上の既存 gem への勧告
+    （sqlite3 2.9.6 の GHSA-4fqr-96q8-xrfx、nokogiri、rails 各 gem、puma、rack、loofah、addressable、net-ssh ほか）で、
+    本変更は Gemfile／Gemfile.lock に触れていない。
+  - 本変更より前から red: 直近の CI run `43601148367`（2026-11-14、dependabot の rspec-rails ブランチ）も
+    `scan_ruby` だけ failure。11/7 の 3 run も failure。対応する dependabot PR が #58〜#63 に開いている
+    （#58 sqlite3 2.10.2、#61 rails 8.1.4.1 ほか）。
+  - 依存更新は本 Issue の範囲外なので手を付けていない（規律 8）。例外報告として上げ、扱いは裁定待ち。
+- #64 の acceptance criteria は「CI green」以外を充足。`scan_ruby` の扱いが決まるまで #64 は開けておく。
