@@ -30,4 +30,28 @@ RSpec.describe "デモ動線: パスカード検索から帳票へ（実ブラ�
     expect(page).to have_content("保存は未対応（#30）")
     expect(page).not_to have_button("保存")
   end
+
+  # skoba/anlage#64（裁定 R-20261116-1）: アーキタイプパスは等幅、長ければ折り返し、
+  # 壇上の解像度 1280×720（rails_helper）で横スクロールを出さない。
+  it "「傷病名」のカードにアーキタイプパスが等幅で出て、横スクロールが出ない" do
+    visit pathcards_search_path
+
+    fill_in "探したい項目", with: "傷病名"
+    click_button "検索"
+    card = find(".pathcard", text: "プロブレム・診断の名称")
+    path = card.find("code.archetype-path")
+    expect(path).to have_text("/data[at0001]/items[at0002]/value", exact: true)
+
+    style = page.evaluate_script(<<~JS)
+      (() => {
+        const style = getComputedStyle(document.querySelector(".pathcard code.archetype-path"));
+        return { family: style.fontFamily, wrap: style.overflowWrap };
+      })()
+    JS
+    expect(style.fetch("family")).to include("monospace")
+    expect(style.fetch("wrap")).to eq("anywhere")
+
+    widths = page.evaluate_script("[document.documentElement.scrollWidth, document.documentElement.clientWidth]")
+    expect(widths[0]).to be <= widths[1]
+  end
 end

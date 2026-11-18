@@ -39,3 +39,9 @@
   margin: 0.5rem 0;
 }
 
+
+/* skoba/anlage#64: アーキタイプパスは等幅、長ければ折り返す（1280×720 で横スクロールを出さない） */
+.pathcard code.archetype-path {
+  font-family: monospace;
+  overflow-wrap: anywhere;
+}
