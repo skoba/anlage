@@ -72,6 +72,8 @@ Anlageは、openehr-rails-startupから生成されたopenEHRベースEHRの参�
 - 未コミット物を捨てるのは削除にあたり、ゲート対象
 - コミットはパスを明示して add する(`-A` と `.` を使わない)
 - 合否はクリーンな checkout(CI)で決める
+- git worktree は `/home/skoba/src/anlage-worktrees/<slug>` に作る。
+  `/tmp` には作らない(snap 版 Chromium が読めず、attach_file の system spec が落ちる)
 
 ## Codexとの分業（openehr-ruby CLAUDE.mdと同旨）
 
