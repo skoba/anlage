@@ -147,4 +147,4 @@ pin した例（期待値は golden の identity.path からの実測）:
   （履歴の書き換えはゲート対象）。訂正は本節をもって足りる。
 - #30 のコメント（2026-11-18、未調査事項）は「2026-11-11 の `rails g openehr:scaffold` の出力を退避してある」と
   書いているだけで、壇上には触れていない（本文を確認）。訂正のコメントは足していない。
-- 本番は開発機とは別の PC で実施しており、別 PC のコミットは未確認（`docs/reports/jcmi46-retrospective.md` の質問 4）。
+- 本番は開発機とは別の PC で実施しており、別 PC のコミットは未確認（`docs/reports/jcmi46-retrospective.md` 5 節の 4）。
