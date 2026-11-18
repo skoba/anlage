@@ -1,0 +1,12 @@
+ja:
+  activerecord:
+    models:
+      jp_referral: Jp referral
+    attributes:
+      jp_referral:
+        problem_diagnosis_at0002: "プロブレム・診断の名称"
+        problem_diagnosis_at0077: "発症日時"
+        problem_diagnosis_at0073: "診断確度"
+        story: "病歴の記述"
+        clinical_synopsis: "治療経過"
+        clinical_synopsis_2: "治療経過"

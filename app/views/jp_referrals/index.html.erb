@@ -1,0 +1,35 @@
+<h1>Listing Jp referrals</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th><%= JpReferral.human_attribute_name(:problem_diagnosis_at0002) %></th>
+      <th><%= JpReferral.human_attribute_name(:problem_diagnosis_at0077) %></th>
+      <th><%= JpReferral.human_attribute_name(:problem_diagnosis_at0073) %></th>
+      <th><%= JpReferral.human_attribute_name(:story) %></th>
+      <th><%= JpReferral.human_attribute_name(:clinical_synopsis) %></th>
+      <th><%= JpReferral.human_attribute_name(:clinical_synopsis_2) %></th>
+      <th colspan="3"></th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <% @jp_referrals.each do |jp_referral| %>
+      <tr>
+        <td><%= jp_referral.problem_diagnosis_at0002 %></td>
+        <td><%= jp_referral.problem_diagnosis_at0077 %></td>
+        <td><%= jp_referral.problem_diagnosis_at0073 %></td>
+        <td><%= jp_referral.story %></td>
+        <td><%= jp_referral.clinical_synopsis %></td>
+        <td><%= jp_referral.clinical_synopsis_2 %></td>
+        <td><%= link_to 'Show', jp_referral_path(jp_referral) %></td>
+        <td><%= link_to 'Edit', edit_jp_referral_path(jp_referral) %></td>
+        <td><%= button_to 'Destroy', jp_referral_path(jp_referral), method: :delete, data: { turbo_confirm: 'Are you sure?' } %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<br>
+
+<%= link_to 'New Jp referral', new_jp_referral_path %>

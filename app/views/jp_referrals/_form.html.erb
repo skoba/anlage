@@ -1,0 +1,41 @@
+<%= form_with(model: jp_referral) do |f| %>
+  <% if jp_referral.errors.any? %>
+    <div id="error_explanation">
+      <h2><%= pluralize(jp_referral.errors.count, "error") %> prohibited this record from being saved:</h2>
+      <ul>
+        <% jp_referral.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="field">
+    <%= f.label :problem_diagnosis_at0002, JpReferral.human_attribute_name(:problem_diagnosis_at0002) %><br>
+    <%= f.select :problem_diagnosis_at0002, [], include_blank: true %>
+  </div>
+  <div class="field">
+    <%= f.label :problem_diagnosis_at0077, JpReferral.human_attribute_name(:problem_diagnosis_at0077) %><br>
+    <%= f.datetime_field :problem_diagnosis_at0077 %>
+  </div>
+  <div class="field">
+    <%= f.label :problem_diagnosis_at0073, JpReferral.human_attribute_name(:problem_diagnosis_at0073) %><br>
+    <%= f.select :problem_diagnosis_at0073, [["疑い", "at0074"], ["推定", "at0075"], ["確定", "at0076"]], include_blank: true %>
+  </div>
+  <div class="field">
+    <%= f.label :story, JpReferral.human_attribute_name(:story) %><br>
+    <%= f.text_field :story %>
+  </div>
+  <div class="field">
+    <%= f.label :clinical_synopsis, JpReferral.human_attribute_name(:clinical_synopsis) %><br>
+    <%= f.text_field :clinical_synopsis %>
+  </div>
+  <div class="field">
+    <%= f.label :clinical_synopsis_2, JpReferral.human_attribute_name(:clinical_synopsis_2) %><br>
+    <%= f.text_field :clinical_synopsis_2 %>
+  </div>
+
+  <div class="actions">
+    <%= f.submit %>
+  </div>
+<% end %>

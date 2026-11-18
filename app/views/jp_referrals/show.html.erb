@@ -1,0 +1,29 @@
+<h1>Jp referral</h1>
+
+<p>
+  <strong><%= JpReferral.human_attribute_name(:problem_diagnosis_at0002) %></strong>:
+  <%= @jp_referral.problem_diagnosis_at0002 %>
+</p>
+<p>
+  <strong><%= JpReferral.human_attribute_name(:problem_diagnosis_at0077) %></strong>:
+  <%= @jp_referral.problem_diagnosis_at0077 %>
+</p>
+<p>
+  <strong><%= JpReferral.human_attribute_name(:problem_diagnosis_at0073) %></strong>:
+  <%= @jp_referral.problem_diagnosis_at0073 %>
+</p>
+<p>
+  <strong><%= JpReferral.human_attribute_name(:story) %></strong>:
+  <%= @jp_referral.story %>
+</p>
+<p>
+  <strong><%= JpReferral.human_attribute_name(:clinical_synopsis) %></strong>:
+  <%= @jp_referral.clinical_synopsis %>
+</p>
+<p>
+  <strong><%= JpReferral.human_attribute_name(:clinical_synopsis_2) %></strong>:
+  <%= @jp_referral.clinical_synopsis_2 %>
+</p>
+
+<%= link_to 'Edit', edit_jp_referral_path(@jp_referral) %> |
+<%= link_to 'Back', jp_referrals_path %>

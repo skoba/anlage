@@ -7,3 +7,4 @@
 #   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
 #     MovieGenre.find_or_create_by!(name: genre_name)
 #   end
+OpenehrTemplate.from_opt_file(Rails.root.join('app/templates/operational/jp_referral.opt')) if defined?(OpenehrTemplate)
