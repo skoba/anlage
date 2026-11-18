@@ -85,3 +85,47 @@ pin した例（期待値は golden の identity.path からの実測）:
     （#58 sqlite3 2.10.2、#61 rails 8.1.4.1 ほか）。
   - 依存更新は本 Issue の範囲外なので手を付けていない（規律 8）。例外報告として上げ、扱いは裁定待ち。
 - #64 の acceptance criteria は「CI green」以外を充足。`scan_ruby` の扱いが決まるまで #64 は開けておく。
+
+## R3: タグの位置づけ、生成 scaffold の退避、OPT の差（2026-11-18）
+
+裁定 C の追補（小林、2026-11-18）による。
+
+### 1. タグ `v0.1.0-jcmi46` の位置づけ
+
+- `v0.1.0-jcmi46`（`210bd85`）は**壇上の土台の版**である。壇上（JCMI46 チュートリアル、2026-11-12）では、
+  これに生成 scaffold（未コミット）を足して実演した。タグの版だけでは壇上の生成デモの出力は再現されない。
+- 生成 scaffold の由来: 2026-11-11 に `rails g openehr:scaffold` を jp_referral.opt に対して実行した
+  生成デモの出力。本番は別 PC で同じ生成を壇上で実演した。本機の作業ツリーに残っていた jp_referrals 一式
+  （R1 の 3 節）はこの 11/11 の出力である。
+
+### 2. 退避
+
+- ローカルブランチ `wip/jp-referrals-scaffold`（`6e6c8b2`、親は `ea3ccff`）に 13 ファイルをパス明示で
+  コミットした。内訳: `config/routes.rb`・`db/seeds.rb` の各 1 行、`app/controllers/jp_referrals_controller.rb`、
+  `app/models/jp_referral.rb`、`app/templates/operational/jp_referral.opt`、`app/views/jp_referrals/` の 5 ファイル、
+  `config/locales/jp_referral.ja.yml`、`db/migrate/20261111070602_create_jp_referrals.rb`、
+  `spec/requests/jp_referrals_spec.rb`。生成器の出力のままで、手を入れていない。
+- **push していない**（追補の指定がローカルブランチ）。M2（#30）の着手時まで残す。main へは入れない。
+- 退避後の main の `git status --short` は空。`db/schema.rb` に差分は無かった。
+
+### 3. OPT の差（実測）
+
+`app/templates/operational/jp_referral.opt`（退避ブランチ、459,385 bytes、sha256 `f3884e9f…464af3e86`）と
+`spec/fixtures/opt/jp_referral.opt`（main、459,677 bytes、sha256 `5ffc7e6d…322d4f924`）。
+どちらも sem_ver 0.2.0 で、同じ v0.2 の**別の書き出し**である。差は 4 点:
+
+| # | 差 | 内容 |
+|---|---|---|
+| 1 | 出所コメント | fixture だけにある（2〜23 行、22 行）。fixture の冒頭コメント自身が「このコメントだけ足した」と記す |
+| 2 | `MD5-CAM-1.0.1` | scaffold 側 `dd515c14…`、fixture 側 `9ed6dafa…` |
+| 3 | 代替型の並び順 | `problem_diagnosis` at0002 の `value` の子の順。scaffold 側は DV_CODED_TEXT → DV_TEXT、fixture 側は DV_TEXT → DV_CODED_TEXT。ブロックの中身は同じ |
+| 4 | 末尾の `<annotations>` | scaffold 側だけに `L10n.en` の 5 件（Organisation (2)／Organisation ×2／Clinical synopsis／Clinical synopsis (2)） |
+
+- fixture のコメントが記す上流の sha256（`99abe4e3…`、openehr-templates-jp@0918722）とは、scaffold 側の
+  sha256 は一致しない。scaffold 側がどのコミット・どの時点の書き出しかは**不明**（リポジトリ内に記録が無い）。
+- パスカードへの影響: 両者を `Opt::PathcardExtractor` に通すと、どちらも 26 カード。provenance
+  （source_checksum・extracted_at）を除いて差があるのは 1 枚だけで、`problem_diagnosis` at0002 の
+  `semantics.rm_type_alternatives` が scaffold 側 `["DV_CODED_TEXT","DV_TEXT"]`、fixture 側
+  `["DV_TEXT","DV_CODED_TEXT"]`（差 3 の反映）。identity.path は 26 枚とも一致するので、
+  アーキタイプパスの導出結果は同じ。
+- 差 3 が帳票（代替型の既定の選択）に影響するかは未調査。M2（#30）で scaffold 側の OPT を使うなら要確認。
