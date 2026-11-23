@@ -93,6 +93,21 @@ Anlageは、openehr-rails-startupから生成されたopenEHRベースEHRの参�
 - 合否はクリーンな checkout(CI)で決める
 - git worktree は `/home/skoba/src/anlage-worktrees/<slug>` に作る。
   `/tmp` には作らない(snap 版 Chromium が読めず、attach_file の system spec が落ちる)
+- 越境(読み取り)は、絶対パスと `git -C` で相手リポジトリの本体ツリーを読む
+  (`log`・`show`・`grep`・ファイルの閲覧)。報告に対象リポジトリと SHA を書く。
+  相手のツリーでは `checkout`・`pull`・`bundle`・`rspec` を実行しない。
+  gem の挙動は、自分の worktree で `Gemfile.lock` が指す版に対して確かめる。
+  未リリースのコミットの挙動は、gem 側に Issue を立てて頼む。`Gemfile` を
+  相手のツリーへの path 指定に書き換えたものをコミットしない(2026-11-23 追加)
+- Codex の納品先は、当該 Issue の worktree。本体ツリーには納品させない。
+  起動の直前に `pwd` を出力して worktree であることを確かめる。
+  `codex exec resume --last` は使わない。毎回あたらしく起動し、受け渡しは
+  commit 済みの計画書で行う(2026-11-23 追加)
+- 着手時に同じ slug の worktree が既にあれば、止まって例外報告する
+  (worktree のパス、ブランチ、未コミット物の一覧を書く)。ログの記載だけを
+  根拠に再開しない。例外は、裁定または人間の指示がその slug の再開を
+  名指ししているときだけ(2026-11-23 追加)
+- 根拠と採らなかった案は `docs/design/session-isolation-plan.md`
 
 ## Codexとの分業（openehr-ruby CLAUDE.mdと同旨）
 
