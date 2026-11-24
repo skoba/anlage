@@ -583,3 +583,17 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - openehr 2.5.0（[skoba/openehr-ruby#58](https://github.com/skoba/openehr-ruby/issues/58)）で `CArchetypeRoot#term_definitions` がルートごとの値を持つようになった
 - anlage の迂回 `Opt::TemplateTerms`（OPT の XML の再解析）を撤去し、`Opt::RootTerms`（パース済みの OPT を辿る）に置き換えた（`skoba/anlage#104`）
 - 実測: 6 つの fixture の OPT すべてで、迂回の出力と gem からの出力が一致した。違いは 1 点だけで、gem はテンプレートのルート（COMPOSITION の definition）の用語も持つ（迂回は持たなかった。キーは `""`）
+## 19・20・22 項の追記（2026-11-24）: openehr-rails 0.9.0 で解消し、anlage の迂回を撤去した
+
+- 0.9.0 の `FieldExtractor` は、埋め込みルートの path（`[archetype_id]`）、自アーキタイプで名前空間化した field 名、
+  `root_path`、`rm_type_alternatives`、`min_occurrences`、`units_list` を出す
+- 実測: 6 つの fixture の OPT すべてで、anlage の訂正後の値と一致した（`spec/models/template_spec.rb` の「#111 web_template の field は
+  0.9.0 の FieldExtractor の値をそのまま使う」で pin）
+- anlage の迂回 `Opt::ElementConstraints`・`Opt::ValueAlternatives`・`Template.rewrite_embedded_field` の訂正を撤去した（`skoba/anlage#111`）
+- 20 項の `required` は、gem が意味を変えずに `min_occurrences` を足す形で解決した。anlage は「要素の下限 ≥1 も required」の規則を残す
+- 残る違い: 同じアーキタイプの複数 ENTRY の field の `label` は、gem では後勝ち（jp_referral の 1 つめの clinical_synopsis が「治療経過」になる）。
+  anlage はルート別の名前（openehr 2.5.0 の per-root term_definitions）で上書きしている
+
+## 23 項の追記（2026-11-24）: openehr-rails 0.9.0 でも残る
+
+- 実測（0.9.0）: ProblemList と jp_referral の `fhir_profile_ids` は、どちらも `openehr-evaluation-problem-diagnosis-v1` を含む
