@@ -264,3 +264,37 @@ RSpec.describe Opt::CompositionBuilder, "#86 terminology_id の値" do
     expect(certainty.dig("value", "defining_code")).to include("code_string" => "at0074", "terminology_id" => { "_type" => "TERMINOLOGY_ID", "value" => "local" })
   end
 end
+
+# skoba/anlage#87: COMPOSITION の category は value が表示（event）、code_string がコード（433）。
+# OPT が category を 1 つのコードに絞っていれば、そのコードを使う
+# （docs/design/rm-attributes-without-inputs.md 2 節の規則 1、4 節の 2）。
+RSpec.describe Opt::CompositionBuilder, "#87 COMPOSITION の category" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!).reload }
+  let(:values) { { "problem_diagnosis_at0002" => "高血圧症" } }
+
+  def category_of(template)
+    canonical = JSON.parse(OpenEHR::Serializer::RMJSONSerializer.new(described_class.new(template, values).build).serialize)
+    canonical["category"].then { |c| [ c["value"], c.dig("defining_code", "code_string"), c.dig("defining_code", "terminology_id", "value") ] }
+  end
+
+  it "value は event、code_string は 433、用語体系は openehr" do
+    expect(category_of(template)).to eq(%w[event 433 openehr])
+  end
+
+  it "登録時に、OPT が絞っている category のコードを web_template に持つ（ProblemList.opt は 433）" do
+    expect(template.web_template["category_code"]).to eq("433")
+  end
+
+  it "OPT が category を絞っていれば、設定の既定値ではなく OPT のコードを使う" do
+    allow(OpenehrRails).to receive(:default_category).and_return(%w[431 persistent])
+
+    expect(category_of(template)).to eq(%w[event 433 openehr])
+  end
+
+  it "category_code を持たない登録済みの web_template（#87 より前の登録）では、設定の既定値を正しい向きで使う" do
+    template.update!(web_template: template.web_template.except("category_code"))
+    allow(OpenehrRails).to receive(:default_category).and_return(%w[431 persistent])
+
+    expect(category_of(template.reload)).to eq(%w[persistent 431 openehr])
+  end
+end
