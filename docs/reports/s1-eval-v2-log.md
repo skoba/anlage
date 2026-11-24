@@ -87,3 +87,10 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
 - Green: dataset ごとに 1 回 `Datasets.build` してから aql を採点（`aql_summary`: match／mismatch／unexecutable）。
   `releasable_pendings` は期待先のアーキタイプが active のカードに現れた保留問
 - 実測: demo_initial（jp_referral を含まない）では story の保留問は候補に出ず、jp_referral を索引すると c021 だけが候補になる。18 examples, 0 failures
+
+## R8 サイクル 7: Markdown 報告（2026-11-24）
+
+- Red: `NameError: uninitialized constant Evaluation::Report`
+- Green: `app/lib/evaluation/report.rb`。`Report.render(run, label:)` が card の集計表と intent_tag 別、完全失敗、負例違反、aql の集計と不一致の差分、
+  draft、保留問（解除候補に印）を Markdown で返す。ファイルには書かない。3 examples, 0 failures
+- spec の修正: 保留問 c19 の期待先を specimen にした（補助メソッドの既定が blood_pressure で、コーパスに有るため解除候補になってしまう誤り）
