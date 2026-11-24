@@ -1,0 +1,97 @@
+# 評価 v2 のゴールド（card 種）。docs/design/s1-eval-v2-plan.md 2.1・4・7 節。
+# 臨床レビュー（Kobayashi, Shinji、2026-11-24）の結果を裁定 R-20261124-15 で確定した。案は R-20261124-11 作業列 3。
+# 確定した問いは active（採点の母数）。pending は正解がコーパスに無い保留問で、母数に入らない。
+# ゴールド本体（query／expected／acceptable／forbidden／notes）は人間の専有領域。変更は人間のレビューを経る。
+#
+# 形式: id / kind: card / status（既定 active）/ query / expected（期待集合。{archetype_id, at_code, rank}。rank は順位で
+#       1 が最上位、同じ順位を複数に付けてよい。rank の無い問いは全要素が同じ順位）/ match（card = at_code まで見る。
+#       archetype = archetype_id のみ）/ acceptable（許容。正解でも誤りでもなく、上位に出てよい候補）/
+#       forbidden（負例。top-3 に出たら負例違反）/ intent_tag / pending_until / notes / reviewed_by / reviewed_at。
+#       アーキタイプ ID と at-code は spec/fixtures/pathcards/*.golden.json の実物。
+
+# --- 期待集合（v1 では archetype 一致で「どちらに着いても正解」としていたペアを、集合として明示する）
+
+- id: c010
+  kind: card
+  query: "血圧"
+  expected:
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
+  match: card
+  intent_tag: bigram成立想定
+  notes: "v1 q10 の注記「期待集合 {at0004, at0005} の第 1 号」を形式にした。recall@3 で両要素が上位に並ぶかを測る（v1 の hit は片方で成立）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-24
+
+- id: c014
+  kind: card
+  query: "血圧測定"
+  expected:
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
+  match: card
+  intent_tag: 複合語
+  notes: "v1 q14 の注記（判定は q10 に準ずる）。複合語の分解経路で両要素に届くか"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-24
+
+# --- 順位（第 1 候補・第 2 候補）
+
+- id: c008
+  kind: card
+  query: "発症"
+  expected:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0077, rank: 1 }
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002, rank: 2 }
+  match: card
+  intent_tag: bigram成立想定
+  notes: "v1 q08 の注記（主文脈 at0077 発症日時、少数文脈 at0002 プロブレム・診断名）。レビュー（2026-11-24）: 第 1 候補は発症日時（at0077）、第 2 候補はプロブレム・診断名（at0002）。順位つきにする理由（小林）: 該当するアーキタイプや要素を示唆したり抽出したりする用途が、今後増える"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-24
+
+# --- 負例（bigram の偽陽性を系統的に集める。forbidden が top-3 に出たら負例違反）
+
+- id: c015
+  kind: card
+  query: "臨床検査"
+  expected:
+    - { archetype_id: openEHR-EHR-OBSERVATION.laboratory_test_result.v1, rank: 1 }
+  match: archetype
+  acceptable: []
+  forbidden:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0003 }
+  intent_tag: 複合語
+  notes: "v1 q15 の旧クエリ。レビュー（2026-11-24、小林）: 広い語として扱う。laboratory_test_result が優先だが、心電図、呼吸機能、認知機能検査なども含む語で、広く抽出されるべき。第 1 候補は laboratory_test_result（archetype 一致）。許容（acceptable）は検査の結果を表すほかのアーキタイプ（種類: 心電図、呼吸機能、認知機能検査など）── いまのコーパスには該当するアーキタイプが無いので ID は空。該当するアーキタイプがコーパスに入ったら、人間のレビューを経て ID を足す。負例は bigram「臨床」で 1 位を占めた ProblemList at0003「臨床的に認識された日時」（wp4-eval-log の偽陽性）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-24
+
+# --- 保留問（正解がコーパスに無い。期待先のアーキタイプが active のカードに現れると報告で「保留解除候補」になる）
+
+- id: c021
+  kind: card
+  status: pending
+  query: "既往歴"
+  expected:
+    - { archetype_id: openEHR-EHR-OBSERVATION.story.v1, at_code: at0004, rank: 1 }
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, rank: 1 }
+  match: card
+  intent_tag: 同義語ギャップ
+  pending_until: "jp_referral（OBSERVATION.story.v1 を含む）が demo_initial の索引に入る（いまは壇上で登録するため初期状態に含めない）"
+  notes: "v1 の q21（draft）を v2 に移した（v1 からは消した）。レビュー（2026-11-24、小林）: 既往歴の記録のしかたは 2 通りある── 叙述として書くもの（OBSERVATION.story）と、problem_diagnosis の形で過去の病名を並べるもの。どちらも正解で、同じ順位。負例は置かない。割合の目安は story 系が約 8 割、problem list が約 2 割（v1 q18 の注記）。jp_referral の story ルート名「既往歴及び家族歴」に container_labels で着地する想定（referral-intake-log R8）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-24
+
+- id: c019
+  kind: card
+  status: pending
+  query: "検体"
+  expected:
+    - { archetype_id: openEHR-EHR-CLUSTER.specimen.v1 }
+  match: archetype
+  forbidden:
+    - { archetype_id: openEHR-EHR-OBSERVATION.laboratory_test_result.v1 }
+  intent_tag: 同義語ギャップ
+  pending_until: "CLUSTER.specimen.v1 を含む OPT（LabResultReport の改訂、jp_referral v0.3 等）がコーパスに入る"
+  notes: "v1 の旧 q19（廃止）の注記「検体の正しい対応は CLUSTER.specimen。laboratory_test_result への着地は入力側実体→出力側記録の隣接概念誤対応」。LabResultReport.opt には specimen が注釈文にしか無く（スロット未充足）、カードは無い。laboratory_test_result を forbidden にして、字面の重なり（検体／検体検査）による誤着地を測る"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-24

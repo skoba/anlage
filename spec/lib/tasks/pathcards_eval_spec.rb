@@ -18,9 +18,12 @@ RSpec.describe "pathcards:eval" do
   # 2026-09-25: q21（既往歴→story、skoba/anlage#23 (3) の保留問）を draft として seed に
   # 置いたところ、eval が 18 問体制になり本 spec が赤になった（CI run 36117630926）。
   # draft は人間レビュー前の下書きで、確定までは 17 問体制の集計に含めない。
-  it "draft エントリ（人間レビュー前）は評価母数に含めない" do
-    expect(entries.select { |entry| entry["draft"] }.map { |entry| entry["id"] }).to eq([ "q21" ])
-    expect(entries.reject { |entry| entry["draft"] }.size).to eq(17)
+  # 2026-11-24: q21 は評価 v2 の c021（spec/fixtures/evaluation/v2/cards.yml）に移し、v1 からは消した
+  # （R-20261124-15）。v1 は 17 問のままで、draft は無い
+  it "draft エントリ（人間レビュー前）は評価母数に含めない（いまは draft が無く、17 問）" do
+    expect(entries.select { |entry| entry["draft"] }).to be_empty
+    expect(entries.map { |entry| entry["id"] }).not_to include("q21")
+    expect(entries.size).to eq(17)
   end
 
   it "評価シードの全エントリが必須キーを持つ" do
@@ -32,8 +35,7 @@ RSpec.describe "pathcards:eval" do
   end
 
   it "全ての正解archetype_idが現有テンプレート（4 件＋jp_referral）の実抽出結果に存在する" do
-    # draft の q21（story）は jp_referral にしか無い。確定時は下の索引 context にも
-    # jp_referral を加えて集計値を実測し直す
+    # jp_referral は q21（story、2026-11-24 に評価 v2 の c021 へ移した）のために加えた。残しても 17 問の照合は変わらない
     fixture_names = %w[CardiologyEncounter LabResultReport ProblemList bmi_calculation jp_referral]
     actual_archetype_ids = fixture_names.flat_map do |fixture_name|
       source_xml = Rails.root.join("spec/fixtures/opt/#{fixture_name}.opt").read
@@ -73,7 +75,7 @@ RSpec.describe "pathcards:eval" do
       Rake::Task["pathcards:eval"].invoke
     end
 
-    it "17問の実測集計値と完全失敗問題を表示する（draft の q21 は母数外）" do
+    it "17問の実測集計値と完全失敗問題を表示する（q21 を v2 に移したあとも同じ値）" do
       expect { run_task }.to output(
         a_string_including(
           "Questions: 17",

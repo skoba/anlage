@@ -22,15 +22,19 @@ module Evaluation
           unexecutable: statuses.count(:unexecutable) }
       end
 
-      # 保留問のうち、期待先のアーキタイプがコーパス（active のテンプレートのカード）に現れたもの。
+      # 保留問のうち、期待先のアーキタイプがすべてコーパス（active のテンプレートのカード）に現れたもの。
+      # 一部だけ（c021 の problem_diagnosis のように、もとからコーパスにある正解）では解除候補にしない。
       # 出題化（status を active に戻す）の判断は人間に回す
       def releasable_pendings
-        pendings.select { |question| question.expected.any? { |ref| @corpus_archetype_ids.include?(ref[:archetype_id]) } }
+        pendings.select do |question|
+          question.expected.any? && question.expected.all? { |ref| @corpus_archetype_ids.include?(ref[:archetype_id]) }
+        end
       end
 
       def card_summary
         scores = card_results.map(&:score)
         total = scores.size
+        ranked = scores.select { |score| score.order_pairs.positive? }
         {
           questions: total,
           hit_at_1: scores.count(&:hit_at_1),
@@ -39,6 +43,12 @@ module Evaluation
           mrr: total.zero? ? 0.0 : scores.sum(&:reciprocal_rank) / total,
           recall_at_3: total.zero? ? 0.0 : scores.sum(&:recall_at_3) / total,
           violations: scores.count { |score| score.violations.any? },
+          # 順位（docs/design/s1-eval-v2-plan.md 7.2）: 順位の組を持つ問いだけが母数。rank の無い問いは入らない
+          ranked_questions: ranked.size,
+          order_kept: ranked.count(&:order_kept),
+          order_pairs: ranked.sum(&:order_pairs),
+          order_pairs_kept: ranked.sum(&:order_pairs_kept),
+          acceptables: scores.count { |score| score.acceptables.any? },
           by_intent: by_intent
         }
       end

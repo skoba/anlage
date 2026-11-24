@@ -20,14 +20,24 @@ module Evaluation
       lines << "| MRR | #{format('%.4f', summary.fetch(:mrr))} |"
       lines << "| recall@3 | #{format('%.4f', summary.fetch(:recall_at_3))} |"
       lines << "| 負例違反 | #{summary.fetch(:violations)}/#{total} |"
+      lines << "| 順位遵守 | #{ratio(summary.fetch(:order_kept), summary.fetch(:ranked_questions))}" \
+               "（組 #{summary.fetch(:order_pairs_kept)}/#{summary.fetch(:order_pairs)}） |"
+      lines << "| 許容の出現 | #{summary.fetch(:acceptables)}/#{total} |"
       lines << "" << "intent_tag 別（hit@3／問題数）:" << ""
       summary.fetch(:by_intent).each { |tag, counts| lines << "- #{tag || '（タグ無し）'}: #{counts.fetch(:hits)}/#{counts.fetch(:total)}" }
       lines << "" << "### 完全失敗" << ""
       lines.concat(list(run.card_results.select { |result| result.score.complete_failure }) { |result| "#{result.question.id}: #{result.question.query}" })
       lines << "" << "### 負例違反" << ""
       lines.concat(list(run.card_results.select { |result| result.score.violations.any? }) do |result|
-        refs = result.score.violations.map { |ref| [ ref[:archetype_id], ref[:at_code] ].compact.join(" ") }.join("、")
-        "#{result.question.id}: #{result.question.query} → #{refs}"
+        "#{result.question.id}: #{result.question.query} → #{refs(result.score.violations)}"
+      end)
+      lines << "" << "### 順位が守られなかった問い" << ""
+      lines.concat(list(run.card_results.select { |result| result.score.order_kept == false }) do |result|
+        "#{result.question.id}: #{result.question.query}（組 #{result.score.order_pairs_kept}/#{result.score.order_pairs}）"
+      end)
+      lines << "" << "### 許容の出現" << ""
+      lines.concat(list(run.card_results.select { |result| result.score.acceptables.any? }) do |result|
+        "#{result.question.id}: #{result.question.query} → #{refs(result.score.acceptables)}"
       end)
       lines.join("\n")
     end
@@ -59,6 +69,10 @@ module Evaluation
         "#{question.id}: #{question.query} — #{question.pending_until}#{mark}"
       end
       ([ "## 保留問（#{run.pendings.size} 問、母数外）", "" ] + items).join("\n")
+    end
+
+    def refs(list)
+      list.map { |ref| [ ref[:archetype_id], ref[:at_code] ].compact.join(" ") }.join("、")
     end
 
     def ratio(count, total)
