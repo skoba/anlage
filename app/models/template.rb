@@ -71,11 +71,19 @@ class Template < ApplicationRecord
     web_template = {
       "template_id" => opt.template_id.value,
       "concept" => opt.concept,
+      # COMPOSITION アーキタイプの ID（definition ルート）。保存する Composition のルートに使う（skoba/anlage#54）
+      "root_archetype_id" => opt.definition.archetype_id.value,
       "sem_ver" => opt.description&.other_details&.dig("sem_ver").presence,
       "entries" => extractor.entries.map { |entry| serialize_entry(entry, constraints, instance_terms(entry, terms, root_occurrences), terms) }
     }
     # 保存可否は登録時に一度だけ判定（skoba/anlage#36）
     web_template.merge(Opt::FormCapability.call(web_template))
+  end
+
+  # #54 より前に登録された web_template にはキーが無いので、そのときは OPT から引く
+  # （rebuild_web_template! を呼べば web_template に入る）。
+  def root_archetype_id
+    (web_template || {})["root_archetype_id"] || Opt::SafeParser.parse(source_xml).definition.archetype_id.value
   end
 
   def preview_only?

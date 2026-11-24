@@ -33,7 +33,9 @@ module Opt
 
     def build
       OpenEHR::RM::Composition::Composition.new(
-        archetype_node_id: @template.web_template["template_id"],
+        # ルートは COMPOSITION アーキタイプの ID。template_id は archetype_details に入る（skoba/anlage#54）
+        archetype_node_id: @template.root_archetype_id,
+        archetype_details: archetyped(@template.root_archetype_id),
         name: dv_text(@template.web_template["concept"] || @template.template_id),
         language: code_phrase(OpenehrRails.default_language, "ISO_639-1"),
         territory: code_phrase(OpenehrRails.default_territory, "ISO_3166-1"),
@@ -53,13 +55,7 @@ module Opt
 
       klass.new(
         archetype_node_id: entry["archetype_id"],
-        archetype_details: OpenEHR::RM::Common::Archetyped::Archetyped.new(
-          archetype_id: OpenEHR::RM::Support::Identification::ArchetypeID.new(value: entry["archetype_id"]),
-          template_id: OpenEHR::RM::Support::Identification::TemplateID.new(
-            value: @template.web_template["template_id"]
-          ),
-          rm_version: RM_VERSION
-        ),
+        archetype_details: archetyped(entry["archetype_id"]),
         name: dv_text(entry["concept"]),
         language: code_phrase(OpenehrRails.default_language, "ISO_639-1"),
         encoding: code_phrase(OpenehrRails.default_encoding, "IANA_character-sets"),
@@ -134,11 +130,7 @@ module Opt
       OpenEHR::RM::DataStructures::ItemStructure::Representation::Cluster.new(
         archetype_node_id: archetype_id,
         name: dv_text(fields.first["root_label"] || archetype_id.split(".")[1]),
-        archetype_details: OpenEHR::RM::Common::Archetyped::Archetyped.new(
-          archetype_id: OpenEHR::RM::Support::Identification::ArchetypeID.new(value: archetype_id),
-          template_id: OpenEHR::RM::Support::Identification::TemplateID.new(value: @template.web_template["template_id"]),
-          rm_version: RM_VERSION
-        ),
+        archetype_details: archetyped(archetype_id),
         items: fields.map { |field| build_element(field) }
       )
     end
@@ -208,6 +200,14 @@ module Opt
       else
         dv_text(raw_value.to_s)
       end
+    end
+
+    def archetyped(archetype_id)
+      OpenEHR::RM::Common::Archetyped::Archetyped.new(
+        archetype_id: OpenEHR::RM::Support::Identification::ArchetypeID.new(value: archetype_id),
+        template_id: OpenEHR::RM::Support::Identification::TemplateID.new(value: @template.web_template["template_id"]),
+        rm_version: RM_VERSION
+      )
     end
 
     def dv_text(value)

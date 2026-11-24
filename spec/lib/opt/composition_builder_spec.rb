@@ -35,6 +35,26 @@ RSpec.describe Opt::CompositionBuilder do
       expect(composition.territory.code_string).to eq("JP")
     end
 
+    # skoba/anlage#54: ルートは COMPOSITION アーキタイプの ID（OPT の definition ルート）を
+    # archetype_node_id に持ち、archetype_details を持つ。template_id は archetype_details に入る。
+    describe "ルート（COMPOSITION）" do
+      it "archetype_node_id は COMPOSITION アーキタイプの ID になる（template_id ではない）" do
+        expect(composition.archetype_node_id).to eq("openEHR-EHR-COMPOSITION.encounter.v1")
+      end
+
+      it "archetype_details に archetype_id、template_id、RM version を持つ" do
+        expect(composition.archetype_details.archetype_id.value).to eq("openEHR-EHR-COMPOSITION.encounter.v1")
+        expect(composition.archetype_details.template_id.value).to eq(template.template_id)
+        expect(composition.archetype_details.rm_version).to eq(described_class::RM_VERSION)
+      end
+
+      it "root_archetype_id を持たない登録済みの web_template（#54 より前の登録）でも、OPT から引いて組む" do
+        template.update!(web_template: template.web_template.except("root_archetype_id"))
+
+        expect(described_class.new(template.reload, values).build.archetype_node_id).to eq("openEHR-EHR-COMPOSITION.encounter.v1")
+      end
+    end
+
     describe "ENTRYのarchetype_details" do
       let(:entry) { template.entries.first }
       let(:built_entry) { composition.content.first }
