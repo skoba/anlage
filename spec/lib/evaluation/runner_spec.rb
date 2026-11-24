@@ -77,6 +77,23 @@ RSpec.describe Evaluation::Runner do
       expect(run.aql_summary).to eq(questions: 1, match: 1, mismatch: 0, unexecutable: 0)
     end
 
+    # S2 の経路（R-20261124-21 の作業列 3）: selection を持つ aql の問いは、ビルダーが組んだ AQL でも採点する
+    it "selection を持つ aql の問いは S2 の経路でも採点し、builder_summary に数が出る。selection の無い問いは母数に入らない" do
+      bp = { archetype_id: BP_ID, at_code: "at0004" }
+      with_selection = Evaluation::Question.new(id: "a901", kind: :aql, query: "収縮期血圧が 110 を超える記録", dataset: "demo_initial",
+                                                reference_aql: SYSTOLIC, expected_rows: [ [ 120.0 ] ],
+                                                selection: { columns: [ bp ], conditions: [ { card: bp, operator: ">", value: 110 } ] })
+      wrong = Evaluation::Question.new(id: "a902", kind: :aql, query: "収縮期血圧が 110 を超える記録", dataset: "demo_initial",
+                                       reference_aql: SYSTOLIC, expected_rows: [ [ 120.0 ] ],
+                                       selection: { columns: [ bp ], conditions: [ { card: bp, operator: "<", value: 110 } ] })
+      run = described_class.run([ aql_question, with_selection, wrong ])
+
+      expect(run.aql_summary).to eq(questions: 3, match: 3, mismatch: 0, unexecutable: 0)
+      expect(run.aql_results.map { |result| [ result.question.id, result.builder_score&.status ] })
+        .to eq([ [ "a001", nil ], [ "a901", :match ], [ "a902", :mismatch ] ])
+      expect(run.builder_summary).to eq(questions: 2, match: 1, mismatch: 1, unexecutable: 0, unbuildable: 0)
+    end
+
     it "保留問は母数に入らず、期待先のアーキタイプがコーパス（active のカード）に現れたものだけ保留解除候補になる" do
       Evaluation::Datasets.build("demo_initial") # jp_referral（story）は含まない
       run = described_class.run([ specimen_pending, story_pending ])

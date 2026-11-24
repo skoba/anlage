@@ -5,7 +5,7 @@ module Evaluation
     module_function
 
     def render(run, label:)
-      [ "# 評価 v2（#{label}）", card_section(run), aql_section(run), draft_section(run), pending_section(run) ]
+      [ "# 評価 v2（#{label}）", card_section(run), aql_section(run), builder_section(run), draft_section(run), pending_section(run) ]
         .compact.join("\n\n") + "\n"
     end
 
@@ -54,6 +54,26 @@ module Evaluation
         score = result.score
         detail = score.status == :unexecutable ? score.error : "不足 #{score.missing.to_json} 余分 #{score.extra.to_json}"
         "#{result.question.id}: #{result.question.query} — #{detail}"
+      end)
+      lines.join("\n")
+    end
+
+    # S2 の経路。selection を持つ問いが無ければ節を出さない
+    def builder_section(run)
+      summary = run.builder_summary
+      total = summary.fetch(:questions)
+      return nil if total.zero?
+
+      names = { mismatch: "不一致", unexecutable: "実行不能", unbuildable: "組めない" }
+      lines = [ "## aql: S2 の経路（クエリビルダーが組んだ AQL。#{total} 問）", "", "| 結果 | 数 |", "|---|---|" ]
+      lines << "| 一致 | #{summary.fetch(:match)}/#{total} |"
+      names.each { |status, name| lines << "| #{name} | #{summary.fetch(status)}/#{total} |" }
+      lines << "" << "### 一致しなかった問い" << ""
+      failed = run.aql_results.select { |result| result.builder_score && result.builder_score.status != :match }
+      lines.concat(list(failed) do |result|
+        score = result.builder_score
+        detail = score.status == :mismatch ? "不足 #{score.missing.to_json} 余分 #{score.extra.to_json}（#{score.aql.to_s.squish}）" : score.error
+        "#{result.question.id}: #{result.question.query} — #{names.fetch(score.status)}: #{detail}"
       end)
       lines.join("\n")
     end
