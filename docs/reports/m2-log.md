@@ -138,3 +138,26 @@ Opt::CompositionReader#80 SECTION 配下の ENTRY builder が SECTION の items 
 
 - SECTION を持ち、未対応クラスの entry も複数ルートの衝突も無い OPT を 1 つ（Archetype Designer で作成）。
   届けば、帳票からの POST の通しの spec を足す。無くても C・D のあとは jp_referral で通しを確かめられる
+
+## R4 `skoba/anlage#86`: terminology_id に値を入れる（2026-11-24）
+
+ブランチ `fix/86-terminology-id-value`。設計書 5 節の 1。
+
+### Red（実装の前、3 失敗）
+
+```
+1) Opt::CompositionBuilder#86 terminology_id の値 COMPOSITION の言語・地域・category の terminology_id が値を持つ
+     expected: "ISO_639-1"
+          got: nil
+2) … ENTRY の言語・文字コードの terminology_id が値を持つ
+     expected: "ISO_639-1"
+          got: nil
+3) … 選択肢（DV_CODED_TEXT）の terminology_id が値を持つ
+     expected {"_type" => "CODE_PHRASE", "code_string" => "at0074", "terminology_id" => {"_type" => "TERMINOLOGY_ID"}}
+     to include {"terminology_id" => {"_type" => "TERMINOLOGY_ID", "value" => "local"}}
+```
+
+### Green
+
+- 変更は 1 行（`code_phrase` が `TerminologyID.new(value:)` で組む）
+- 開発機の全 suite: 258 例 0 失敗、3 pending。`spec/demo/` と FHIR の spec は緑のまま（regression pin）
