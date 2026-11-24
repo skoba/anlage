@@ -558,3 +558,22 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 関連: [anlage#54](https://github.com/skoba/anlage/issues/54)（同根: フォーム経路の Composition はルートに archetype_details を持たず、RM 側の template_id も nil。本項が解消しても、#54 が残る限りフォーム経路の記録の template_id は引けない）。裁定 2026-10-21 で #54 は凍結後・12 月の最初の修正候補
 - ステータス: 観察
 
+
+## 26. `TerminologyID.new(name:)` で組んだ値が、`RMJSONSerializer` で `value` を持たずに直列化される
+
+- 発見日: 2026-11-24（`docs/design/rm-attributes-without-inputs.md` 4 節の 1、`docs/reports/m2-log.md` R3）
+- 対象: openehr 2.4.3 `lib/openehr/rm/support/identification.rb:152-170`（`TerminologyID#initialize` は `value:` が無いとき `name`・`version_id` だけを設定し、`value` はメソッドで合成する）、`lib/openehr/serializer/rm_json_serializer.rb:29-30`（`@name` を直列化の対象から外している）
+- 実測: `CodePhrase.new(terminology_id: TerminologyID.new(name: "ISO_639-1"), code_string: "ja")` を直列化すると `{"_type":"CODE_PHRASE","code_string":"ja","terminology_id":{"_type":"TERMINOLOGY_ID"}}`。`TerminologyID.new(value: "ISO_639-1")` なら `"value":"ISO_639-1"` が出る
+- 含意: `name:` は公開されているコンストラクタの引数なのに、それで組むと canonical JSON から用語体系の ID が落ちる。13 項（ArchetypeID の `value`）と同じ類。anlage は `value:` で組むように直す（設計書 5 節の 1）
+- 提案: 直列化のとき `value` を必ず出す（`@value` が無ければ `value` メソッドの結果を使う）
+- 還流先: openehr-ruby
+- ステータス: 観察（再現は上の 1 行。Issue の起票と文面は人間）
+
+## 27. `TerminologyService.has_code_for_group?` の既定の実装が常に true を返し、COMPOSITION の category の検査が効かない
+
+- 発見日: 2026-11-24（同上、4 節の 2）
+- 対象: openehr 2.4.3 `lib/openehr/terminology_service.rb:21-23`（既定の provider の `has_code_for_group?(_group_id, _code)` が `true`）、`lib/openehr/rm/composition.rb:41`（`category code is invalid` の検査がこれを使う）
+- 実測: `OpenEHR::TerminologyService.has_code_for_group?('composition category', 'zzz')` が true。anlage は category の値とコードを逆に入れていた（`value` が `"433"`、`code_string` が `"event"`）が、gem の検査を通っていた
+- 含意: 検査があるように見えて、既定では何も確かめていない。openEHR の用語（composition category は 431 persistent・433 event など）を provider が持てば、この種の取り違えは構築の時点で落ちる
+- 還流先: openehr-ruby
+- ステータス: 観察

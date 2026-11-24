@@ -138,3 +138,35 @@ Opt::CompositionReader#80 SECTION 配下の ENTRY builder が SECTION の items 
 
 - SECTION を持ち、未対応クラスの entry も複数ルートの衝突も無い OPT を 1 つ（Archetype Designer で作成）。
   届けば、帳票からの POST の通しの spec を足す。無くても C・D のあとは jp_referral で通しを確かめられる
+
+## R3 作業列 4: 帳票に入力欄の無い RM の属性の設計書（2026-11-24）
+
+ブランチ `docs/rm-attributes-without-inputs`。基準点は main `c09d72f`（B のマージのあと）。
+成果物は `docs/design/rm-attributes-without-inputs.md`。
+
+### ゲート報告（narrative の作り方。人間の判断）
+
+設計書 6 節。候補は 4 つ（A: 1 項目の写し、B: 複数項目からの組み立て、C: 専用の入力欄、D: 固定文）。
+推奨は B。決めてほしい点は 3 つ:
+
+1. A〜D のどれを採るか（B に C を重ねる形もありうる）
+2. B の場合、つなぎ方（区切り、含める型、空欄の扱い）を実装で決めてよいか
+3. 「依頼内容」がどの要素を指すか（B なら決めなくて済む）
+
+D（INSTRUCTION を組む作業）は、この答えと openehr-rails 0.9.0 の両方を待つ。ほかの作業は止めない。
+
+### 実測で見つけた欠陥（設計書 4 節）
+
+1. 保存される CODE_PHRASE の `terminology_id` が、すべて値を持たない（`{"_type":"TERMINOLOGY_ID"}`）。
+   `TerminologyID.new(name:)` で組んでいるため。上流候補 26 項に観察を書いた
+2. COMPOSITION の `category` の値とコードが逆（`value` が `"433"`、`code_string` が `"event"`）。
+   gem の検査は常に true を返すので通っていた。上流候補 27 項
+3. HISTORY・EVENT・ITEM_TREE・ENTRY の name が、テンプレートの用語でない（固定文と英字の concept）
+4. `context` が付かない（上流候補 16 項と同じ件）
+
+### 自己承認した判断
+
+- 1〜3 は、設計書 5 節の順（1 → 2 → 3 → 4）で、1 Issue = 1 PR で直す。保存される Composition の形を
+  変えるので、A（`#54`）と同じ扱いにする（保存済みの記録は変えない、`spec/demo/` と FHIR を regression pin）。
+  R-20261124-10 の「ほかの属性の扱いは、設計書に書いたとおりに進めてよい」による
+- 3（name）は、name 述語の AQL と検索に影響しうるので、着手の前に洗ってログに書く
