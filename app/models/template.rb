@@ -74,6 +74,8 @@ class Template < ApplicationRecord
       # COMPOSITION アーキタイプの ID（definition ルート）。保存する Composition のルートに使う（skoba/anlage#54）
       "root_archetype_id" => opt.definition.archetype_id.value,
       "sem_ver" => opt.description&.other_details&.dig("sem_ver").presence,
+      # SECTION ルートの path → テンプレート上の名前。builder が SECTION の name に使う（skoba/anlage#80）
+      "section_labels" => section_labels(terms),
       "entries" => extractor.entries.map { |entry| serialize_entry(entry, constraints, instance_terms(entry, terms, root_occurrences), terms) }
     }
     # 保存可否は登録時に一度だけ判定（skoba/anlage#36）
@@ -125,6 +127,11 @@ class Template < ApplicationRecord
     )
   end
 
+  def self.section_labels(terms)
+    terms.select { |path, _| path.match?(/\[openEHR-EHR-SECTION\.[^\]]+\]\z/) }
+         .transform_values { |instances| instances.first&.dig("at0000", "text") }.compact
+  end
+
   def self.instance_terms(entry, terms, root_occurrences)
     root_path = (entry[:fields] || []).map { |f| f[:path].to_s[/\A.*\[openEHR-EHR-[^\]]+\]/] }.compact.min_by(&:length)
     return {} unless root_path
@@ -171,7 +178,7 @@ class Template < ApplicationRecord
 
     { "lower" => interval.lower, "upper" => interval.upper }
   end
-  private_class_method :build_web_template, :serialize_entry, :interval_to_h
+  private_class_method :build_web_template, :serialize_entry, :interval_to_h, :section_labels
 
   def entries
     (web_template || {})["entries"] || []

@@ -34,7 +34,7 @@ module Opt
 
       values = {}
       @template.entries.each do |entry|
-        entry_node = (composition["content"] || []).find { |c| c["archetype_node_id"] == entry["archetype_id"] }
+        entry_node = content_entries(composition["content"]).find { |c| c["archetype_node_id"] == entry["archetype_id"] }
         next unless entry_node
 
         items = items_for(entry, entry_node)
@@ -56,6 +56,11 @@ module Opt
     end
 
     private
+
+    # SECTION は items を辿って、配下の ENTRY を平らに並べる（skoba/anlage#80）
+    def content_entries(content_items)
+      (content_items || []).flat_map { |item| item["_type"] == "SECTION" ? content_entries(item["items"]) : [ item ] }
+    end
 
     def items_for(entry, entry_node)
       data = entry_node["data"] || {}

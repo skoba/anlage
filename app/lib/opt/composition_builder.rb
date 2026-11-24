@@ -41,12 +41,69 @@ module Opt
         territory: code_phrase(OpenehrRails.default_territory, "ISO_3166-1"),
         category: dv_coded_text(*OpenehrRails.default_category, "openehr"),
         composer: OpenEHR::RM::Common::Generic::PartyIdentified.new(name: OpenehrRails.default_composer_name),
-        # 全要素が空欄の entry は含めない（skoba/anlage#34）
-        content: @template.entries.reject { |entry| filled_fields(entry).empty? }.map { |entry| build_entry(entry) }
+        content: build_content
       )
     end
 
+    # build が「正しく」組めない形の理由（skoba/anlage#80、R-20261124-5 問い 2）。build のドライランでは
+    # 見えないものを挙げる: field を持たず空 entry として飛ばされる未対応クラスの entry（INSTRUCTION）と、
+    # 複数の field で衝突する名前（値が 1 つの入力から複数のルートに入ってしまう）。
+    def unsupported_reasons
+      rm_types = @template.entries.map { |entry| entry["rm_type"] }.uniq.reject { |rm_type| ENTRY_CLASSES.key?(rm_type) }
+      shared = @template.fields.map { |field| field["name"] }.tally.select { |_name, count| count > 1 }
+
+      rm_types.map { |rm_type| "entry rm_type #{rm_type} is not supported yet" } +
+        shared.map { |name, count| "field name #{name} is shared by #{count} fields" }
+    end
+
     private
+
+    # 全要素が空欄の entry は含めない（skoba/anlage#34）。SECTION 配下の entry は、path の
+    # SECTION の並びどおりに SECTION（入れ子も可）を作って、その items に入れる（skoba/anlage#80）。
+    # SECTION は、配下に組む entry があるときだけ作る。
+    def build_content
+      root = { items: [] }
+      @template.entries.reject { |entry| filled_fields(entry).empty? }.each do |entry|
+        node = section_chain(entry).inject(root) do |parent, (attr, archetype_id)|
+          path = "#{parent[:path]}/#{attr}[#{archetype_id}]"
+          parent[:items].find { |item| item.is_a?(Hash) && item[:path] == path } ||
+            { path: path, archetype_id: archetype_id, items: [] }.tap { |section| parent[:items] << section }
+        end
+        node[:items] << build_entry(entry)
+      end
+      root[:items].map { |item| build_section(item) }
+    end
+
+    def build_section(item)
+      return item unless item.is_a?(Hash)
+
+      OpenEHR::RM::Composition::Content::Navigation::Section.new(
+        archetype_node_id: item[:archetype_id],
+        name: dv_text(@template.web_template.dig("section_labels", item[:path]) || item[:archetype_id].split(".")[1]),
+        archetype_details: archetyped(item[:archetype_id]),
+        items: item[:items].map { |child| build_section(child) }
+      )
+    end
+
+    # entry より外側の segment（SECTION の並び）。[[attr, archetype_id], ...]、外側から。
+    def section_chain(entry)
+      chains = filled_fields(entry).map do |field|
+        segments = path_segments(field["path"])
+        segments[0...entry_index(segments, entry)]
+      end.uniq
+      raise UnsupportedShape, "entry #{entry['archetype_id']} fields span more than one container (#{chains.inspect})" unless chains.size == 1
+
+      chains.first
+    end
+
+    def path_segments(path)
+      path.split("/").reject(&:empty?).map { |seg| seg.match(/\A(\w+)(?:\[(.+)\])?\z/).captures }
+    end
+
+    def entry_index(segments, entry)
+      segments.index { |_attr, node_id| node_id == entry["archetype_id"] } ||
+        raise(UnsupportedShape, "entry #{entry['archetype_id']} is not on its field path")
+    end
 
     def build_entry(entry)
       klass = ENTRY_CLASSES.fetch(entry["rm_type"]) do
@@ -78,7 +135,7 @@ module Opt
       fields = filled_fields(entry)
       raise UnsupportedShape, "entry #{entry['archetype_id']} has no fields" if fields.blank?
 
-      chains = fields.map { |f| wrapper_chain(f["path"]) }
+      chains = fields.map { |f| wrapper_chain(f["path"], entry) }
       common = chains.min_by(&:size)
       groups = fields.zip(chains).group_by do |_field, chain|
         rest = chain[common.size..]
@@ -101,15 +158,13 @@ module Opt
       end
     end
 
-    # [[attr, node_id], ...] from outermost to innermost, excluding the
-    # entry's own "content[...]" prefix, the trailing "value" leaf and
+    # [[attr, node_id], ...] from outermost to innermost, excluding everything
+    # up to and including the entry's own segment (content[...] or, under
+    # SECTIONs, .../items[<entry archetype_id>]), the trailing "value" leaf and
     # the ELEMENT's own "items[node_id]" segment (handled per-field).
-    def wrapper_chain(path)
-      segments = path.split("/").reject(&:empty?)
-      segments.shift # content[...]
-      segments.pop   # "value"
-      segments.pop   # items[element_node_id] -- the element itself
-      segments.map { |seg| seg.match(/\A(\w+)\[(.+)\]\z/).captures }
+    def wrapper_chain(path, entry)
+      segments = path_segments(path)
+      segments[(entry_index(segments, entry) + 1)...-2]
     end
 
     # groups: { nil => [[field, chain], ...] (ITEM_TREE 直下), "<archetype_id>" => [...] (埋め込み CLUSTER) }
