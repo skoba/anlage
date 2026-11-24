@@ -153,6 +153,16 @@ jp_referral に限らず、INSTRUCTION を含むどのテンプレートでも�
 - 案 C（専用の入力欄）は重ねない。「依頼内容」がどの要素かを決める必要は無くなった
 - 実装は D（INSTRUCTION と多段 CLUSTER）の中で行う。D は openehr-rails 0.9.0 の公開のあと
 
+### 決めたつなぎ方（実装で決定、2026-11-24、`skoba/anlage#30`。spec: `spec/lib/opt/composition_builder_spec.rb` の「#30 INSTRUCTION と多段 CLUSTER」）
+
+- 対象: INSTRUCTION の配下（activities と protocol。埋め込み CLUSTER の奥も含む）で、値が入った要素。空欄は含めない
+- 並び: web_template の field の並び（OPT の文書順）
+- 1 要素の書き方: 「ラベル: 値」。埋め込みルートの配下の要素は「ルートのテンプレート上の名前／ラベル: 値」（例: 「住所／市区町村: 文京区」）
+- 値: 帳票で見えるとおり。選択肢は表示名、数量は「値 単位」、日時は「日付 時刻」（時刻が入っていれば）。そのほかは入力のまま
+- 区切り: 全角のセミコロン「；」。改行は使えない（DV_TEXT は改行を持てない。RM の不変条件、openehr 2.5.0 `rm/data_types/text.rb:102-106`）
+- 入力がひとつも無い INSTRUCTION は組まない
+- 生成系は使わない
+
 ## 7. 範囲の外
 
 - 測定時刻・記録者・施設の入力欄（M3 の「患者と EHR」「カルテ記録」で扱う）

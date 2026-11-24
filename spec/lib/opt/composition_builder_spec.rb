@@ -390,3 +390,70 @@ RSpec.describe Opt::CompositionBuilder, "#111 ENTRY の protocol" do
     expect(Opt::CompositionReader.call(template, JSON.generate(commit.canonical_hash))).to eq(values)
   end
 end
+
+# skoba/anlage#30（M2 の D）: INSTRUCTION（activities／protocol）と、多段の埋め込み CLUSTER を組む。
+# narrative は案 B（R-20261124-14）: INSTRUCTION の配下で入力された要素を、文書順に「ラベル: 値」でつなぐ。
+# 実物 fixture: jp_referral.opt v0.2。値を入れるのは、field 名が衝突しない項目だけ
+# （organisation_at0001 ×3・person_at0001 ×2・clinical_synopsis ×2 の区別は C）。
+RSpec.describe Opt::CompositionBuilder, "#30 INSTRUCTION と多段 CLUSTER" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).tap(&:save!).reload }
+  let(:values) do
+    {
+      "service_request_at0121" => "精査",
+      "service_request_at0062" => "糖尿病の精査",
+      "address_at0002" => "文京区"
+    }
+  end
+  let(:instruction) { described_class.new(template, values).build.content.first.items.first }
+
+  it "INSTRUCTION を組み、ACTIVITY（テンプレート上の名前、description の ITEM_TREE、action_archetype_id は /.*/、timing 無し）を持つ" do
+    expect(instruction).to be_a(OpenEHR::RM::Composition::Content::Entry::Instruction)
+    expect(instruction.name.value).to eq("サービス依頼")
+    activity = instruction.activities.first
+    expect(instruction.activities.size).to eq(1)
+    expect([ activity.archetype_node_id, activity.name.value ]).to eq([ "at0001", "現在のアクティビティ" ])
+    expect(activity.action_archetype_id).to eq("/.*/")
+    expect(activity.timing).to be_nil
+    expect(activity.description.archetype_node_id).to eq("at0009")
+    expect(activity.description.items.map { |item| [ item.archetype_node_id, item.value.value ] })
+      .to eq([ [ "at0121", "精査" ], [ "at0062", "糖尿病の精査" ] ])
+  end
+
+  it "protocol の 2 段の埋め込み CLUSTER（紹介元医療機関 → 住所）を、それぞれのルートの名前で組む" do
+    expect(instruction.protocol.archetype_node_id).to eq("at0008")
+    organisation = instruction.protocol.items.sole
+    expect([ organisation.archetype_node_id, organisation.name.value ]).to eq([ "openEHR-EHR-CLUSTER.organisation.v1", "紹介元医療機関" ])
+    address = organisation.items.sole
+    expect([ address.archetype_node_id, address.name.value ]).to eq([ "openEHR-EHR-CLUSTER.address.v1", "住所" ])
+    expect(address.archetype_details.archetype_id.value).to eq("openEHR-EHR-CLUSTER.address.v1")
+    expect(address.items.map { |item| [ item.archetype_node_id, item.value.value ] }).to eq([ [ "at0002", "文京区" ] ])
+  end
+
+  # DV_TEXT は改行を持てない（RM の不変条件）ので、区切りは全角のセミコロン「；」
+  it "narrative は、入力された要素を文書順に「ラベル: 値」で「；」でつなぐ。埋め込みルートの要素はルートの名前を前に付ける" do
+    expect(instruction.narrative.value).to eq("サービス名: 精査；紹介目的: 糖尿病の精査；住所／市区町村: 文京区")
+  end
+
+  it "INSTRUCTION の配下に入力が無ければ、INSTRUCTION を組まない（空の narrative を作らない）" do
+    built = described_class.new(template, { "story" => "頭痛" }).build
+
+    expect(built.content.first.items.map(&:class)).to eq([ OpenEHR::RM::Composition::Content::Entry::Observation ])
+  end
+
+  it "protocol だけに入力があっても、ACTIVITY（要素の無い description）を組み、入力を捨てない" do
+    only_protocol = described_class.new(template, { "address_at0002" => "文京区" }).build.content.first.items.first
+
+    expect(only_protocol.activities.first.description.items).to be_blank
+    expect(only_protocol.narrative.value).to eq("住所／市区町村: 文京区")
+  end
+
+  it "組んだ Composition を RM グラフにコミットし、AQL で INSTRUCTION の値を引ける" do
+    Opt::RmCompositionCommitter.call(template, values)
+
+    result = OpenehrRails::Aql::Executor.execute(<<~AQL)
+      SELECT i/activities[at0001]/description[at0009]/items[at0062]/value/value
+      FROM EHR e CONTAINS COMPOSITION c CONTAINS INSTRUCTION i[openEHR-EHR-INSTRUCTION.service_request.v1]
+    AQL
+    expect(result.rows).to eq([ [ "糖尿病の精査" ] ])
+  end
+end

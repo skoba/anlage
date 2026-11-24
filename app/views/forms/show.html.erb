@@ -9,12 +9,9 @@
 <% behavior_rules = Opt::FormBehaviors.rules_for(@template.template_id) %>
 <% behavior_data = behavior_rules.empty? ? {} : { controller: "form-behaviors", form_behaviors_rules_value: behavior_rules.to_json, action: "input->form-behaviors#recalculate" } %>
 <%= form_with url: template_compositions_path(@template.template_id), method: :post, local: true, data: behavior_data do %>
-  <fieldset>
-    <% @template.fields.each do |field| %>
-      <%= render "templates/field", field: field, disabled: @template.preview_only?,
-                 value: @values[field["name"]], error: @errors[field["name"]] %>
-    <% end %>
-  </fieldset>
+  <% Opt::FormLayout.call(@template).each do |node| %>
+    <%= render "forms/root_group", node: node %>
+  <% end %>
 
   <% unless @template.preview_only? %>
     <button type="submit">保存</button>

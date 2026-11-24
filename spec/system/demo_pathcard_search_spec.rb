@@ -2,7 +2,7 @@ require "rails_helper"
 
 # 台本「検索」と 1' 閲覧専用（skoba/anlage#47 6 節）: 第 1 幕で登録した jp_referral を、
 # パスカード検索で臨床の言葉（「既往歴」「傷病名」）から引き、カードから帳票へ移る。
-# jp_referral の帳票は保存未対応（#30）なので閲覧専用で、保存ボタンが出ない。
+# jp_referral の帳票は、#30（D）と #117（C）で保存できるようになった（それまでは閲覧専用で保存ボタンが無かった）。
 # 検索結果は実測（docs/reports/demo-integration-log.md R12）。文言は docs/demo/ui-vocabulary.md の写し。
 RSpec.describe "デモ動線: パスカード検索から帳票へ（実ブラウザ）", type: :system, js: true do
   before do
@@ -11,7 +11,7 @@ RSpec.describe "デモ動線: パスカード検索から帳票へ（実ブラ�
     template.save!
   end
 
-  it "「既往歴」「傷病名」で jp_referral のカードが出て、「帳票に入力」で閲覧専用の帳票が開く" do
+  it "「既往歴」「傷病名」で jp_referral のカードが出て、「帳票に入力」で保存できる帳票が開く" do
     visit pathcards_search_path
 
     fill_in "探したい項目", with: "既往歴"
@@ -27,8 +27,8 @@ RSpec.describe "デモ動線: パスカード検索から帳票へ（実ブラ�
     card.click_link "帳票に入力"
 
     expect(page).to have_current_path("/forms/jp_referral")
-    expect(page).to have_content("保存は未対応（#30）")
-    expect(page).not_to have_button("保存")
+    expect(page).not_to have_content("保存は未対応")
+    expect(page).to have_button("保存")
   end
 
   # skoba/anlage#64（裁定 R-20261116-1）: アーキタイプパスは等幅、長ければ折り返し、
