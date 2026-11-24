@@ -44,3 +44,68 @@ Acceptance criteria:
 6. ゴールド v2 の案を `draft` で置いてゲート報告（臨床のレビューは人間。R-20261124-11 作業列 3）
 
 Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ（S2）、ゴールドの臨床判断、CI への rake の定期実行。
+
+## R2 サイクル 1: v1 シードのアダプタ読み込み（2026-11-24）
+
+- Red: `spec/lib/evaluation/questions_spec.rb` → `NameError: uninitialized constant Evaluation`（読み込み時エラー、0 examples）
+- Green: `app/lib/evaluation/question.rb`（1 問の値オブジェクト。kind／status／match）、
+  `app/lib/evaluation/questions.rb`（`from_v1_seed`。draft → status: draft、expected は 1 要素、match: archetype）。2 examples, 0 failures
+- 実測: v1 の seed は active 17・draft 1（q21）。q10 の expected_at_code は空（nil に写す）
+
+## R3 サイクル 2: v2 YAML の読み込みと形式の検査（2026-11-24）
+
+- Red: `NoMethodError: undefined method 'from_v2' for module Evaluation::Questions`（4 examples, 2 failures）
+- Green: `Questions.from_v2(dir)`。ファイル名順に `*.yml` を読む。kind ごとの必須キー（card: query・expected／aql: query・dataset・reference_aql・expected_rows）、
+  未知の kind・status・match は `InvalidQuestion` で止める（黙って母数を変えない）。4 examples, 0 failures
+
+## R4 サイクル 3: card の採点器（2026-11-24）
+
+- Red: `NameError: uninitialized constant Evaluation::CardScorer`
+- Green: `app/lib/evaluation/card_scorer.rb`。rank（期待集合のどれかが最初に出た 0 始まりの順位）、hit@1・hit@3、recall@3（集合）、逆順位、完全失敗、
+  負例違反（forbidden が top-3 に出る）。match: archetype は at_code を見ない（v1 互換）。9 examples, 0 failures（questions_spec と合わせて）
+
+## R5 サイクル 4: 実行器と最初の pin（2026-11-24）
+
+- Red: `NameError: uninitialized constant Evaluation::Runner`
+- Green: `app/lib/evaluation/runner.rb`。active の card の問いを `Opt::PathcardSearch` で引いて `CardScorer` で採点、draft／pending は一覧に残す。
+  `Run#card_summary` が questions・hit_at_1・hit_at_3・complete_failures・mrr・recall_at_3・violations・by_intent を返す
+- **pin の実測**（4 テンプレートを索引、v1 の 17 問をアダプタで読む）: Top-1 14/17、Top-3 15/17、完全失敗 2/17（q16・q18）、MRR 0.8529、
+  intent_tag 別 11/11・4/4・0/2 ── `spec/lib/tasks/pathcards_eval_spec.rb` と同じ数字。2 examples, 0 failures
+
+## R6 サイクル 5: aql の採点器とデータセット demo_initial（2026-11-24）
+
+- Red: `NameError: uninitialized constant Evaluation::AqlScorer`
+- Green: `app/lib/evaluation/datasets.rb`（`demo_initial` は `rake demo:reset` を呼ぶ。手順を写さない）、
+  `app/lib/evaluation/aql_scorer.rb`（`OpenehrRails::Aql::Executor` で実行、行を多重集合で比較、`ordered: true` で順序も。
+  `OpenehrRails::Aql::Error` は unexecutable に数える。採点対象の AQL は `aql:` で差し替え可）
+- 実測（demo_initial）: 収縮期 > 110 → `[[120.0]]`。横断の傷病名 → 3 行（順序を入れ替えても match、ordered なら mismatch）。
+  `value/defining_code/code_string` → `UnsupportedFeature: unsupported path attribute "defining_code" …`（上流候補 10 項の再現）。5 examples, 0 failures
+
+## R7 サイクル 6: 実行器の aql と保留問（2026-11-24）
+
+- Red: `NoMethodError: undefined method 'aql_results'`／`'releasable_pendings' for an instance of Evaluation::Runner::Run`
+- Green: dataset ごとに 1 回 `Datasets.build` してから aql を採点（`aql_summary`: match／mismatch／unexecutable）。
+  `releasable_pendings` は期待先のアーキタイプが active のカードに現れた保留問
+- 実測: demo_initial（jp_referral を含まない）では story の保留問は候補に出ず、jp_referral を索引すると c021 だけが候補になる。18 examples, 0 failures
+
+## R8 サイクル 7: Markdown 報告（2026-11-24）
+
+- Red: `NameError: uninitialized constant Evaluation::Report`
+- Green: `app/lib/evaluation/report.rb`。`Report.render(run, label:)` が card の集計表と intent_tag 別、完全失敗、負例違反、aql の集計と不一致の差分、
+  draft、保留問（解除候補に印）を Markdown で返す。ファイルには書かない。3 examples, 0 failures
+- spec の修正: 保留問 c19 の期待先を specimen にした（補助メソッドの既定が blood_pressure で、コーパスに有るため解除候補になってしまう誤り）
+
+## R9 サイクル 8: rake evaluation:run（2026-11-24）
+
+- Red: `RuntimeError: Don't know how to build task 'evaluation:run'`
+- Green: `lib/tasks/evaluation.rake`。v1（アダプタ）＋ v2（`spec/fixtures/evaluation/v2/`）の問いを走らせ、Markdown を標準出力に出す。
+  `RESET=1` のときだけ aql を採点（dataset を作り直して dev DB の記録を入れ替えるため。既定は飛ばして件数を出す）。
+  spec は `docs/reports/` の mtime が変わらないことも固定。2 examples, 0 failures
+
+## R10 サイクル 9: 17 問を match: card でも集計（情報）（2026-11-24）
+
+- Red: `evaluation_run_spec` の 3 例目（「# 評価 v2（phase1-bigram、match: card）」が出ない）1 failure
+- Green: `Questions.from_v1_seed(match: :card)`、rake が 2 本目の報告を出す。7 examples, 0 failures
+- 実測（demo_initial の 5 テンプレートを索引、at_code まで見る）: Top-1 14/17、Top-3 15/17、完全失敗 2/17、MRR 0.8431、recall@3 0.8824。
+  archetype 一致との差は q07「検査結果」だけ（archetype なら rank 1、at0001 まで見ると rank 2。analyte の他のカードが先に出る）
+- 全 suite（worktree、SQLite）: 267 examples, 0 failures, 3 pending（pending は既存の jp_referral 統合 spec）
