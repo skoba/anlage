@@ -114,3 +114,46 @@ openehr-rails の 3 行だけを書き換えた（版、依存の行 `openehr (~
   ただし 0.9.0 の既知の制限で、`c/context/start_time` は AQL でまだ引けない（openehr の path 評価が EVENT_CONTEXT を辿れない）。
   M2 の計画の「紹介日で引ける」は、openehr の次の版を待つ
 - 23 項（FHIR プロファイル id の衝突）: 0.9.0 でも残る（実測）。anlage では直さない
+
+## R3 `skoba/anlage#30`（M2 の D）: INSTRUCTION と多段 CLUSTER（2026-11-24）
+
+ブランチ `feat/30-instruction`（R2 のブランチの上に積んだ）。裁定: R-20261124-5（timing・action_archetype_id）、R-20261124-14（narrative は案 B）。
+
+### 自己承認した判断
+
+1. **narrative の区切りは全角のセミコロン「；」**。改行でつなぐ案で実装したところ、DV_TEXT が改行を拒否した
+   （`ArgumentError: value is not valid`、openehr 2.5.0 `rm/data_types/text.rb:102-106`。RM の不変条件）。
+   決めた規則は設計書 6 節に書いた
+2. **action_archetype_id は既定値 `/.*/` だけ**。OPT の制約から取る処理は書いていない。手元の実物の OPT 6 つには
+   制約を持つものが無く（`grep -c action_archetype_id spec/fixtures/opt/*.opt` がすべて 0）、テストできない（実物主義）。
+   **人間への依頼**: ACTIVITY に action_archetype_id の制約を持つ OPT が 1 つあれば、制約から取る処理を足す
+3. **多段の埋め込み CLUSTER**: 骨格（ITEM_TREE まで）は「最初の埋め込みルートより手前」の segment とし、その奥はルートの並びで
+   再帰的に CLUSTER にまとめる。ルートでない途中のノード（アーキタイプ内部の CLUSTER）は、これまでどおり `UnsupportedShape`
+4. **保存可否の理由の重複を除いた**（ドライランと `unsupported_reasons` が同じ文を出していた）
+5. **既存の spec 2 つを追随**: jp_referral の閲覧専用の理由（INSTRUCTION が消え、field 名の衝突 3 件だけ）。
+   `#80` の pin「B だけでは保存可能に変わらない」は、理由の中身を変えて残した（C が済むまで閲覧専用のまま）
+
+### Red（実装の前、8 例 6 失敗）
+
+```
+1)〜5) Opt::CompositionBuilder#30 INSTRUCTION と多段 CLUSTER …（5 例）
+     Opt::CompositionBuilder::UnsupportedShape: entry rm_type INSTRUCTION is not supported yet
+6) Template#36 form_capability jp_referral は、SECTION 配下の ENTRY と INSTRUCTION を組めるようになっても preview_only のまま（field 名の衝突）
+     （理由に "entry rm_type INSTRUCTION is not supported yet" が残っていた）
+```
+
+### Green
+
+- 開発機の全 suite: 309 例 0 失敗、2 pending。rubocop 違反なし
+- 組んだ Composition を RM グラフにコミットし、`i/activities[at0001]/description[at0009]/items[at0062]/value/value` を AQL で引けた
+
+### 見つけたもの（C で扱う）
+
+- **2 つめの organisation（紹介先医療機関）の field の root_label が「紹介元医療機関」になる**。root_label を
+  `terms.fetch(root_path).first`（同じ path の最初のルート）から取っているため。0.9.0 の field は `instance_index` を持つので、
+  C（同じアーキタイプの複数ルートの区別）で、ルートのインスタンスに結び直す
+- **reader（記入済みの帳票）は INSTRUCTION と多段 CLUSTER をまだ読み戻さない**。jp_referral が保存可能になる C のあとに足す
+
+### Issue
+
+- `#30` は開けたまま（reader と、C のあとの保存の通しが残る）

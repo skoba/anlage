@@ -120,7 +120,7 @@ RSpec.describe "テンプレートの詳細と版の履歴", type: :request do
 
       get "/templates/jp_referral"
 
-      expect(detail_rows["帳票"]).to start_with("閲覧専用（").and include("INSTRUCTION")
+      expect(detail_rows["帳票"]).to start_with("閲覧専用（").and include("clinical_synopsis")
       expect(detail_rows["版"]).to eq("登録版 v1.0.0／テンプレート版 0.2.0")
     end
   end

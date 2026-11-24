@@ -126,13 +126,16 @@ RSpec.describe Template, "#36 form_capability" do
   # skoba/anlage#80（R-20261124-5 問い 2）: 「テンプレートのすべての field を正しく組めるときだけ保存可能」。
   # B（SECTION 配下の ENTRY）だけでは jp_referral は保存可能に変わらない。残る理由は、
   # builder が組めない INSTRUCTION（D）と、2 つのルートで衝突する field 名 clinical_synopsis（C）。
-  it "jp_referral は、SECTION 配下の ENTRY を組めるようになっても preview_only のまま（INSTRUCTION と field 名の衝突）" do
+  # skoba/anlage#30（D）のあと: INSTRUCTION は組めるようになった。残る理由は field 名の衝突（C）だけ。
+  it "jp_referral は、SECTION 配下の ENTRY と INSTRUCTION を組めるようになっても preview_only のまま（field 名の衝突）" do
     capability, reason = capability_of("jp_referral.opt")
 
     expect(capability).to eq("preview_only")
-    expect(reason).to include("INSTRUCTION")
-    expect(reason).to include("clinical_synopsis")
-    expect(reason).not_to include("unexpected wrapper depth")
+    expect(reason.split("; ")).to eq([
+      "field name organisation_at0001 is shared by 3 fields",
+      "field name person_at0001 is shared by 2 fields",
+      "field name clinical_synopsis is shared by 2 fields"
+    ])
   end
 
   # jp_referral の web_template から、INSTRUCTION と 2 つめの clinical_synopsis を除いた形（実物からの導出）。
