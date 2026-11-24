@@ -58,3 +58,47 @@
 - 実測: `VERSION v`・`LENGTH(...)` は構文（`InvalidQuery`: expected IDENTIFIER）で落ち、`QueryValidator` の未対応に届くのは `VERSIONED_COMPOSITION` と
   `MATCHES {TERMINOLOGY(...)}`。spec は前者で固定。18 examples, 0 failures
 - 設計書 3 節のリンタの TODO 9 項目はすべて green。次はビルダー（2.2）
+
+## R9 ビルダーの本体と画面の着手（裁定 R-20261124-21、作業列 1・2）（2026-11-24）
+
+- 基準点: main `66f3a85`（openehr 2.5.0、openehr-rails 0.9.0）。worktree `/home/skoba/src/anlage-worktrees/s2-builder`、ブランチ `feat/s2-builder`
+- 設計: 設計書 6 節（`4604fa9`）。自己承認した判断は 6.6 の G1〜G5（SECTION を FROM に書かない、ENTRY は 1 クエリに 1 つ、
+  コード値は `defining_code/code_string`、画面の状態は URL だけ、画面は AQL の文字列を受け取らない）
+- 実測（越境は読み取りだけ。対象は `Gemfile.lock` が指す openehr 2.5.0 の gem）:
+  - `lib/openehr/aql/engine/path_evaluator.rb:23` `ALLOWED_TERMINAL_HOPS = %w[code_string defining_code magnitude name time value]`
+  - `lib/openehr/aql/engine/predicate_evaluator.rb:17-21` LIKE は glob（`?`・`*`、値の全体に一致）
+  - `lib/openehr/aql/lexer.rb:74-78` 文字列リテラルのエスケープ
+  - `path_evaluator.rb:93-96` 1 つの節が複数に当たると `fan-out SELECT paths are not yet supported`
+- 書く側との重なり: `status/anlage-write.md` を読み、開いている PR #113 の変更ファイルに routes・レイアウト・語彙表が無いことを確かめた
+
+## R10 サイクル: リンタの追随（`434937a`）
+
+- Red: `linter_spec` 22 examples, 5 failures（code_string が error（終端ホップ）のまま、コードの値集合の指摘が出ない、型の指摘が出ない）
+- Green: `ENGINE_HOPS` を 2.5.0 の実物に、`CODE_HOPS`（`value/defining_code/code_string`、DV_CODED_TEXT だけ）、値集合はコードなら `code_list[].code` と照合し
+  許されるコードを表示つきで添える。22 examples, 0 failures
+- 変えたもの: 「defining_code は error（上流候補 10 項）」の例を、「DV_CODED_TEXT なら通る／DV_TEXT と途中で切れた形は error」に置き換えた
+
+## R11 サイクル: ビルダー（`58c8c31`）と実行器（`509e930`）
+
+- Red: `uninitialized constant QueryBuilder::Builder`（0 examples, 1 error）
+- Green: `app/lib/query_builder/builder.rb`、`Corpus#cards`・`Corpus.ref`・`Corpus#find`。`builder_spec` 11 examples を含め 33 examples, 0 failures
+  - 組んだ AQL は、評価 v2 の a001〜a004 の参照 AQL と同じ形（AS の別名だけ無い）
+- Red: `uninitialized constant QueryBuilder::Runner`
+- Green: `app/lib/query_builder/runner.rb`。demo_initial の上で a001〜a005 と同じ選択を組んで実行し、ゴールドの期待行と一致（`AqlScorer` で match）。4 examples, 0 failures
+
+## R12 サイクル: 画面（`75407cc`）
+
+- Red: `spec/requests/queries_spec.rb` 12 examples, 11 failures（route が無い）
+- Green: `GET /queries/new`（`QueriesController#new`、`app/views/queries/new.html.erb`）。12 examples, 0 failures
+- ナビ: Red は `demo_navigation_spec` 3 failures（リンクが 5 つになった）。語彙表（`docs/demo/ui-vocabulary.md`）とナビの spec を同じコミットで更新
+- 実ブラウザ: `spec/system/demo_query_builder_spec.rb`（`js: true`、3 例: 数値・値集合・組めない値）。横スクロールが出ないことも見る
+- 画面に入れていないもの: 文字列の「いずれかに一致」（`MATCHES` の複数値。ビルダーの本体にはある。a003 の形は画面からは「含む」で近い問いになる）、OR、複数の ENTRY
+
+## R13 全 suite で見つけた spec の定数の衝突（`d64b9ae`）
+
+- 全 suite: 399 examples, 1 failure（`spec/lib/evaluation/runner_spec.rb:73` が `:unexecutable`。単独では通る）
+- 原因（実測）: `RSpec.describe` の中の定数はトップレベルに出る。新しい `queries_spec.rb` の `SYSTOLIC`（カードの参照）が、
+  `evaluation/runner_spec.rb` の `SYSTOLIC`（AQL）を上書きした
+- 直し: 新しい spec の定数に `QB_` の接頭辞。spec 全体で重複する定数名が無いことを確かめた（`grep` で重複 0）
+- 全 suite（worktree、SQLite）: 399 examples, 0 failures, 2 pending。rubocop 146 files, no offenses
+

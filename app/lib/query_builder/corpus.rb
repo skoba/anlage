@@ -9,8 +9,19 @@ module QueryBuilder
       new(Template.active.where.not(pathcards: nil).flat_map { |template| Array(template.pathcards) })
     end
 
+    attr_reader :cards
+
     def initialize(cards)
       @cards = cards
+    end
+
+    # 画面が持ち回るカードの参照（"<template_id>|<path>"。設計書 6.4）
+    def self.ref(card)
+      card.fetch("identity").values_at("template_id", "path").join("|")
+    end
+
+    def find(ref)
+      @cards.find { |card| self.class.ref(card) == ref }
     end
 
     def archetype_ids

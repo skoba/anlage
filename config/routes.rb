@@ -23,6 +23,8 @@ Rails.application.routes.draw do
        format: false, constraints: { template_id: /[^\/]+/, version: /[^\/]+/ }
 
   get "pathcards/search", to: "pathcards#search"
+  # クエリビルダー（docs/design/s2-query-builder-plan.md 6.4）。状態は URL のパラメータだけ
+  get "queries/new", to: "queries#new", as: :new_query
 
   get  "forms/:template_id",        to: "forms#show", as: :form,
        format: false, constraints: { template_id: /[^\/]+/ }
