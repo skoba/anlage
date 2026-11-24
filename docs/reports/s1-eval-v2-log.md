@@ -80,3 +80,10 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
   `OpenehrRails::Aql::Error` は unexecutable に数える。採点対象の AQL は `aql:` で差し替え可）
 - 実測（demo_initial）: 収縮期 > 110 → `[[120.0]]`。横断の傷病名 → 3 行（順序を入れ替えても match、ordered なら mismatch）。
   `value/defining_code/code_string` → `UnsupportedFeature: unsupported path attribute "defining_code" …`（上流候補 10 項の再現）。5 examples, 0 failures
+
+## R7 サイクル 6: 実行器の aql と保留問（2026-11-24）
+
+- Red: `NoMethodError: undefined method 'aql_results'`／`'releasable_pendings' for an instance of Evaluation::Runner::Run`
+- Green: dataset ごとに 1 回 `Datasets.build` してから aql を採点（`aql_summary`: match／mismatch／unexecutable）。
+  `releasable_pendings` は期待先のアーキタイプが active のカードに現れた保留問
+- 実測: demo_initial（jp_referral を含まない）では story の保留問は候補に出ず、jp_referral を索引すると c021 だけが候補になる。18 examples, 0 failures
