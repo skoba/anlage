@@ -210,3 +210,46 @@ RSpec.describe Template, "#47 sem_ver" do
     expect(sem_ver_of("patient_blood_pressure.opt")).to be_nil
   end
 end
+
+# skoba/anlage#111（M2 の F の後半）: openehr-rails 0.9.0 の FieldExtractor は、埋め込みルートの path（[archetype_id]）、
+# 自アーキタイプで名前空間化した名前、値の代替型、要素の occurrences 下限、単位の一覧を自分で出す
+# （上流候補 19・20・22 項）。anlage はそれを訂正せずにそのまま使い、足すのは anlage の規則だけ
+# （required の意味、インスタンス別のラベル、root_label、input_kind）。
+# 値の代替型の期待値は、撤去した Opt::ValueAlternatives の spec（#33）から移した。
+RSpec.describe Template, "#111 web_template の field は 0.9.0 の FieldExtractor の値をそのまま使う" do
+  def fields_of(fixture)
+    xml = Rails.root.join("spec/fixtures/opt/#{fixture}").read
+    gem_fields = OpenehrRails::Opt::FieldExtractor.new(Opt::SafeParser.parse(xml)).entries.flat_map { |e| (e[:fields] || []).map(&:stringify_keys) }
+    [ Template.build_from_opt_xml(xml).fields, gem_fields ]
+  end
+
+  %w[CardiologyEncounter.opt LabResultReport.opt ProblemList.opt bmi_calculation.opt jp_referral.opt patient_blood_pressure.opt].each do |fixture|
+    it "#{fixture}: path・名前・archetype_id・root_path・値の代替型・occurrences 下限が gem と同じ。単位の一覧は gem の値（無ければ空）" do
+      ours, gem = fields_of(fixture)
+
+      keys = %w[path name archetype_id root_path rm_type_alternatives min_occurrences]
+      expect(ours.map { |f| f.slice(*keys) }).to eq(gem.map { |f| f.slice(*keys) })
+      expect(ours.map { |f| f["units_list"] }).to eq(gem.map { |f| f["units_list"] || [] })
+    end
+  end
+
+  it "値の代替型（#33）: ProblemList の傷病名は [DV_TEXT, DV_CODED_TEXT]、診断確度は [DV_CODED_TEXT, DV_TEXT]（OPT の出現順）" do
+    ours, = fields_of("ProblemList.opt")
+
+    expect(ours.to_h { |f| [ f["node_id"], f["rm_type_alternatives"] ] }.values_at("at0002", "at0073"))
+      .to eq([ %w[DV_TEXT DV_CODED_TEXT], %w[DV_CODED_TEXT DV_TEXT] ])
+  end
+
+  it "値の代替型（#33）: SECTION 配下（jp_referral）の傷病名も [DV_TEXT, DV_CODED_TEXT]" do
+    ours, = fields_of("jp_referral.opt")
+
+    expect(ours.find { |f| f["name"] == "problem_diagnosis_at0002" }["rm_type_alternatives"]).to eq(%w[DV_TEXT DV_CODED_TEXT])
+  end
+
+  it "anlage の規則は残す: required は「要素の下限 ≥1」も含み、2 つめの clinical_synopsis はそのルートの名前を持つ" do
+    ours, gem = fields_of("jp_referral.opt")
+
+    expect(ours.count { |f| f["required"] }).to be > gem.count { |f| f["required"] }
+    expect(ours.select { |f| f["name"] == "clinical_synopsis" }.map { |f| f["label"] }).to eq(%w[症状経過及び検査結果 治療経過])
+  end
+end
