@@ -289,3 +289,46 @@ rspec ./spec/integration/jp_referral_aql_spec.rb:54 # jp_referral: 手動写像 
 ### Green
 
 - 開発機の全 suite: 262 例 0 失敗、3 pending。rubocop 違反なし
+
+## R7 `skoba/anlage#104`: Opt::TemplateTerms の撤去（2026-11-24）
+
+ブランチ `chore/104-remove-template-terms`。基準点は main `e3c168e`（openehr 2.5.0）。
+計画は `docs/design/openehr-2.5.0-adoption-plan.md` 4 節の 3。**マージは人間**（ファイルの削除を含む）。
+
+### 実測（置き換えの前）
+
+6 つの fixture の OPT すべてで、`Opt::TemplateTerms.call(source_xml)` と、パース済みの OPT の
+`CArchetypeRoot#term_definitions` を「ルートの path → 出現順の配列」に並べたものを比べた:
+
+| OPT | ルートの数 | 迂回のキーの数 | 違い |
+|---|---|---|---|
+| CardiologyEncounter | 2 | 1 | キー `""` だけ（gem は definition のルートも持つ） |
+| LabResultReport | 3 | 2 | 同上 |
+| ProblemList | 2 | 1 | 同上 |
+| bmi_calculation | 4 | 3 | 同上 |
+| jp_referral | 14 | 11 | 同上（同じ path の複数ルート〔clinical_synopsis ×2、organisation ×2〕も順序どおり一致） |
+| patient_blood_pressure | 3 | 2 | 同上 |
+
+- 計画書 3 節の「gem 側に頼む問い 1」（同じ path に同じアーキタイプが複数回埋め込まれたとき、ルートごとに別の値を返すか）
+  の答えは「返す」（jp_referral の clinical_synopsis で、at0000 の text が 2 つとも別。spec で pin した）
+- API の確認: openehr 2.5.0 `lib/openehr/am/archetype/constraint_model.rb:494-498`
+  （`term_definitions: { language => { code => ArchetypeTerm } }`）、`ArchetypeTerm#items`（`ontology.rb:96`）
+
+### 自己承認した判断
+
+- 置き換え先は `Opt::RootTerms.call(opt)`。返す形（path → 出現順の配列 → at-code → text・description）は迂回と同じにし、
+  呼ぶ側（`Template.build_web_template`、`Opt::PathcardExtractor`）の変更を 1 行ずつにした
+- `Opt::SafeParser.safe_document` は残した（呼ぶ箇所は無くなったが、単体の spec がある。消すのは別の判断）
+- `build_web_template` の使わなくなった引数 `source_xml` を消した
+
+### Red（実装の前）
+
+```
+An error occurred while loading ./spec/lib/opt/root_terms_spec.rb.
+NameError: uninitialized constant Opt::RootTerms
+```
+
+### Green
+
+- 開発機の全 suite: 289 例 0 失敗、2 pending。golden 4 件、`template_spec.rb`、`pathcard_extractor_spec.rb` は期待値を変えずに緑
+- rubocop 違反なし
