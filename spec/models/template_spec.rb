@@ -126,16 +126,10 @@ RSpec.describe Template, "#36 form_capability" do
   # skoba/anlage#80（R-20261124-5 問い 2）: 「テンプレートのすべての field を正しく組めるときだけ保存可能」。
   # B（SECTION 配下の ENTRY）だけでは jp_referral は保存可能に変わらない。残る理由は、
   # builder が組めない INSTRUCTION（D）と、2 つのルートで衝突する field 名 clinical_synopsis（C）。
-  # skoba/anlage#30（D）のあと: INSTRUCTION は組めるようになった。残る理由は field 名の衝突（C）だけ。
-  it "jp_referral は、SECTION 配下の ENTRY と INSTRUCTION を組めるようになっても preview_only のまま（field 名の衝突）" do
-    capability, reason = capability_of("jp_referral.opt")
-
-    expect(capability).to eq("preview_only")
-    expect(reason.split("; ")).to eq([
-      "field name organisation_at0001 is shared by 3 fields",
-      "field name person_at0001 is shared by 2 fields",
-      "field name clinical_synopsis is shared by 2 fields"
-    ])
+  # skoba/anlage#30（D）のあと: INSTRUCTION は組めるようになった。残る理由は field 名の衝突（C）だけだった。
+  # skoba/anlage#117（C）のあと: 衝突も無くなり、jp_referral は保存可能になる（R-20261124-5 問い 2 の条件がそろった）。
+  it "jp_referral は、SECTION・INSTRUCTION・複数ルートの区別がそろって saveable" do
+    expect(capability_of("jp_referral.opt")).to eq([ "saveable", nil ])
   end
 
   # jp_referral の web_template から、INSTRUCTION と 2 つめの clinical_synopsis を除いた形（実物からの導出）。
@@ -230,8 +224,11 @@ RSpec.describe Template, "#111 web_template の field は 0.9.0 の FieldExtract
     it "#{fixture}: path・名前・archetype_id・root_path・値の代替型・occurrences 下限が gem と同じ。単位の一覧は gem の値（無ければ空）" do
       ours, gem = fields_of(fixture)
 
-      keys = %w[path name archetype_id root_path rm_type_alternatives min_occurrences]
+      keys = %w[path archetype_id root_path rm_type_alternatives min_occurrences]
       expect(ours.map { |f| f.slice(*keys) }).to eq(gem.map { |f| f.slice(*keys) })
+      # 名前は gem のまま。ただし同じ名前の 2 つめ以降には _2・_3 を付ける（#117）
+      expect(ours.map { |f| f["name"].sub(/_\d+\z/) { |suffix| gem.map { |g| g["name"] }.include?(f["name"]) ? suffix : "" } })
+        .to eq(gem.map { |f| f["name"] })
       expect(ours.map { |f| f["units_list"] }).to eq(gem.map { |f| f["units_list"] || [] })
     end
   end
@@ -253,6 +250,7 @@ RSpec.describe Template, "#111 web_template の field は 0.9.0 の FieldExtract
     ours, gem = fields_of("jp_referral.opt")
 
     expect(ours.count { |f| f["required"] }).to be > gem.count { |f| f["required"] }
-    expect(ours.select { |f| f["name"] == "clinical_synopsis" }.map { |f| f["label"] }).to eq(%w[症状経過及び検査結果 治療経過])
+    expect(ours.select { |f| f["name"].start_with?("clinical_synopsis") }.map { |f| [ f["name"], f["label"] ] })
+      .to eq([ %w[clinical_synopsis 症状経過及び検査結果], %w[clinical_synopsis_2 治療経過] ])
   end
 end

@@ -2,8 +2,15 @@ require "rails_helper"
 
 # skoba/anlage#36: builder が扱えない形のテンプレートは閲覧専用＋「保存は未対応」の明示。
 # 500 を壇上で出さない。
+# skoba/anlage#117 のあと、手元の実物の OPT はすべて保存可能になった。閲覧専用の画面は、jp_referral の
+# 登録時の判定を閲覧専用に書き換えて確かめる（判定そのものは spec/models/template_spec.rb）。
 RSpec.describe "preview_only のフォーム（#36）", type: :request do
-  let!(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).tap(&:save!) }
+  let!(:template) do
+    Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).tap do |t|
+      t.web_template = t.web_template.merge("form_capability" => "preview_only", "form_capability_reason" => "entry rm_type ACTION is not supported yet")
+      t.save!
+    end
+  end
 
   it "GET /forms/jp_referral は閲覧専用（入力 disabled・送信ボタン無し）で、保存未対応と理由を明示する" do
     get "/forms/jp_referral"

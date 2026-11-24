@@ -245,25 +245,36 @@ module Opt
         bad = rest.find { |_attr, node_id| !archetype_root?(node_id) }
         raise UnsupportedShape, "entry #{entry['archetype_id']}: embedded node #{bad.inspect} is not an archetype root" if bad
 
-        [ field, rest.map(&:last) ] if filled.include?(field)
+        [ field, cluster_keys(field, rest) ] if filled.include?(field)
       end
 
       item_tree_seg, *outer_segs = common.reverse
       [ build_item_tree(item_tree_seg, entry, pairs), outer_segs ]
     end
 
+    # 埋め込みルートの並びを、CLUSTER をまとめる鍵にする。web_template の root_chain（ルートのインスタンスと名前、
+    # skoba/anlage#117）があればそれを使い、同じアーキタイプの 2 つのルート（紹介元／紹介先）を別の CLUSTER にする。
+    # 無ければ（#117 より前の登録）archetype_id だけで鍵にする
+    def cluster_keys(field, rest)
+      chain = field["root_chain"]
+      return rest.map { |_attr, archetype_id| [ archetype_id, nil, nil ] } unless chain && chain.size == rest.size
+
+      chain.map { |root| [ root["archetype_id"], root["index"], root["label"] ] }
+    end
+
     def archetype_root?(node_id)
       node_id.to_s.start_with?("openEHR-")
     end
 
-    # pairs: [[field, [埋め込みルートの archetype_id, ...（外側から）]], ...]。文書順に、要素はそのまま、
-    # 埋め込みルートは CLUSTER（archetype_details 付き）にまとめて、その中を同じ規則で組む
+    # pairs: [[field, [[archetype_id, インスタンス, 名前], ...（外側から）]], ...]。文書順に、要素はそのまま、
+    # 埋め込みルートは CLUSTER（archetype_details 付き）にインスタンスごとにまとめて、その中を同じ規則で組む
     def build_items(pairs)
-      pairs.group_by { |_field, roots| roots.first }.flat_map do |root, group|
-        next group.map { |field, _roots| build_element(field) } unless root
+      pairs.group_by { |_field, roots| roots.first&.take(2) }.flat_map do |key, group|
+        next group.map { |field, _roots| build_element(field) } unless key
 
+        _archetype_id, _index, label = group.first.last.first
         inner = group.map { |field, roots| [ field, roots.drop(1) ] }
-        [ build_cluster(root, inner) ]
+        [ build_cluster(key.first, inner, label) ]
       end
     end
 
@@ -287,9 +298,9 @@ module Opt
 
     # CLUSTER の name は、そのルートの直下の要素の root_label（テンプレート上の名前）。直下に入力が無ければ、
     # 奥の要素のラベルからは取れないので、アーキタイプの概念名に落とす
-    def build_cluster(archetype_id, inner)
+    def build_cluster(archetype_id, inner, label = nil)
       own = inner.find { |field, roots| roots.empty? && field["archetype_id"] == archetype_id }&.first
-      label = own&.fetch("root_label", nil) || root_label_of(archetype_id)
+      label ||= own&.fetch("root_label", nil) || root_label_of(archetype_id)
       OpenEHR::RM::DataStructures::ItemStructure::Representation::Cluster.new(
         archetype_node_id: archetype_id,
         name: dv_text(label || archetype_id.split(".")[1]),

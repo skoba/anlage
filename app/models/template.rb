@@ -67,6 +67,9 @@ class Template < ApplicationRecord
   def self.build_web_template(opt, extractor)
     terms = Opt::RootTerms.call(opt)
     root_occurrences = Hash.new(0)
+    # 各 field が属するルート（インスタンス）。field の path と instance_index で結ぶ（skoba/anlage#117。
+    # OPT には content の外〔context〕にも ELEMENT があるので、並び順だけでは結べない）
+    element_roots = Opt::ElementRoots.call(opt).group_by { |element| element["path"] }
     web_template = {
       "template_id" => opt.template_id.value,
       "concept" => opt.concept,
@@ -77,7 +80,7 @@ class Template < ApplicationRecord
       "category_code" => category_code(opt),
       # SECTION ルートの path → テンプレート上の名前。builder が SECTION の name に使う（skoba/anlage#80）
       "section_labels" => section_labels(terms),
-      "entries" => extractor.entries.map { |entry| serialize_entry(entry, instance_terms(entry, terms, root_occurrences), terms) }
+      "entries" => uniquify_field_names(extractor.entries.map { |entry| serialize_entry(entry, instance_terms(entry, terms, root_occurrences), terms, element_roots) })
     }
     # 保存可否は登録時に一度だけ判定（skoba/anlage#36）
     web_template.merge(Opt::FormCapability.call(web_template))
@@ -110,10 +113,32 @@ class Template < ApplicationRecord
   # 埋め込みルート配下の field（skoba/anlage#38）に、そのルートのテンプレート上の名前（root_label）を足す。
   # builder が CLUSTER の name に使う。path・name・archetype_id・root_path は openehr-rails 0.9.0 の
   # FieldExtractor がそのまま出す（上流候補 22 項。anlage の訂正は #111 で撤去）。
-  def self.root_label(field, entry, terms)
-    return if field["archetype_id"] == entry[:archetype_id]
+  # 埋め込みルート配下の field の、entry より奥のルートの並び（外側から）。各ルートはインスタンスで区別し、
+  # テンプレート上の名前を持つ（skoba/anlage#117）。builder はこれで CLUSTER をインスタンスごとに分け、名前を付ける。
+  # element が FieldExtractor の field と結べない（path が違う）ときは nil（これまでの組み方に落ちる）。
+  def self.root_chain(field, entry, terms, element)
+    return unless element && element["path"] == field["path"]
 
-    terms.fetch(field["root_path"], []).first&.dig("at0000", "text") || field["archetype_id"].split(".")[1]
+    roots = element["roots"]
+    entry_index = roots.index { |archetype_id, _path, _occurrence| archetype_id == entry[:archetype_id] }
+    return unless entry_index
+
+    roots.drop(entry_index + 1).map do |archetype_id, path, occurrence|
+      { "archetype_id" => archetype_id, "index" => occurrence,
+        "label" => terms.fetch(path, [])[occurrence]&.dig("at0000", "text") || archetype_id.split(".")[1] }
+    end
+  end
+
+  # 同じ名前の field（同じアーキタイプの複数ルート）は、文書順で 2 つめ以降に _2・_3 を付ける（skoba/anlage#117。
+  # openehr-rails 0.8.0 までの FieldExtractor の付け方〔…_at0001_2〕にならう）
+  def self.uniquify_field_names(entries)
+    seen = Hash.new(0)
+    entries.each do |entry|
+      entry["fields"].each do |field|
+        seen[field["name"]] += 1
+        field["name"] = "#{field['name']}_#{seen[field['name']]}" if seen[field["name"]] > 1
+      end
+    end
   end
 
   def self.category_code(opt)
@@ -148,13 +173,14 @@ class Template < ApplicationRecord
   #   required: 要素自身の下限 ≥1 も required とする（#34。gem の required は「entry が必須 かつ
   #     要素が必須」の意味のままで、0..1 の entry 配下では 1..1 の要素も false）
   #   units_list: 数量でない field は空（gem は nil）
-  def self.serialize_entry(entry, instance_terms = {}, terms = {})
+  def self.serialize_entry(entry, instance_terms = {}, terms = {}, element_roots = nil)
     fields = (entry[:fields] || []).map do |field|
       field = field.stringify_keys
+      element = element_roots&.fetch(field["path"], nil)&.at(field["instance_index"].to_i)
       instance_label = instance_terms.dig(field["node_id"], "text") if field["archetype_id"] == entry[:archetype_id]
       field["label"] = instance_label if instance_label.present?
-      label = root_label(field, entry, terms)
-      field = field.merge("root_label" => label) if label
+      chain = root_chain(field, entry, terms, element)
+      field = field.merge("root_chain" => chain, "root_label" => chain.last["label"]) if chain.present?
       field.merge(
         "input_kind" => Opt::InputKind.for(field, field["rm_type_alternatives"]),
         "required" => field["required"] || field["min_occurrences"].to_i >= 1,
@@ -180,7 +206,7 @@ class Template < ApplicationRecord
 
     { "lower" => interval.lower, "upper" => interval.upper }
   end
-  private_class_method :build_web_template, :serialize_entry, :root_label, :interval_to_h, :section_labels, :category_code, :entry_labels
+  private_class_method :build_web_template, :serialize_entry, :root_chain, :uniquify_field_names, :interval_to_h, :section_labels, :category_code, :entry_labels
 
   def entries
     (web_template || {})["entries"] || []
