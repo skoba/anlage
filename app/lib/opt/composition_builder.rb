@@ -275,7 +275,9 @@ module Opt
 
     def code_phrase(code, terminology)
       OpenEHR::RM::DataTypes::Text::CodePhrase.new(
-        terminology_id: OpenEHR::RM::Support::Identification::TerminologyID.new(name: terminology),
+        # value: で組む。name: で組むと RMJSONSerializer が値を出さない（skoba/anlage#86、
+        # docs/upstream-candidates.md 26 項）
+        terminology_id: OpenEHR::RM::Support::Identification::TerminologyID.new(value: terminology),
         code_string: code
       )
     end
