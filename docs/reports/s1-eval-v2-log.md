@@ -109,3 +109,43 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
 - 実測（demo_initial の 5 テンプレートを索引、at_code まで見る）: Top-1 14/17、Top-3 15/17、完全失敗 2/17、MRR 0.8431、recall@3 0.8824。
   archetype 一致との差は q07「検査結果」だけ（archetype なら rank 1、at0001 まで見ると rank 2。analyte の他のカードが先に出る）
 - 全 suite（worktree、SQLite）: 267 examples, 0 failures, 3 pending（pending は既存の jp_referral 統合 spec）
+
+## R11 ゲート報告: ゴールド v2 の案（作業列 3。ここで止まる）（2026-11-24）
+
+**判断を求めること**: `spec/fixtures/evaluation/v2/cards.yml`（6 問）と `aql.yml`（5 問）の案を、臨床のレビューで確定してよいか。
+確定の操作は、各問の `status: draft` を外し（pending はそのまま）、`reviewed_by`／`reviewed_at` を記入すること。
+ゴールド本体は人間の専有領域なので、セッションは案を出すところまで（v1 の seed は変更していない）。
+
+### 案の一覧と実測（demo_initial の 5 テンプレートを索引、案を active と見なして採点。情報）
+
+| id | 種 | 問い | 形 | いまの実測 |
+|---|---|---|---|---|
+| c010 | card | 血圧 | 期待集合 {bp at0004, at0005} | rank 0、recall@3 1.0（両方が 1・2 位） |
+| c014 | card | 血圧測定 | 期待集合 {bp at0004, at0005} | rank 0、recall@3 1.0 |
+| c008 | card | 発症 | 期待集合 {pd at0077, at0002} | rank 0、recall@3 0.5（at0002 は top-3 に無い） |
+| c015 | card | 臨床検査 | 期待 lab_result（archetype）、負例 pd at0003 | rank 0、負例違反なし（旧競合は container_labels の導入後に消えている。推論） |
+| c021 | card（pending） | 既往歴 | 期待 story at0004、負例 pd | コーパスに story 無し。jp_referral を索引すると解除候補になる（R7 で実測） |
+| c019 | card（pending） | 検体 | 期待 CLUSTER.specimen、負例 lab_result | コーパスに specimen 無し。負例 lab_result が 1 位（誤着地の実例） |
+| a001 | aql | 収縮期血圧が 110 mmHg を超える記録 | 数値比較 | 一致 `[[120.0]]` |
+| a002 | aql | 診断確度が「疑い」の傷病名 | 値集合（表示文字列で仮置き） | 一致 `[["高血圧症"], ["2型糖尿病"]]` |
+| a003 | aql | 2型糖尿病または高血圧症の記録を出所つきで | 横断 | 一致 3 行（デモクエリ 5 と同じ） |
+| a004 | aql | 空腹時血糖の値 | 文字列一致 ＋ 埋め込み CLUSTER | 一致 `[[98.0]]` |
+| a005 | aql | 身長が 170 cm 以上の記録 | 境界値を含む数値比較 | 一致 `[[170.0]]` |
+
+### 人間に問うこと（案の notes にも書いた）
+
+1. c008: 集合（順序なし）でよいか、at0077 主・at0002 第 2 候補の順位つきが要るか（順位つきなら形式の拡張を別に計画）
+2. c015: 2026-08-25 のレビュー（臨床検査 → laboratory_test_result の単一固定は恣意）と、期待を archetype 一致に置く案が両立するか。
+   両立しないなら「負例だけの問い（expected 空）」を形式に足すか
+3. c021: 確定時に v1 の q21（draft）と二重にしない扱い（v1 に残す／v2 に移す）
+4. a002: コード値（at0074）の本来形は openehr 2.5.0 のあと。それまで表示文字列「疑い」の一致で仮置きしてよいか（R-20261124-11 の 5 のとおり）
+
+### 保留問の運用
+
+- pending の 2 問は母数に入らない。`rake evaluation:run` の報告で、期待先がコーパスに現れると「保留解除候補」の印が付く（c021 は jp_referral の登録で付く）
+
+### PR
+
+- 計画書: PR #81（CI run 45389992419 green。マージは実行環境の権限で止められたので人間に回す）
+- 枠組み: PR #84（`feat/s1-eval-v2`、#81 の上）
+- ゴールド案: 本ログの R11 と同じ PR（`feat/s1-eval-v2-gold-draft`、#84 の上）。**人間のレビューが済むまでマージしない**
