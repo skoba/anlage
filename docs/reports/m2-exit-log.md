@@ -93,3 +93,45 @@ D までの記録は `docs/reports/rails-0.9.0-adoption-log.md`（R1〜R3）。
 
 - 開発機の全 suite: 390 例 0 失敗、2 pending。rubocop 違反なし、brakeman の警告 0
 - 実ブラウザ（1280×720）で、jp_referral の帳票（入れ子 5 段）に横スクロールが出ない
+
+## R3 I（M2 の出口の system spec）: ゲート報告（2026-11-24）
+
+ブランチ `wip/i-referral-exit`（draft PR）。基準点は main `7011c22`（E まで入っている）。
+
+### 何が起きたか
+
+`spec/system/demo_referral_spec.rb`（新規）で、計画書の I のとおり「サービス名・紹介元・紹介先・傷病名」を入力して保存すると、
+**422 で保存できない**。必須の検証に、次の 3 項目で止まる（実測、POST で同じ値を送って確かめた）:
+
+| 項目 | 入れ物 | 要素の下限 | 入れ物の occurrences |
+|---|---|---|---|
+| 電子的な連絡先／値（`electronic_communication_at0002`） | 埋め込み CLUSTER（紹介元医療機関の中） | 1 | 0..1 |
+| 症状経過及び検査結果（`clinical_synopsis`） | EVALUATION | 1 | 0..1 |
+| 治療経過（`clinical_synopsis_2`） | EVALUATION | 1 | 0..1 |
+
+原因は `#34` の規則「要素自身の occurrences の下限が 1 以上なら必須」（`app/models/template.rb` の `serialize_entry`、
+`app/lib/opt/form_validator.rb:34`）。openEHR の意味は「**入れ物を書くなら**その要素は必須」で、入れ物が 0..1 なら、
+入れ物ごと書かないことは許される。いまの規則は、入れ物を書かない場合も必須にしている。
+（openehr-rails 0.9.0 の CHANGELOG も「mandatory if the entry is written at all」と書き、条件つきの必須は rails の #65 で扱うとしている）
+
+### 実測: 入れ物の occurrences
+
+- jp_referral: COMPOSITION 1..1 のほかは、SECTION・ENTRY 5 つ・CLUSTER 7 つがすべて 0..1（診療科の organisation だけ 0..*）
+- ProblemList: COMPOSITION 1..1、problem_diagnosis（ENTRY）0..1
+
+### 裁定を求める点
+
+規則を「入れ物を書くなら必須」に改めるかどうか。利用者に見える結果が変わる:
+
+| 案 | 何が変わるか |
+|---|---|
+| **A. 入れ物（ENTRY・埋め込み CLUSTER）に 1 つでも値があるときだけ、その中の下限 ≥1 の要素を必須にする（推奨）** | jp_referral は、書いた部分だけの入力で保存できる。**ProblemList は傷病名が空でも保存できる**（ENTRY が 0..1 なので、何も書かなければ ENTRY ごと書かない）。そのとき Composition の content は空になる。`#34` の pin「必須の傷病名が空なら 422」を変える |
+| B. A に加えて、帳票全体で値が 1 つも無ければ保存させない | ProblemList の空の保存は止まる（「何か入力してください」）。傷病名だけ空で発症日だけ書いたときは、A と同じく傷病名で止まる |
+| C. いまの規則のまま。I の spec は 3 項目も入力する | コードは変わらない。紹介状を書くたびに、連絡先の値と 2 つの経過を必ず書かせることになる |
+
+推奨は B（A の正しさと、空の記録を作らない安全さの両方）。
+
+### 待っているあいだ
+
+- I の spec はこのブランチに置いたまま（いまは赤）。答えが出たら、A／B なら Red から規則を直し、C なら spec に 3 項目を足して緑にする
+- 作業列の次（3: 版の公開待ち、4: M3 の残り）には進める
