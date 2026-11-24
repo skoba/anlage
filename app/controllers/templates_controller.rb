@@ -17,6 +17,13 @@ class TemplatesController < ApplicationController
     @templates = Template.active.order(:template_id)
   end
 
+  # 詳細と版の履歴（skoba/anlage#98）。:version が無ければ有効な版、あればその版（置き換えられた版も）。
+  def show
+    @versions = Template.where(template_id: params[:template_id]).sort_by { |t| Gem::Version.new(t.version) }.reverse
+    @template = params[:version] ? @versions.find { |t| t.version == params[:version] } : @versions.find { |t| t.status == "active" }
+    head :not_found unless @template
+  end
+
   # Parses and validates an uploaded OPT without persisting it (the
   # "fitting room"): summary + a live form preview, so the visitor can
   # inspect the template before deciding to register it.

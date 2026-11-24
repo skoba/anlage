@@ -13,6 +13,11 @@ Rails.application.routes.draw do
   get  "templates",         to: "templates#index"
   post "templates/preview", to: "templates#preview"
   post "templates",         to: "templates#create"
+  # テンプレートの詳細と版の履歴（skoba/anlage#98、docs/design/m3-plan.md 3 節）
+  get  "templates/:template_id", to: "templates#show", as: :template,
+       format: false, constraints: { template_id: /[^\/]+/ }
+  get  "templates/:template_id/versions/:version", to: "templates#show", as: :template_version,
+       format: false, constraints: { template_id: /[^\/]+/, version: /[^\/]+/ }
 
   get "pathcards/search", to: "pathcards#search"
 
