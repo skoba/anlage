@@ -98,3 +98,17 @@ code.archetype-path {
   font-family: monospace;
   overflow-wrap: anywhere;
 }
+
+/* クエリビルダー（docs/design/s2-query-builder-plan.md 6.4）: AQL は等幅で折り返す。結果は罫線つきの表。配置まで */
+#query_aql pre {
+  font-family: monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #f8f9fa;
+  padding: 0.75rem;
+}
+#query_result table { border-collapse: collapse; }
+#query_result th, #query_result td { border: 1px solid #ccc; padding: 0.4rem 0.75rem; text-align: left; }
+#query_result th { background: #f3f4f6; }
+.query-error, .lint-error { color: #b91c1c; }
+#query_candidates .pathcard { border: 1px solid #ccc; padding: 0.25rem 1rem 0.75rem; margin: 0.5rem 0; overflow-wrap: anywhere; }
