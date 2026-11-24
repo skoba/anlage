@@ -41,3 +41,17 @@ RSpec.describe Opt::CompositionReader do
     )
   end
 end
+
+# skoba/anlage#80: SECTION 配下に組んだ ENTRY を、reader が同じ値で読み戻す（記入済みの帳票のプレビュー）。
+RSpec.describe Opt::CompositionReader, "#80 SECTION 配下の ENTRY" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).tap(&:save!).reload }
+
+  it "builder が SECTION の items に入れた EVALUATION と OBSERVATION の値を読み戻す" do
+    # 傷病名（at0002、coded_free）は使わない: 自由記述で保存した値を reader が読み戻せないのは
+    # content 直下でも同じ既存の課題で、SECTION とは関わらない
+    values = { "problem_diagnosis_at0073" => "at0074", "story" => "3 か月前から頭痛" }
+    json = OpenEHR::Serializer::RMJSONSerializer.new(Opt::CompositionBuilder.new(template, values).build).serialize
+
+    expect(described_class.call(template, json)).to eq(values)
+  end
+end
