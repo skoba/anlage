@@ -78,12 +78,13 @@ RSpec.describe "デモ動線: 共通ナビと保存後の次アクション", ty
       expect(links_in("nav#app_nav")).to eq(NAV_LINKS)
     end
 
-    it "次アクション 4 つ（同じ帳票にもう 1 件／カルテ記録一覧／AQL 照会／FHIR プロファイル）を出す" do
+    # skoba/anlage#102（M3 の W6）: FHIR プロファイルはテンプレートから決まるので、リンクはテンプレートの詳細に移した
+    it "次アクション 4 つ（同じ帳票にもう 1 件／カルテ記録一覧／AQL 照会／テンプレートの詳細）を出す" do
       expect(links_in("#next_actions")).to eq([
         [ "同じ帳票にもう 1 件入力", "/forms/patient_blood_pressure.v1" ],
         [ "カルテ記録一覧", "/compositions" ],
         [ "AQL 照会", "/openehr/query" ],
-        [ "FHIR プロファイル", "/fhir/r5/StructureDefinition/openehr-observation-heart-rate-pulse-v1" ]
+        [ "テンプレートの詳細", "/templates/patient_blood_pressure.v1" ]
       ])
     end
 

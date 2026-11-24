@@ -176,7 +176,7 @@ RSpec.describe Template, "#38 埋め込み CLUSTER の field" do
   end
 end
 
-# skoba/anlage#47 変更 1: カルテ記録画面の次アクション「FHIR プロファイル」のリンク先。
+# skoba/anlage#47 変更 1・#102: テンプレートの詳細の「FHIR プロファイル」のリンク先（#102 まではカルテ記録画面の次アクション）。
 # id は facade（`/fhir/r5/StructureDefinition/:id`）と同じ ProfileGenerator から導く
 # （実測値は docs/reports/demo-integration-log.md R1 5 節）。
 RSpec.describe Template, "#47 fhir_profile_ids" do

@@ -137,3 +137,39 @@ NameError: uninitialized constant Opt::PathcardDiff
 - 開発機の全 suite: 284 例 0 失敗、2 pending（openehr 2.5.0。pending は手写像の元が未供給の 2 件）
 - rubocop 違反なし、brakeman の警告 0
 - 実ブラウザ（1280×720）で、版の差分の画面に横スクロールが出ないことを spec に足した
+
+## R4 W6（`skoba/anlage#102`）: FHIR プロファイルのリンクをテンプレートの詳細に移す（2026-11-24）
+
+ブランチ `feat/102-fhir-links-on-template`。基準点は main `4633cae`。
+
+### 自己承認した判断（計画書 4 節の問い 2・3 は、答えを待たずに案のとおり進めた）
+
+1. **カルテ記録の画面の「FHIR プロファイル」は、「テンプレートの詳細」へのリンクに置き換えた**（問い 2 の案）。
+   次アクションは 4 つのまま。両方に残すほうがよければ、revert ではなく 1 行足すだけで戻せる
+2. **FSH は画面に出していない**（問い 3 の案）
+3. **テンプレートの詳細には、すべてのプロファイルを並べた**。これまでのリンクは先頭の 1 つだけだった
+   （patient_blood_pressure.v1 は 2 本ある。`spec/models/template_spec.rb` の実測）
+4. **プロファイルの欄は、有効な版にだけ出す**。facade は有効なテンプレートのプロファイルだけを返すので、
+   置き換えられた版で出すとリンクが 404 になる
+5. **壇上の動線の spec を 2 つ直した**（`spec/requests/demo_navigation_spec.rb`、`spec/system/demo_save_next_actions_spec.rb`）。
+   台本（次アクションの 4 つめ）が変わるので、`docs/demo/ui-vocabulary.md` も同じコミットで直した
+
+### Red（実装の前、3 失敗）
+
+```
+1) デモ動線: 共通ナビと保存後の次アクション 保存後のカルテ記録画面 次アクション 4 つ（同じ帳票にもう 1 件／カルテ記録一覧／AQL 照会／テンプレートの詳細）を出す
+     （4 つめが [ "FHIR プロファイル", "/fhir/r5/StructureDefinition/openehr-observation-heart-rate-pulse-v1" ] のまま）
+2) テンプレートの詳細と版の履歴 GET /templates/:template_id（有効な版の詳細） FHIR プロファイルの欄に、すべてのプロファイルへのリンクが出る
+     expected: "FHIR プロファイル"
+          got: ""
+3) デモ動線: 保存後の次アクション（実ブラウザ） CardiologyEncounter を保存すると flash と次アクション 4 つが出て、…
+     expected to find link "テンプレートの詳細" with href "/templates/CardiologyEncounter" … but there were no matches
+```
+
+### Green
+
+- 開発機の全 suite: 285 例 0 失敗、2 pending。rubocop 違反なし
+
+### M3 の先行分の残り
+
+- W1〜W6 はこれで出そろった。作業列 7（患者と EHR、カルテ記録）は M2 の出口のあと

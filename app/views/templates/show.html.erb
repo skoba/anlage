@@ -26,6 +26,18 @@
   <% end %>
 </p>
 
+<%# skoba/anlage#102（M3 の W6）: facade（/fhir/r5/StructureDefinition/:id）は有効な版だけを返すので、有効な版にだけ出す %>
+<% if @template.status == "active" && (profile_ids = @template.fhir_profile_ids).any? %>
+  <section id="template_fhir_profiles">
+    <h2>FHIR プロファイル</h2>
+    <ul>
+      <% profile_ids.each do |profile_id| %>
+        <li><%= link_to profile_id, "/fhir/r5/StructureDefinition/#{profile_id}" %></li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>
+
 <section id="template_versions">
   <h2>版の履歴</h2>
   <ul>
