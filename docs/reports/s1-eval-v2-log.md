@@ -51,3 +51,9 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
 - Green: `app/lib/evaluation/question.rb`（1 問の値オブジェクト。kind／status／match）、
   `app/lib/evaluation/questions.rb`（`from_v1_seed`。draft → status: draft、expected は 1 要素、match: archetype）。2 examples, 0 failures
 - 実測: v1 の seed は active 17・draft 1（q21）。q10 の expected_at_code は空（nil に写す）
+
+## R3 サイクル 2: v2 YAML の読み込みと形式の検査（2026-11-24）
+
+- Red: `NoMethodError: undefined method 'from_v2' for module Evaluation::Questions`（4 examples, 2 failures）
+- Green: `Questions.from_v2(dir)`。ファイル名順に `*.yml` を読む。kind ごとの必須キー（card: query・expected／aql: query・dataset・reference_aql・expected_rows）、
+  未知の kind・status・match は `InvalidQuestion` で止める（黙って母数を変えない）。4 examples, 0 failures

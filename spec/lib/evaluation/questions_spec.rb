@@ -26,4 +26,73 @@ RSpec.describe Evaluation::Questions do
       expect(q10.expected).to eq([ { archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2", at_code: nil } ])
     end
   end
+
+  describe ".from_v2" do
+    let(:dir) { Pathname.new(Dir.mktmpdir) }
+
+    def write(name, yaml)
+      dir.join(name).write(yaml)
+    end
+
+    it "card と aql の問いを読み、status は既定 active、match は既定 card、pending は pending_until を持つ" do
+      write("cards.yml", <<~YAML)
+        - id: c010
+          kind: card
+          query: "血圧"
+          expected:
+            - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+            - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
+          forbidden:
+            - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1 }
+          intent_tag: bigram成立想定
+        - id: c019
+          kind: card
+          status: pending
+          query: "検体"
+          expected: [ { archetype_id: openEHR-EHR-CLUSTER.specimen.v1 } ]
+          pending_until: "CLUSTER.specimen を含む OPT がコーパスに入る"
+      YAML
+      write("aql.yml", <<~YAML)
+        - id: a001
+          kind: aql
+          status: draft
+          query: "収縮期血圧が 110 mmHg を超える記録"
+          dataset: demo_initial
+          reference_aql: "SELECT o FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]"
+          expected_rows: [[120.0]]
+          cards: [ { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 } ]
+      YAML
+
+      questions = described_class.from_v2(dir)
+
+      expect(questions.map(&:id)).to eq([ "a001", "c010", "c019" ])
+      c010 = questions.find { |question| question.id == "c010" }
+      expect(c010).to have_attributes(kind: :card, status: :active, match: :card, intent_tag: "bigram成立想定")
+      expect(c010.expected.size).to eq(2)
+      expect(c010.forbidden).to eq([ { archetype_id: "openEHR-EHR-EVALUATION.problem_diagnosis.v1", at_code: nil } ])
+      c019 = questions.find { |question| question.id == "c019" }
+      expect(c019).to have_attributes(status: :pending, pending_until: a_string_including("specimen"))
+      a001 = questions.find { |question| question.id == "a001" }
+      expect(a001).to have_attributes(kind: :aql, status: :draft, dataset: "demo_initial", expected_rows: [ [ 120.0 ] ], ordered: false)
+      expect(a001.reference_aql).to start_with("SELECT o")
+      expect(a001.cards).to eq([ { archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2", at_code: "at0004" } ])
+    end
+
+    it "kind ごとの必須キーを欠く問い、未知の kind・status・match は読み込みで止まる" do
+      write("bad_card.yml", "- { id: x1, kind: card, query: 血圧 }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x1.*expected/)
+
+      write("bad_card.yml", "- { id: x2, kind: aql, query: q, dataset: demo_initial, reference_aql: SELECT }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x2.*expected_rows/)
+
+      write("bad_card.yml", "- { id: x3, kind: table, query: q }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x3.*kind/)
+
+      write("bad_card.yml", "- { id: x4, kind: card, status: maybe, query: q, expected: [ { archetype_id: a } ] }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x4.*status/)
+
+      write("bad_card.yml", "- { id: x5, kind: card, match: fuzzy, query: q, expected: [ { archetype_id: a } ] }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x5.*match/)
+    end
+  end
 end
