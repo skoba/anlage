@@ -3,15 +3,18 @@ module Evaluation
   #   kind:   :card（問い → 期待するカードの集合）／:aql（問い → 参照 AQL の結果）
   #   status: :active（採点の母数）／:draft（人間レビュー前）／:pending（正解がコーパスに無い保留問）
   #   match:  :archetype（archetype_id の一致。v1 互換）／:card（archetype_id と at_code の両方）
+  #   expected の要素は rank（順位。1 が最上位、同順位可）を持てる。rank の無い問いは全要素が同じ順位（同 7 節）
+  #   acceptable: 許容。正解でも誤りでもなく、上位に出てよい候補（forbidden とは別）
   class Question
     KINDS = %i[card aql].freeze
     STATUSES = %i[active draft pending].freeze
     MATCHES = %i[archetype card].freeze
 
-    attr_reader :id, :kind, :status, :query, :expected, :match, :forbidden, :intent_tag, :notes,
+    attr_reader :id, :kind, :status, :query, :expected, :match, :forbidden, :acceptable, :intent_tag, :notes,
                 :dataset, :reference_aql, :expected_rows, :ordered, :cards, :pending_until, :source
 
-    def initialize(id:, kind:, query:, status: :active, expected: [], match: :card, forbidden: [], intent_tag: nil,
+    def initialize(id:, kind:, query:, status: :active, expected: [], match: :card, forbidden: [], acceptable: [],
+                   intent_tag: nil,
                    notes: nil, dataset: nil, reference_aql: nil, expected_rows: nil, ordered: false, cards: [],
                    pending_until: nil, source: nil)
       @id = id
@@ -21,6 +24,7 @@ module Evaluation
       @expected = expected
       @match = match
       @forbidden = forbidden
+      @acceptable = acceptable
       @intent_tag = intent_tag
       @notes = notes
       @dataset = dataset

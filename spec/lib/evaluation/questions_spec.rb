@@ -78,6 +78,46 @@ RSpec.describe Evaluation::Questions do
       expect(a001.cards).to eq([ { archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2", at_code: "at0004" } ])
     end
 
+    it "expected の rank（順位。同じ順位を複数に付けてよい）と acceptable（許容）を読む。rank の無い問いは rank を持たない" do
+      write("cards.yml", <<~YAML)
+        - id: c008
+          kind: card
+          query: "発症"
+          expected:
+            - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0077, rank: 1 }
+            - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002, rank: 2 }
+          acceptable:
+            - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0003 }
+        - id: c010
+          kind: card
+          query: "血圧"
+          expected:
+            - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+      YAML
+
+      c008, c010 = described_class.from_v2(dir)
+
+      expect(c008.expected).to eq([
+        { archetype_id: "openEHR-EHR-EVALUATION.problem_diagnosis.v1", at_code: "at0077", rank: 1 },
+        { archetype_id: "openEHR-EHR-EVALUATION.problem_diagnosis.v1", at_code: "at0002", rank: 2 }
+      ])
+      expect(c008.acceptable).to eq([ { archetype_id: "openEHR-EHR-EVALUATION.problem_diagnosis.v1", at_code: "at0003" } ])
+      expect(c010.expected).to eq([ { archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2", at_code: "at0004" } ])
+      expect(c010.acceptable).to eq([])
+    end
+
+    it "rank が 1 以上の整数でない問い、rank のある要素と無い要素が混ざる問いは読み込みで止まる" do
+      pd = "openEHR-EHR-EVALUATION.problem_diagnosis.v1"
+      write("bad.yml", "- { id: r1, kind: card, query: q, expected: [ { archetype_id: #{pd}, at_code: at0077, rank: 0 } ] }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /r1.*rank/)
+
+      write("bad.yml", "- { id: r2, kind: card, query: q, expected: [ { archetype_id: #{pd}, at_code: at0077, rank: first } ] }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /r2.*rank/)
+
+      write("bad.yml", "- { id: r3, kind: card, query: q, expected: [ { archetype_id: #{pd}, at_code: at0077, rank: 1 }, { archetype_id: #{pd}, at_code: at0002 } ] }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /r3.*rank/)
+    end
+
     it "kind ごとの必須キーを欠く問い、未知の kind・status・match は読み込みで止まる" do
       write("bad_card.yml", "- { id: x1, kind: card, query: 血圧 }\n")
       expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x1.*expected/)

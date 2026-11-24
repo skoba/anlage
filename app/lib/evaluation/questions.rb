@@ -47,7 +47,8 @@ module Evaluation
 
       Question.new(
         id: id, kind: kind, status: status, query: entry.fetch("query"),
-        expected: card_refs(entry["expected"]), match: match, forbidden: card_refs(entry["forbidden"]),
+        expected: ranked_refs(id, entry["expected"]), match: match, forbidden: card_refs(entry["forbidden"]),
+        acceptable: card_refs(entry["acceptable"]),
         intent_tag: entry["intent_tag"], notes: entry["notes"],
         dataset: entry["dataset"], reference_aql: entry["reference_aql"], expected_rows: entry["expected_rows"],
         ordered: entry.fetch("ordered", false), cards: card_refs(entry["cards"]),
@@ -60,6 +61,20 @@ module Evaluation
       return symbol if allowed.include?(symbol)
 
       raise InvalidQuestion, "#{id}: #{key} は #{allowed.join('／')} のどれか（#{value.inspect}）"
+    end
+
+    # expected は rank（1 以上の整数）を持てる。1 問の中で rank の有無を混ぜない（書き忘れか同順位かを推測しない）。
+    # rank の無い問いの要素には rank キーを付けない（全要素が同じ順位として採点器が読む）
+    def ranked_refs(id, list)
+      entries = Array(list)
+      ranks = entries.map { |ref| ref["rank"] }
+      return card_refs(entries) if ranks.all?(&:nil?)
+
+      unless ranks.all? { |rank| rank.is_a?(Integer) && rank >= 1 }
+        raise InvalidQuestion, "#{id}: expected の rank は 1 以上の整数で、付けるなら全要素に付ける（#{ranks.inspect}）"
+      end
+
+      card_refs(entries).zip(ranks).map { |ref, rank| ref.merge(rank: rank) }
     end
 
     def card_refs(list)
