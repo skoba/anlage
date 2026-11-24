@@ -193,3 +193,38 @@ D（INSTRUCTION を組む作業）は、この答えと openehr-rails 0.9.0 の�
 
 - 変更は 1 行（`code_phrase` が `TerminologyID.new(value:)` で組む）
 - 開発機の全 suite: 258 例 0 失敗、3 pending。`spec/demo/` と FHIR の spec は緑のまま（regression pin）
+
+## R6 `skoba/anlage#87`: category を正しい向きにし、OPT の制約から取る（2026-11-24）
+
+ブランチ `fix/87-composition-category`。設計書 5 節の 2。基準点は main `91715f0`（openehr 2.4.3 のまま）。
+
+### 自己承認した判断
+
+- OPT の制約は登録時に読んで `web_template["category_code"]` に入れる（`#54` の `root_archetype_id` と同じ形）。
+  キーが無い登録済みの web_template では、設定の既定値（`OpenehrRails.default_category`）を使う
+- API の確認（実行）: `opt.definition.attributes` の `category` → `children.first.attributes.first`（`defining_code`）→
+  `children.first` は `CCodePhrase` で、`code_list` が `["433"]`、`terminology_id.value` が `"openehr"`（ProblemList.opt）
+- 表示は、openEHR 用語の composition category の rubric を定数で持つ（431 persistent、433 event）。
+  どちらでもなく、設定の既定値とも違うコードは `UnsupportedShape` にする（そのテンプレートは閲覧専用になり、理由が出る）。
+  gem に用語の引き当てが無いため（上流候補 27 項）
+
+### Red（実装の前、4 失敗）
+
+```
+1) … value は event、code_string は 433、用語体系は openehr
+     expected: ["event", "433", "openehr"]
+          got: ["433", "event", "openehr"]
+2) … 登録時に、OPT が絞っている category のコードを web_template に持つ（ProblemList.opt は 433）
+     expected: "433"
+          got: nil
+3) … OPT が category を絞っていれば、設定の既定値ではなく OPT のコードを使う
+     expected: ["event", "433", "openehr"]
+          got: ["431", "persistent", "openehr"]
+4) … category_code を持たない登録済みの web_template（#87 より前の登録）では、設定の既定値を正しい向きで使う
+     expected: ["persistent", "431", "openehr"]
+          got: ["431", "persistent", "openehr"]
+```
+
+### Green
+
+- 開発機の全 suite: 262 例 0 失敗、3 pending。rubocop 違反なし
