@@ -94,3 +94,10 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
 - Green: `app/lib/evaluation/report.rb`。`Report.render(run, label:)` が card の集計表と intent_tag 別、完全失敗、負例違反、aql の集計と不一致の差分、
   draft、保留問（解除候補に印）を Markdown で返す。ファイルには書かない。3 examples, 0 failures
 - spec の修正: 保留問 c19 の期待先を specimen にした（補助メソッドの既定が blood_pressure で、コーパスに有るため解除候補になってしまう誤り）
+
+## R9 サイクル 8: rake evaluation:run（2026-11-24）
+
+- Red: `RuntimeError: Don't know how to build task 'evaluation:run'`
+- Green: `lib/tasks/evaluation.rake`。v1（アダプタ）＋ v2（`spec/fixtures/evaluation/v2/`）の問いを走らせ、Markdown を標準出力に出す。
+  `RESET=1` のときだけ aql を採点（dataset を作り直して dev DB の記録を入れ替えるため。既定は飛ばして件数を出す）。
+  spec は `docs/reports/` の mtime が変わらないことも固定。2 examples, 0 failures
