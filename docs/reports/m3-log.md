@@ -94,3 +94,46 @@
 ### Green
 
 - 開発機の全 suite: 275 例 0 失敗、3 pending。rubocop 違反なし
+
+## R3 W5（`skoba/anlage#100`）: 版差分の画面（2026-11-24）
+
+ブランチ `feat/100-version-diff`。基準点は main `2d9c5f5` のあと（openehr 2.5.0 の PR #92 がマージ済みの main）。
+
+### 自己承認した判断
+
+1. **パスカードの差分は新しいクラス `Opt::PathcardDiff` にした**。キーは `identity.path`（`Opt::TemplateDiff` が
+   field の path をキーにするのと同じ考え方）。比べる観点は 6 つ（ラベル、説明、祖先の名前、型、制約、コード束縛）。
+   ラベルなどは文言（text）だけを比べ、未翻訳の判定などの付随情報は比べない。スキーマ v1.2 は読むだけ
+2. **項目の差分は、既存の `Opt::TemplateDiff` をそのまま使った**。取り込みの確認画面（`preview.html.erb`）の
+   差分の表示と文言は変えていない
+3. **版の履歴の各行に「前の版との差分」を足した**。そのため `#98` の spec（版の履歴の行の文言とリンク）の期待値を 1 箇所直した
+4. **文言を `docs/demo/ui-vocabulary.md` に 1 行足した**（同じコミット）
+
+### Red
+
+`Opt::PathcardDiff` の単体（実装の前）:
+
+```
+An error occurred while loading ./spec/lib/opt/pathcard_diff_spec.rb.
+NameError: uninitialized constant Opt::PathcardDiff
+```
+
+画面（実装の前、4 例 3 失敗。「無い版は 404」は実装の前から緑）:
+
+```
+1) テンプレートの版差分 版の履歴から、前の版との差分に行ける
+     expected [["登録版 v1.0.0", "/templates/patient_blood_pressure.v1/versions/1.0.0"]] to include ["前の版との差分", "/templates/patient_blood_pressure.v1/diff?from=1.0.0&to=1.0.1"]
+2) … 2 つの版を指定すると、変更された項目と、パスカードの差分（ラベルの前後）が出る
+     expected the response to have status code :ok (200) but it was :not_found (404)
+3) … 同じ版どうしなら、差分が無い旨が出る
+     expected the response to have status code :ok (200) but it was :not_found (404)
+```
+
+途中で spec の側の誤りを 1 つ直した: 「片方にしか無いカード」の fixture の選び方が緩く
+（`/items[at0004]/value` で終わるカードが 2 枚ある。実測）、ラベルが「Systolic」のカードを選ぶ形にした。
+
+### Green
+
+- 開発機の全 suite: 284 例 0 失敗、2 pending（openehr 2.5.0。pending は手写像の元が未供給の 2 件）
+- rubocop 違反なし、brakeman の警告 0
+- 実ブラウザ（1280×720）で、版の差分の画面に横スクロールが出ないことを spec に足した

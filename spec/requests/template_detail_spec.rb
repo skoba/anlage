@@ -69,10 +69,11 @@ RSpec.describe "テンプレートの詳細と版の履歴", type: :request do
 
       expect(document.css("#template_versions > h2").text).to eq("版の履歴")
       expect(document.css("#template_versions li").map { _1.text.squish }).to eq([
-        "登録版 v1.0.1 有効（この版）", "登録版 v1.0.0 置き換え済み"
+        "登録版 v1.0.1 有効（この版） 前の版との差分", "登録版 v1.0.0 置き換え済み"
       ])
-      expect(document.css("#template_versions li a").map { _1["href"] })
-        .to eq([ "/templates/patient_blood_pressure.v1/versions/1.0.0" ])
+      expect(document.css("#template_versions li a").map { _1["href"] }).to eq([
+        "/templates/patient_blood_pressure.v1/diff?from=1.0.0&to=1.0.1", "/templates/patient_blood_pressure.v1/versions/1.0.0"
+      ])
     end
 
     it "登録されていない template_id は 404" do
