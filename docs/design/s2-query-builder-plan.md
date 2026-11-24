@@ -42,7 +42,7 @@
 | 変数 | SELECT／WHERE の `IdentifiedPath.variable` が FROM で宣言されている | `ClassExpression.variable` |
 | 結び付け | 変数 → （class_name, archetype_id）。`ArchetypePredicate` の無い変数（`c`、`e`）はパス検査の対象外（`info`） | — |
 | パスの実在 | 変数のアーキタイプを持つカードのうち、**アーキタイプのルートから下の節パス**（カードの path を、述語が archetype_id の節で切り、末尾の `/value` を落としたもの）が AQL の節パス（述語を持つ最後の `PathPart` まで）と一致するものがあるか。無ければ `error` に同じアーキタイプの候補パスを添える | `identity.path` |
-| 終端ホップ | 節のあとのホップ列が、カードの `rm_type` に許されるものか。DV_QUANTITY: `value/magnitude`・`value/units`／DV_CODED_TEXT・DV_TEXT・DV_DATE_TIME・DV_BOOLEAN: `value/value`／どれも `value` 単独（RM オブジェクトの射影）。エンジンが届かないホップ（`defining_code`、`time`、`archetype_details`）は `error` に上流候補の項番を添える | `ALLOWED_TERMINAL_HOPS`、10・11・25 項 |
+| 終端ホップ | 節のあとのホップ列が、カードの `rm_type` に許されるものか。DV_QUANTITY・DV_COUNT: `value/magnitude`（`value/units` は現行エンジンの終端ホップに無く届かない。R5 で訂正）／DV_CODED_TEXT・DV_TEXT・DV_DATE_TIME・DV_BOOLEAN: `value/value`／どれも `value` 単独（RM オブジェクトの射影）。エンジンが届かないホップ（`defining_code`、`time`、`archetype_details`）は `error` に上流候補の項番を添える | `ALLOWED_TERMINAL_HOPS`、10・11・25 項 |
 | 型 | `Comparison` のリテラルの型と終端の型が合うか（`magnitude` は数値、`value/value` は文字列。DV_DATE_TIME の `value/value` は ISO 8601 として読めること） | `Literal.value` の Ruby 型 |
 | 値集合 | DV_CODED_TEXT で `code_list` のあるカードに対する `=`／`MATCHES` のリテラルが、`code_list[].label` に含まれるか。含まれなければ `error` に許される値を添える。`code_list` が空（外部値集合）なら `info`（検査できない） | `constraints.value.code_list` |
 | name 述語 | `ArchetypePredicate.value`／`NodePredicate.value` が付いていれば `warning`（24 項、openehr-ruby#60 の解消まで兄弟に fan-out） | 24 項 |
