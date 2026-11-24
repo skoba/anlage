@@ -24,7 +24,7 @@ module Opt
     def call
       template = Template.new(template_id: @web_template["template_id"], web_template: @web_template)
       builder = Opt::CompositionBuilder.new(template, sample_values(template))
-      reasons = builder.unsupported_reasons + dry_run_reasons(builder)
+      reasons = (builder.unsupported_reasons + dry_run_reasons(builder)).uniq
       return { "form_capability" => "saveable", "form_capability_reason" => nil } if reasons.empty?
 
       { "form_capability" => "preview_only", "form_capability_reason" => reasons.join("; ") }
