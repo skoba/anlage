@@ -25,8 +25,8 @@ RSpec.describe "evaluation:run" do
     expect { run_task }.to output(
       a_string_including("# 評価 v2（phase1-bigram）", "## card（17 問）", "| Top-1 | 14/17 (82.35%) |", "| Top-3 | 15/17 (88.24%) |",
                          "| 完全失敗 | 2/17 (11.76%) |", "| MRR | 0.8529 |", "- q16: BMI", "- q18: 既往",
-                         # v1 の q21 ＋ v2 の案（cards.yml 4 問・aql.yml 5 問）。案の確定で変わる（ゴールドに追随する spec 側の数字）
-                         "## draft（10 問、母数外）", "## 保留問（2 問、母数外）", "- c019: 検体")
+                         # v1 の q21 ＋ v2 の案の card 4 問（aql の 5 問は RESET 無しでは読まない）。案の確定で変わる（ゴールドに追随する spec 側の数字）
+                         "## draft（5 問、母数外）", "## 保留問（2 問、母数外）", "- c019: 検体")
     ).to_stdout
 
     expect(Rails.root.join("docs/reports").children.map { |path| [ path.basename.to_s, path.mtime ] }.sort).to eq(reports_before)
