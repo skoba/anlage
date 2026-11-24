@@ -106,3 +106,71 @@ Chrome 158 と chromedriver 158 の組で、1 例 1 失敗になる。
    （今は `spec/support/` が無い）
 3. CI にブラウザの版を出す 1 行（`google-chrome --version`）を足すか。
    次に版の差で落ちたとき、ログだけで切り分けられる
+
+## R3 案 A の実装（2026-11-24、裁定 R-20261124-1、ブランチ `fix/73-chrome158-storage-reset`）
+
+### 自己承認した判断（裁定の範囲内）
+
+- **組み込み方**: `Capybara::Selenium::Driver::ChromeDriver`（モジュール）に `prepend` して、
+  `execute_cdp` だけを包む。`reset!` 全体は置き換えない。
+  根拠: 当該の呼び出しは `reset!` の末尾の 1 行（capybara 3.40.0 `chrome_driver.rb:54`）で、
+  `execute_cdp` は同じモジュールの private メソッド（同 96 行目）。
+  捨てた案: `reset!` を丸ごと写して置き換える（写しが上流とずれる）
+- **アプリの origin**: `session.server.base_url`
+  （capybara 3.40.0 `server.rb:91`、`session.rb:76` の `attr_reader :server`、
+  `driver/base.rb:175` の `session`）。サーバーが無いセッションでは cookie の全消去だけ
+- **cookie の全消去**: `Storage.clearCookies`（R1 で Chrome 158 での成功を実測）
+- **spec の置き場所**: `spec/lib/capybara_chrome_storage_reset_spec.rb`。
+  `spec/support/` に `_spec.rb` を置くと、support の読み込みと spec の実行が混ざるため
+- **追跡用の Issue**: `skoba/anlage#74`（消す条件の 2 段を記載）
+
+### Red
+
+開発機（Chromium 158.0.8127.36）、`bundle exec rspec spec/system/demo_pathcard_search_spec.rb:36`:
+
+```
+F
+Failures:
+  1) デモ動線: パスカード検索から帳票へ（実ブラウザ） 「傷病名」のカードにアーキタイプパスが等幅で出て、横スクロールが出ない
+     Got 0 failures and 2 other errors:
+     1.1) Failure/Error: raise ex, cause: cause
+          Selenium::WebDriver::Error::InvalidArgumentError:
+            invalid argument: * is not a valid URL
+              (Session info: chrome=158.0.8127.36)
+     1.2) Failure/Error: raise ex, cause: cause
+          Selenium::WebDriver::Error::InvalidArgumentError:
+            invalid argument: * is not a valid URL
+              (Session info: chrome=158.0.8127.36)
+```
+
+ブラウザを使わない spec（実装の前）: `uninitialized constant CapybaraChromeStorageReset`、
+`0 examples, 0 failures, 1 error occurred outside of examples`。
+
+### Green
+
+- ブラウザを使わない spec: 8 例 0 失敗（切り替え 2、拒否されないとき 1、別のエラー 2、版の判定 3）
+- 最小の再現: 1 例 0 失敗
+- 開発機の全 suite: **244 例 0 失敗、3 pending**（pending は従来どおりの 3 件。236 + 新しい 8）
+- rubocop: 変更した 3 ファイルで違反なし
+
+### CI にブラウザの版を出す
+
+`.github/workflows/ci.yml` の test ジョブ、rspec の前に `google-chrome --version` と
+`chromedriver --version` を出すステップを足した（別コミット）。ほかの箇所は変えていない。
+
+## R4 案 B の確認（2026-11-24。未完）
+
+- 上流の修正 PR teamcapybara/capybara#2868 は open・未マージ。head は
+  `0a1a87bbcee0b1380e3aa547cabc062e35946fdb`（fork `alexx-avdeev/capybara`、ブランチ
+  `chrome-158-clear-storage`）。変更は `chrome_driver.rb`（+17 −1）、`edge_driver.rb`（+17 −1）、
+  `spec/selenium_spec_chrome.rb`（+19）の 3 ファイル
+- 修正の中身（差分を読んだ結果）: `origin: '*'` が `InvalidArgumentError` で拒否されたら、
+  `Network.clearBrowserCookies` と、直前に開いていたページの origin に対する
+  `local_storage` の消去に切り替える。案 A と同じ方向
+- リポジトリのファイルを変えずに確かめるため、`Gemfile` と `Gemfile.lock` の写しを
+  リポジトリの外に置き、capybara をこの SHA に固定して依存を解決した。
+  解決の結果、変わる gem は capybara だけ（版の表記は 3.40.0 のまま、出どころが git になる）
+- **その先（`bundle install` と、最小の再現・全 suite の実行）は、セッションの実行環境の
+  権限で止められた**（第三者の fork のコードを取得して実行する操作にあたるため）。
+  回避はしていない。開発機（Chrome 158）での結果は**未実測**
+- 確認用の worktree は、変更なしのまま削除した
