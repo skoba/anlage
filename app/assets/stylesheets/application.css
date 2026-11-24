@@ -98,3 +98,26 @@ code.archetype-path {
   font-family: monospace;
   overflow-wrap: anywhere;
 }
+
+/* skoba/anlage#119: 帳票のルートごとの入れ子。深くなっても 1280×720 で横スクロールを出さない */
+fieldset.root-group {
+  min-width: 0;
+  margin: 0.5rem 0;
+  padding: 0.25rem 0.75rem 0.5rem;
+  border: 1px solid #ccc;
+}
+
+fieldset.root-group fieldset.root-group {
+  margin-left: 0;
+  padding-left: 0.5rem;
+}
+
+fieldset.root-group legend {
+  font-weight: bold;
+}
+
+fieldset.root-group input[type="text"],
+fieldset.root-group input[type="number"],
+fieldset.root-group select {
+  max-width: 100%;
+}
