@@ -298,3 +298,51 @@ RSpec.describe Opt::CompositionBuilder, "#87 COMPOSITION の category" do
     expect(category_of(template.reload)).to eq(%w[persistent 431 openehr])
   end
 end
+
+# skoba/anlage#109（docs/design/rm-attributes-without-inputs.md 5 節の 3）: ノードの name は、テンプレート（OPT）の用語から取る。
+# 期待値は fixture の OPT の term_definitions の実測（docs/reports/m2-log.md R8）。
+RSpec.describe Opt::CompositionBuilder, "#109 ノードの名前" do
+  def template_of(fixture)
+    Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture}").read).tap(&:save!).reload
+  end
+
+  it "OBSERVATION: ENTRY・HISTORY・EVENT・ITEM_TREE の name が、テンプレート上の名前になる（LabResultReport）" do
+    built = described_class.new(template_of("LabResultReport.opt"), { "laboratory_test_result_at0005" => "血液検査" }).build
+    observation = built.content.first
+
+    expect(observation.name.value).to eq("検体検査結果")
+    expect(observation.data.name.value).to eq("Event Series")
+    expect(observation.data.events.first.name.value).to eq("任意のイベント")
+    expect(observation.data.events.first.data.name.value).to eq("Tree")
+  end
+
+  it "EVALUATION: ENTRY の name がテンプレート上の名前になる（ProblemList）" do
+    built = described_class.new(template_of("ProblemList.opt"), { "problem_diagnosis_at0002" => "高血圧症" }).build
+
+    expect(built.content.first.name.value).to eq("プロブレム・診断")
+    expect(built.content.first.data.name.value).to eq("structure")
+  end
+
+  it "同じアーキタイプの別のルートは、それぞれの名前を持つ（jp_referral の傷病名）" do
+    built = described_class.new(template_of("jp_referral.opt"), { "problem_diagnosis_at0002" => "高血圧症", "story" => "頭痛" }).build
+
+    expect(built.content.first.items.map { |entry| entry.name.value }).to eq(%w[傷病名 既往歴及び家族歴])
+  end
+
+  it "COMPOSITION の name は変えない（OPT の concept のまま。デモクエリが出所の表示に使う）" do
+    built = described_class.new(template_of("LabResultReport.opt"), { "laboratory_test_result_at0005" => "血液検査" }).build
+
+    expect(built.name.value).to eq("LabResultReport")
+  end
+
+  it "名前のキーを持たない登録済みの web_template（#109 より前の登録）では、これまでの値のまま" do
+    template = template_of("LabResultReport.opt")
+    entries = template.web_template["entries"].map { |entry| entry.except("label", "node_labels") }
+    template.update!(web_template: template.web_template.merge("entries" => entries))
+
+    observation = described_class.new(template.reload, { "laboratory_test_result_at0005" => "血液検査" }).build.content.first
+
+    expect([ observation.name.value, observation.data.name.value, observation.data.events.first.name.value ])
+      .to eq(%w[laboratory_test_result history event])
+  end
+end

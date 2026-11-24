@@ -31,7 +31,7 @@ Anlageは、openehr-rails-startupから生成されたopenEHRベースEHRの参�
 9. **越境実装の認可ゲート**: 実装対象が本リポジトリ以外（openehr-ruby / openehr-rails / openehr-rails-startup 等）だと判明した時点で、その作業を始める前に停止し、実装対象リポジトリを確認するゲート報告を挟む。設計・根拠収集のための読み取り越境が許可されていても、その許可を根拠に書き込み越境へ滑り込まない。`cd`/`-C`/`-R` でコマンドの向き先を固定する運用規約は「どう向けるか」の話であり、越境そのものを事後的に認可しない（2026-09-04追加。openehr-rails 2026-08-26／openehr-ruby 2026-08-27 の同名節の写し。実例: `docs/reports/fsh-log.md` R6 末尾で rails 側コメント更新を着手前に止めてゲートに回した件）
    - 補則（2026-09-04）: docs・コメントのみの越境は、報告で対象リポジトリと SHA を明示すれば足りる。lib／spec への越境はゲート報告を要する
 
-## 裁定台帳(2026-11-20 導入)
+## 裁定台帳(2026-11-20 導入、2026-11-24 改定。R-20261124-18)
 
 - 統括の裁定の正典は `/home/skoba/src/anlage-ops/rulings.md`
   (非公開リポジトリ `skoba/anlage-ops`)。チャットに貼られた本文は写しで、
@@ -39,11 +39,15 @@ Anlageは、openehr-rails-startupから生成されたopenEHRベースEHRの参�
 - 「裁定 R-… を読んで着手」と言われたら、最初に
   `git -C /home/skoba/src/anlage-ops pull --ff-only` を実行し、
   台帳の該当行と本文を読む。読めなければ、着手せずに例外報告
-- 着手したら、台帳の自分宛ての行の状態を 発行 → 着手 に書き換え、
-  anlage-ops に commit・push する(日付と、あれば最初の push SHA)。
-  anlage-ops に書いてよいのはこの 1 行だけ。ほかの行、本文、
-  ほかのファイルは変えない。これは越境ゲートの例外として認められている
-- 完了に進めるのは統括か人間。セッションは「完了申請(SHA、CI run)」まで書いてよい
+- `rulings.md` は統括だけが書く。セッションは書き換えない
+- 進み具合は `/home/skoba/src/anlage-ops/status/<レーン>.md` に書く。
+  anlage は 2 つのレーンがこの `CLAUDE.md` を共有する: 書く側は `status/anlage-write.md`、
+  引く側は `status/anlage-read.md`。自分のレーンのファイルを使う。
+  裁定 ID の見出しの下に、日付つきの行を書き足す(着手、PR 番号、SHA、CI run、
+  ゲート報告の提出、完了申請)。古い行は消さない。書いたら commit・push する
+- anlage-ops に書いてよいのは、自分のレーンのこの 1 ファイルだけ。
+  これは越境ゲートの例外として認められている
+- 完了に進めるのは統括か人間。セッションは完了申請まで
 - 報告とコミットメッセージには裁定 ID を書く(例: `Refs R-20261120-1`)
 - anlage-ops の内容(裁定の本文、ロードマップ)を、このリポジトリのコード、
   Issue、PR、文書に写さない。参照は裁定 ID で行う
@@ -103,7 +107,7 @@ Anlageは、openehr-rails-startupから生成されたopenEHRベースEHRの参�
 - データの移行と削除、開発機の設定の変更
 - 臨床の判断と、人間の入力を待つもの
 - タグと publish
-- ほかのリポジトリへの書き込み(台帳の自分宛ての行は除く)
+- ほかのリポジトリへの書き込み(anlage-ops の自分のレーンの `status/` のファイルは除く。R-20261124-18)
 - 「ゲート規則」の「必ず止まる」のうち、この節で緩めていないもの
 
 ### マージ
@@ -126,8 +130,8 @@ Anlageは、openehr-rails-startupから生成されたopenEHRベースEHRの参�
 
 ### 報告
 
-- ゲート・バンドル・例外の報告は `docs/reports/` に push し、台帳の自分宛ての行に
-  PR 番号と SHA を書き足す。統括は git と GitHub で読む
+- ゲート・バンドル・例外の報告は `docs/reports/` に push し、自分のレーンの
+  `status/` のファイルに PR 番号と SHA を書き足す(R-20261124-18)。統括は git と GitHub で読む
 
 ### レーン
 
@@ -135,7 +139,7 @@ Anlageは、openehr-rails-startupから生成されたopenEHRベースEHRの参�
   引く側(検索・評価・クエリビルダー)。別々の worktree で動く
 - 両方が触るファイル(`config/routes.rb`、レイアウト、`CLAUDE.md`、
   `docs/demo/ui-vocabulary.md`)は、あとから触る側が rebase する
-- 台帳の宛先は「anlage(書く側)」「anlage(引く側)」
+- 台帳の宛先は「anlage(書く側)」「anlage(引く側)」。進み具合のファイルは `status/anlage-write.md`・`status/anlage-read.md`
 
 ### 変えないもの
 
@@ -229,7 +233,7 @@ red は例外報告として扱う（2026-08-24導入。CI整備後、凍結受�
 ## 報告の3種別（中継コスト削減。2026-08-23導入）
 
 報告は以下の3種に分け、種別ごとに扱いを変える。置き場所は `docs/reports/` への
-push と台帳の自分宛ての行で、人間がチャットに貼って中継することを前提にしない
+push と anlage-ops の自分のレーンの `status/` のファイルで、人間がチャットに貼って中継することを前提にしない
 (2026-11-24 改定。「全開の進め方」):
 
 - **(a) ゲート報告** — 承認・裁定が必要な停止点（計画承認、マージ/push
