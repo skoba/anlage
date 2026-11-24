@@ -44,12 +44,23 @@ RSpec.describe Evaluation::AqlScorer do
     expect(score).to have_attributes(status: :mismatch, missing: [ [ 130.0 ] ], extra: [ [ 120.0 ] ])
   end
 
-  it "エンジンが実行できない AQL（defining_code への終端ホップ、上流候補 10 項）は unexecutable として理由を持つ" do
-    unsupported = SYSTOLIC_OVER_110.sub("value/magnitude AS systolic", "value/defining_code/code_string AS code")
-    score = described_class.score(question(unsupported, [ [ "at0074" ] ]))
+  # openehr 2.5.0 で defining_code/code_string には届くようになった（上流候補 10 項は解消）。届かない例は archetype_details（同 25 項）
+  it "エンジンが実行できない AQL（archetype_details への到達、上流候補 25 項）は unexecutable として理由を持つ" do
+    unsupported = "SELECT c/archetype_details/template_id/value AS template_id FROM EHR e CONTAINS COMPOSITION c"
+    score = described_class.score(question(unsupported, [ [ "ProblemList" ] ]))
 
     expect(score.status).to eq(:unexecutable)
     expect(score.error).to include("unsupported path attribute")
+  end
+
+  it "コード値の条件（defining_code/code_string）は openehr 2.5.0 で実行でき、診断確度 at0074（疑い）の 2 件に一致する" do
+    suspected = <<~AQL
+      SELECT ev/data[at0001]/items[at0002]/value/value AS diagnosis
+      FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+      WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0074"}
+    AQL
+
+    expect(described_class.score(question(suspected, [ [ "高血圧症" ], [ "2型糖尿病" ] ])).status).to eq(:match)
   end
 
   it "採点対象の AQL を差し替えられる（S2・S4 が組んだ AQL を同じ採点器に渡す）" do
