@@ -161,5 +161,39 @@ RSpec.describe QueryBuilder::Linter do
         expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :type ] ])
       end
     end
+
+    describe "値集合" do
+      def certainty(where)
+        lint(<<~AQL)
+          SELECT ev/data[at0001]/items[at0002]/value/value
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+          WHERE ev/data[at0001]/items[at0073]/value/value #{where}
+        AQL
+      end
+
+      it "診断確度 at0073 の MATCHES {\"疑い\", \"推定\"} と = \"確定\" は値集合に含まれ、findings 無し" do
+        expect(certainty('MATCHES {"疑い", "推定"}').findings).to be_empty
+        expect(certainty('= "確定"').findings).to be_empty
+      end
+
+      it "値集合に無い値（疑惑）は error（値集合）に、許される値（疑い／推定／確定）を添える" do
+        lint = certainty('MATCHES {"疑い", "疑惑"}')
+
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :value_set ] ])
+        expect(lint.findings.first.message).to include("疑惑", "疑い", "推定", "確定")
+      end
+
+      it "code_list の無い DV_CODED_TEXT（傷病名 at0002、外部値集合）は info（検査できない）" do
+        lint = lint(<<~AQL)
+          SELECT c/name/value
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+          WHERE ev/data[at0001]/items[at0002]/value/value MATCHES {"2型糖尿病", "高血圧症"}
+        AQL
+
+        expect(lint.ok?).to be(true)
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to include([ :info, :value_set ])
+        expect(lint.findings.find { |finding| finding.code == :value_set }.message).to include("外部", "検査できない")
+      end
+    end
   end
 end

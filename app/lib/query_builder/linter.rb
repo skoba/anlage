@@ -43,7 +43,10 @@ module QueryBuilder
 
       @bindings = collect_bindings(query.from_clause.containment)
       identified_paths(query).each { |path| check_identified_path(path) }
-      comparisons(query.where_clause&.expression).each { |comparison| check_comparison(comparison) }
+      conditions(query.where_clause&.expression).each do |condition|
+        check_comparison(condition) if condition.is_a?(Model::Comparison)
+        check_value_set(condition)
+      end
       Lint.new(@findings)
     end
 
@@ -149,11 +152,11 @@ module QueryBuilder
 
     # --- WHERE の比較: リテラルの型が終端の型に合うか
 
-    def comparisons(node)
+    def conditions(node)
       case node
-      when Model::Comparison then [ node ]
-      when Model::AndExpr, Model::OrExpr then comparisons(node.left) + comparisons(node.right)
-      when Model::NotExpr then comparisons(node.operand)
+      when Model::Comparison, Model::MatchesExpr then [ node ]
+      when Model::AndExpr, Model::OrExpr then conditions(node.left) + conditions(node.right)
+      when Model::NotExpr then conditions(node.operand)
       else []
       end
     end
@@ -173,6 +176,45 @@ module QueryBuilder
         report(:error, :type, "#{text}（#{rm_types.join('／')} の value）は文字列と比べる。#{value.inspect} は文字列ではない", path: text)
       elsif hops.last == "value" && rm_types.all? { |type| TEMPORAL_TYPES.include?(type) } && !iso8601?(value)
         report(:error, :type, "#{text}（#{rm_types.join('／')}）は ISO 8601 の文字列と比べる（例 \"2026-01-01T00:00:00\"）。#{value.inspect} は読めない", path: text)
+      end
+    end
+
+    # --- 値集合: DV_CODED_TEXT の value/value に対する = と MATCHES のリテラルが code_list の label にあるか。
+    # code_list が空（外部値集合。コンテンツ防火壁により手元に展開しない）なら info。
+    # コード値（defining_code）での条件は openehr 2.5.0 のあと（判断 D4）
+    def check_value_set(condition)
+      path, literals = value_set_operands(condition)
+      return unless path && @resolved.key?(path)
+
+      cards, hops, text = @resolved[path]
+      return unless hops == %w[value value]
+
+      coded = cards.select { |card| card.dig("semantics", "rm_type") == "DV_CODED_TEXT" }
+      return if coded.empty?
+
+      labels = coded.flat_map { |card| Array(card.dig("constraints", "value", "code_list")).map { |entry| entry["label"] } }.compact.uniq
+      if labels.empty?
+        return report(:info, :value_set, "#{text} は外部値集合（code_list が空）なので、値が値集合にあるかは検査できない", path: text)
+      end
+
+      unknown = literals.reject { |value| labels.include?(value) }
+      return if unknown.empty?
+
+      report(:error, :value_set, "#{text} の値集合に #{unknown.map(&:inspect).join('、')} は無い。許される値: #{labels.join('／')}", path: text)
+    end
+
+    def value_set_operands(condition)
+      case condition
+      when Model::MatchesExpr
+        items = condition.operand.is_a?(Model::MatchesValueList) ? condition.operand.items : []
+        [ condition.path, items.select { |item| item.is_a?(Model::Literal) }.map(&:value) ]
+      when Model::Comparison
+        return [ nil, [] ] unless condition.operator == "="
+
+        path, literal = [ condition.left, condition.right ].partition { |operand| operand.is_a?(Model::IdentifiedPath) }.map(&:first)
+        [ path, literal.is_a?(Model::Literal) ? [ literal.value ] : [] ]
+      else
+        [ nil, [] ]
       end
     end
 
