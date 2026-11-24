@@ -35,9 +35,15 @@ RSpec.describe Evaluation::Runner do
       expect(run.card_summary.fetch(:recall_at_3)).to be_within(0.00005).of(0.8824)
     end
 
-    it "draft の問いは採点せず一覧に残す（q21）" do
-      expect(run.drafts.map(&:id)).to eq([ "q21" ])
-      expect(run.card_results.map { |result| result.question.id }).not_to include("q21")
+    # v1 の draft（q21）は R-20261124-15 で v2 の c021 に移したので、draft の扱いは合成した問いで固定する
+    it "draft の問いは採点せず一覧に残す" do
+      draft = Evaluation::Question.new(id: "d01", kind: :card, status: :draft, query: "収縮期",
+                                       expected: [ { archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2", at_code: "at0004" } ])
+      run = described_class.run(questions + [ draft ])
+
+      expect(run.drafts.map(&:id)).to eq([ "d01" ])
+      expect(run.card_results.map { |result| result.question.id }).not_to include("d01")
+      expect(run.card_summary.fetch(:questions)).to eq(17)
     end
   end
 
@@ -84,6 +90,42 @@ RSpec.describe Evaluation::Runner do
       template.save!
 
       expect(described_class.run([ specimen_pending, story_pending ]).releasable_pendings.map(&:id)).to eq([ "c021" ])
+    end
+
+    # c021「既往歴」は story と problem_diagnosis の両方が正解（R-20261124-15）。problem_diagnosis は初期状態にあるが、
+    # 保留の条件（story がコーパスに入る）は満たしていないので、期待先がすべて現れるまで解除候補にしない
+    it "期待先のアーキタイプの一部だけがコーパスにある保留問は、保留解除候補にならない" do
+      Evaluation::Datasets.build("demo_initial")
+      both = Evaluation::Question.new(id: "c021", kind: :card, status: :pending, query: "既往歴", expected: [
+        { archetype_id: "openEHR-EHR-OBSERVATION.story.v1", at_code: "at0004", rank: 1 },
+        { archetype_id: "openEHR-EHR-EVALUATION.problem_diagnosis.v1", at_code: nil, rank: 1 }
+      ])
+
+      expect(described_class.run([ both ]).releasable_pendings).to be_empty
+    end
+  end
+
+  # 確定したゴールド v2（R-20261124-15）の実測。ゴールドに追随する spec 側の数字（docs/reports/s1-eval-v2-log.md R12）
+  context "確定したゴールド v2 を demo_initial の上で走らせる場合" do
+    subject(:run) do
+      Evaluation::Datasets.build("demo_initial")
+      described_class.run(Evaluation::Questions.from_v2)
+    end
+
+    it "card 4 問: Top-1 4/4、recall@3 0.875（c008 の第 2 候補 at0002 が出ない）、負例違反なし、順位遵守 1/1" do
+      expect(run.card_summary).to include(questions: 4, hit_at_1: 4, hit_at_3: 4, complete_failures: 0, violations: 0,
+                                          ranked_questions: 1, order_kept: 1, order_pairs: 1, order_pairs_kept: 1, acceptables: 0)
+      expect(run.card_summary.fetch(:recall_at_3)).to eq(0.875)
+    end
+
+    it "aql 5 問は参照 AQL が期待行に一致する（a002 はコード値 at0074 の一致）" do
+      expect(run.aql_summary).to eq(questions: 5, match: 5, mismatch: 0, unexecutable: 0)
+    end
+
+    it "保留問は c019・c021 の 2 問で、解除候補は無い。draft は無い" do
+      expect(run.pendings.map(&:id)).to match_array(%w[c019 c021])
+      expect(run.releasable_pendings).to be_empty
+      expect(run.drafts).to be_empty
     end
   end
 end

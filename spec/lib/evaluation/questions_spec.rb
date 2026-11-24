@@ -8,10 +8,12 @@ RSpec.describe Evaluation::Questions do
   describe ".from_v1_seed" do
     subject(:questions) { described_class.from_v1_seed(Rails.root.join("spec/fixtures/pathcards_eval_seed.yml")) }
 
-    it "v1 の seed を card の問いとして読み、active 17 問・draft 1 問（q21）になり、match は archetype" do
+    # q21（既往歴、draft）は R-20261124-15 で v2 の c021 に移した。v1 は active 17 問だけになる
+    it "v1 の seed を card の問いとして読み、active 17 問・draft 0 問になり、match は archetype" do
       expect(questions).to all(have_attributes(kind: :card, match: :archetype))
       expect(questions.select(&:active?).size).to eq(17)
-      expect(questions.select(&:draft?).map(&:id)).to eq([ "q21" ])
+      expect(questions.select(&:draft?)).to be_empty
+      expect(questions.map(&:id)).not_to include("q21")
     end
 
     it "expected_archetype_id と expected_at_code を期待集合 1 要素に写し、intent_tag と notes を持ち越す" do
@@ -133,6 +135,51 @@ RSpec.describe Evaluation::Questions do
 
       write("bad_card.yml", "- { id: x5, kind: card, match: fuzzy, query: q, expected: [ { archetype_id: a } ] }\n")
       expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x5.*match/)
+    end
+  end
+
+  # ゴールド v2（spec/fixtures/evaluation/v2/）。臨床レビュー（Kobayashi, Shinji、2026-11-24）の結果を R-20261124-15 で確定した。
+  # ゴールド本体は人間の専有領域で、ここは確定した内容の写し（ゴールドに追随する）
+  describe "確定したゴールド v2（R-20261124-15）" do
+    subject(:questions) { described_class.from_v2.index_by(&:id) }
+
+    PD_ID = "openEHR-EHR-EVALUATION.problem_diagnosis.v1"
+
+    it "11 問: active 9 問（card 4・aql 5）、pending 2 問（c019・c021）、draft は無い" do
+      expect(questions.keys).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015 c019 c021])
+      expect(questions.values.select(&:active?).map(&:id)).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015])
+      expect(questions.values.select(&:pending?).map(&:id)).to match_array(%w[c019 c021])
+      expect(questions.values.select(&:draft?)).to be_empty
+    end
+
+    it "c008「発症」: 第 1 候補は発症日時（at0077）、第 2 候補はプロブレム・診断名（at0002）" do
+      expect(questions.fetch("c008").expected).to eq([
+        { archetype_id: PD_ID, at_code: "at0077", rank: 1 }, { archetype_id: PD_ID, at_code: "at0002", rank: 2 }
+      ])
+    end
+
+    it "c015「臨床検査」: 第 1 候補は laboratory_test_result（archetype 一致）、負例は problem_diagnosis の at0003、許容の ID はまだ無い" do
+      expect(questions.fetch("c015")).to have_attributes(
+        match: :archetype,
+        expected: [ { archetype_id: "openEHR-EHR-OBSERVATION.laboratory_test_result.v1", at_code: nil, rank: 1 } ],
+        forbidden: [ { archetype_id: PD_ID, at_code: "at0003" } ],
+        acceptable: []
+      )
+    end
+
+    it "c021「既往歴」: story の at0004 と problem_diagnosis（archetype 一致）が同じ順位の正解で、負例は無い。pending のまま" do
+      expect(questions.fetch("c021")).to have_attributes(
+        status: :pending,
+        expected: [
+          { archetype_id: "openEHR-EHR-OBSERVATION.story.v1", at_code: "at0004", rank: 1 },
+          { archetype_id: PD_ID, at_code: nil, rank: 1 }
+        ],
+        forbidden: []
+      )
+    end
+
+    it "a002「診断確度が『疑い』」: コード値（value/defining_code/code_string）の一致で引く" do
+      expect(questions.fetch("a002").reference_aql).to include("items[at0073]/value/defining_code/code_string", "at0074")
     end
   end
 end

@@ -1,17 +1,16 @@
-# 評価 v2 のゴールド（aql 種）の案。docs/design/s1-eval-v2-plan.md 2.1・4 節、裁定 R-20261124-11 作業列 3。
-# すべて status: draft（人間レビュー前。採点の母数に入らない）。レビュー確定時に status を外す（active になる）。
+# 評価 v2 のゴールド（aql 種）。docs/design/s1-eval-v2-plan.md 2.1・4 節。
+# 臨床レビュー（Kobayashi, Shinji、2026-11-24）の結果を裁定 R-20261124-15 で確定した。すべて active（採点の母数）。
+# ゴールド本体（query／reference_aql／expected_rows／notes）は人間の専有領域。変更は人間のレビューを経る。
 #
 # 形式: id / kind: aql / query（日本語の問い）/ dataset（demo_initial = rake demo:reset の初期状態）/
 #       reference_aql（参照 AQL。パスは spec/fixtures/pathcards/*.golden.json の identity.path）/
-#       expected_rows（demo_initial での実測。docs/reports/s1-eval-v2-log.md R10）/ cards（問いが指すカード。S2 の入力）/
+#       expected_rows（demo_initial での実測。docs/reports/s1-eval-v2-log.md R10・R12）/ cards（問いが指すカード。S2 の入力）/
 #       ordered（既定 false。行の多重集合として比べる）/ notes / reviewed_by / reviewed_at
 #
-# 人間レビューの範囲: 問いの文言が臨床的に自然か、参照 AQL が問いの意図を正しく表しているか、期待行がその意図の正解か。
-# エンジンの制約（コード値・イベント時刻・template_id に届かない。docs/upstream-candidates.md 10・11・25 項）による仮置きは notes に書いた。
+# エンジンの制約（イベント時刻・template_id に届かない。docs/upstream-candidates.md 11・25 項）による形は notes に書いた。
 
 - id: a001
   kind: aql
-  status: draft
   query: "収縮期血圧が 110 mmHg を超える記録"
   dataset: demo_initial
   reference_aql: |
@@ -22,29 +21,27 @@
   cards:
     - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
   notes: "数値比較（S2 の条件型: 数値）。demo_initial の血圧は CardiologyEncounter の 120/80 の 1 件。デモクエリ 1（身長 > 170）と同型"
-  reviewed_by:
-  reviewed_at:
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-24
 
 - id: a002
   kind: aql
-  status: draft
   query: "診断確度が「疑い」の傷病名"
   dataset: demo_initial
   reference_aql: |
     SELECT ev/data[at0001]/items[at0002]/value/value AS diagnosis
     FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
-    WHERE ev/data[at0001]/items[at0073]/value/value MATCHES {"疑い"}
+    WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0074"}
   expected_rows: [["高血圧症"], ["2型糖尿病"]]
   cards:
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
-  notes: "値集合の条件（S2 の条件型: 値集合）。本来形はコード値 at0074 の一致（value/defining_code/code_string）だが現行エンジンでは届かない（上流候補 10 項）ため、表示文字列「疑い」の一致で仮置き（R-20261124-11 の 5。openehr 2.5.0 のあと本来形に戻す）。v1 q20「疑い」の臨床意図（診断確度 = at0074 の絞り込み）の AQL 形"
-  reviewed_by:
-  reviewed_at:
+  notes: "値集合の条件（S2 の条件型: 値集合）。本来形 = コード値 at0074（疑い）の一致（value/defining_code/code_string）。案では表示文字列「疑い」の一致で仮置きしていたが、openehr 2.5.0（anlage main 94561e9）でコード値に届くようになったので書き換えた（R-20261124-15。上流候補 10 項）。v1 q20「疑い」の臨床意図（診断確度 = at0074 の絞り込み）の AQL 形"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-24
 
 - id: a003
   kind: aql
-  status: draft
   query: "2型糖尿病または高血圧症の記録を、出所の文書名つきで"
   dataset: demo_initial
   reference_aql: |
@@ -56,12 +53,11 @@
   cards:
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
   notes: "テンプレート横断（デモクエリ 5 と同じ AQL。spec/demo/cross_template_query_spec.rb が初期状態 3 行を固定済み）。出所は c/name/value（archetype_details/template_id は上流候補 25 項で届かない）"
-  reviewed_by:
-  reviewed_at:
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-24
 
 - id: a004
   kind: aql
-  status: draft
   query: "空腹時血糖の値"
   dataset: demo_initial
   reference_aql: |
@@ -73,12 +69,11 @@
     - { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0024 }
     - { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0001 }
   notes: "文字列一致で分析名を絞り、数値を射影する（S2 の条件型: 包含／一致）。埋め込み CLUSTER へのパス（items[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1]）を通る初の問い。demo_initial の検査は空腹時血糖 98 mg/dL の 1 件"
-  reviewed_by:
-  reviewed_at:
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-24
 
 - id: a005
   kind: aql
-  status: draft
   query: "身長が 170 cm 以上の記録"
   dataset: demo_initial
   reference_aql: |
@@ -89,5 +84,5 @@
   cards:
     - { archetype_id: openEHR-EHR-OBSERVATION.height.v2, at_code: at0004 }
   notes: "境界値を含む数値比較（>=）。デモクエリ 1 は > 170 で境界を外す形。demo_initial の身長は bmi_calculation の 170 cm の 1 件"
-  reviewed_by:
-  reviewed_at:
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-24

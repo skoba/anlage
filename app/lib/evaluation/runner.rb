@@ -22,10 +22,13 @@ module Evaluation
           unexecutable: statuses.count(:unexecutable) }
       end
 
-      # 保留問のうち、期待先のアーキタイプがコーパス（active のテンプレートのカード）に現れたもの。
+      # 保留問のうち、期待先のアーキタイプがすべてコーパス（active のテンプレートのカード）に現れたもの。
+      # 一部だけ（c021 の problem_diagnosis のように、もとからコーパスにある正解）では解除候補にしない。
       # 出題化（status を active に戻す）の判断は人間に回す
       def releasable_pendings
-        pendings.select { |question| question.expected.any? { |ref| @corpus_archetype_ids.include?(ref[:archetype_id]) } }
+        pendings.select do |question|
+          question.expected.any? && question.expected.all? { |ref| @corpus_archetype_ids.include?(ref[:archetype_id]) }
+        end
       end
 
       def card_summary
