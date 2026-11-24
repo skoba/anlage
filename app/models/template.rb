@@ -182,6 +182,17 @@ class Template < ApplicationRecord
       )
     end
     entry.merge(occurrences: interval_to_h(entry[:occurrences]), fields: fields).stringify_keys
+         .merge(entry_labels(entry, fields, instance_terms))
+  end
+
+  # この ENTRY のルート（インスタンス）のテンプレート上の名前（label）と、field の path に現れる
+  # 構造ノード（HISTORY・EVENT・ITEM_TREE など、at-code を持つ途中のノード）の名前（node_labels）。
+  # builder がノードの name に使う（skoba/anlage#109）。用語が無いものは入れない。
+  def self.entry_labels(entry, fields, instance_terms)
+    codes = fields.select { |field| field["archetype_id"] == entry[:archetype_id] }
+                  .flat_map { |field| field["path"].to_s.scan(/\[(at[\d.]+)\]/).flatten[0...-1] }.uniq
+    node_labels = codes.to_h { |code| [ code, instance_terms.dig(code, "text") ] }.compact
+    { "label" => instance_terms.dig("at0000", "text"), "node_labels" => node_labels }.compact
   end
 
   def self.interval_to_h(interval)
@@ -189,7 +200,7 @@ class Template < ApplicationRecord
 
     { "lower" => interval.lower, "upper" => interval.upper }
   end
-  private_class_method :build_web_template, :serialize_entry, :interval_to_h, :section_labels, :category_code
+  private_class_method :build_web_template, :serialize_entry, :interval_to_h, :section_labels, :category_code, :entry_labels
 
   def entries
     (web_template || {})["entries"] || []
