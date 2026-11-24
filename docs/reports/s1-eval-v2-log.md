@@ -101,3 +101,11 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
 - Green: `lib/tasks/evaluation.rake`。v1（アダプタ）＋ v2（`spec/fixtures/evaluation/v2/`）の問いを走らせ、Markdown を標準出力に出す。
   `RESET=1` のときだけ aql を採点（dataset を作り直して dev DB の記録を入れ替えるため。既定は飛ばして件数を出す）。
   spec は `docs/reports/` の mtime が変わらないことも固定。2 examples, 0 failures
+
+## R10 サイクル 9: 17 問を match: card でも集計（情報）（2026-11-24）
+
+- Red: `evaluation_run_spec` の 3 例目（「# 評価 v2（phase1-bigram、match: card）」が出ない）1 failure
+- Green: `Questions.from_v1_seed(match: :card)`、rake が 2 本目の報告を出す。7 examples, 0 failures
+- 実測（demo_initial の 5 テンプレートを索引、at_code まで見る）: Top-1 14/17、Top-3 15/17、完全失敗 2/17、MRR 0.8431、recall@3 0.8824。
+  archetype 一致との差は q07「検査結果」だけ（archetype なら rank 1、at0001 まで見ると rank 2。analyte の他のカードが先に出る）
+- 全 suite（worktree、SQLite）: 267 examples, 0 failures, 3 pending（pending は既存の jp_referral 統合 spec）

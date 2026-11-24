@@ -11,5 +11,9 @@ namespace :evaluation do
     end
 
     puts Evaluation::Report.render(Evaluation::Runner.run(questions), label: "phase1-bigram")
+
+    # 情報: v1 の問いを at_code まで見て集計する（docs/design/s1-eval-v2-plan.md 2.2。pin ではない）
+    puts Evaluation::Report.render(Evaluation::Runner.run(Evaluation::Questions.from_v1_seed(match: :card)),
+                                   label: "phase1-bigram、match: card")
   end
 end

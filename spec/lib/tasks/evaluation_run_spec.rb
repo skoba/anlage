@@ -33,4 +33,8 @@ RSpec.describe "evaluation:run" do
   it "RESET が無ければ aql の問いは採点せず、その旨を出す" do
     expect { run_task }.to output(a_string_including("aql の問いは RESET=1 のときだけ採点する")).to_stdout
   end
+
+  it "同じ 17 問を match: card（at_code まで見る）でも集計し、情報として並べる（pin ではない）" do
+    expect { run_task }.to output(a_string_including("# 評価 v2（phase1-bigram、match: card）", "## card（17 問）")).to_stdout
+  end
 end

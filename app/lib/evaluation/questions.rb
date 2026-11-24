@@ -13,7 +13,8 @@ module Evaluation
 
     # v1 の 1 エントリ → kind: card、match: archetype（v1 は archetype_id の一致だけで採点していた）、
     # expected は {archetype_id, at_code} の 1 要素、draft: true → status: draft。
-    def from_v1_seed(path = Rails.root.join(V1_SEED))
+    # match: :card を渡すと同じ問いを at_code まで見て集計できる（情報。pin ではない）。
+    def from_v1_seed(path = Rails.root.join(V1_SEED), match: :archetype)
       YAML.load_file(path, permitted_classes: [ Date ]).map do |entry|
         Question.new(
           id: entry.fetch("id"),
@@ -21,7 +22,7 @@ module Evaluation
           status: entry["draft"] ? :draft : :active,
           query: entry.fetch("query"),
           expected: [ { archetype_id: entry.fetch("expected_archetype_id"), at_code: entry["expected_at_code"].presence } ],
-          match: :archetype,
+          match: match,
           intent_tag: entry["intent_tag"],
           notes: entry["notes"],
           source: path.to_s
