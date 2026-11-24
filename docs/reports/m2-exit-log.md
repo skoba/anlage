@@ -55,3 +55,41 @@ D までの記録は `docs/reports/rails-0.9.0-adoption-log.md`（R1〜R3）。
 ### 残り
 
 - reader（記入済みの帳票）は、INSTRUCTION・多段 CLUSTER・同じアーキタイプの 2 つめの ENTRY をまだ読み戻さない（`#30` に残す）
+
+## R2 E（`skoba/anlage#119`）: 帳票の入力欄をルートごとにまとめる（2026-11-24）
+
+ブランチ `feat/119-form-roots`。基準点は main `e492e32`（C まで入っている）。
+
+### 実測（R-20261124-5 問い 5 の「13 ルート」の数え方）
+
+- jp_referral のパスカードは 26 枚、帳票の入力欄（`values[...]` のうち `__` の補助を除く）も 26 個で、一致している
+- ロードマップの「13 ルート」は、テンプレートのルート（COMPOSITION）を除いた C_ARCHETYPE_ROOT の数と一致する:
+  SECTION 1（紹介状の詳細情報）、ENTRY 5（サービス依頼・傷病名・既往歴及び家族歴・症状経過及び検査結果・治療経過）、
+  CLUSTER 7（紹介元医療機関・紹介先医療機関・住所・電子的な連絡先・医師・診療科・担当医）。`Opt::RootTerms` で数えた
+
+### 自己承認した判断
+
+1. **入れ子の作り方は `Opt::FormLayout`（新規）**。SECTION は field の path から（名前は `section_labels`）、ENTRY は entry の並び
+   （名前は entry の `label`）、埋め込み CLUSTER は C で入れた `root_chain`（インスタンスと名前）から作る。新しい登録時の情報は足していない
+2. **見た目は fieldset と legend**。配置と名前までにして、デザインはしない（M3 の計画書 6 節と同じ方針）
+3. **取り込みの確認画面（`templates/preview`）は変えていない**。登録の前で、`root_chain` がまだ無い経路もあるため
+4. 新しい固定の文言は無い（legend はテンプレート上の名前）ので、`docs/demo/ui-vocabulary.md` は変えていない
+
+### Red（実装の前、8 例 4 失敗。「入力欄 26 = パスカード 26」は実装の前から緑で、pin として残した）
+
+```
+1) 帳票のルートごとのまとまり（#119） SECTION も埋め込みルートも無いテンプレート（ProblemList）は、ENTRY の fieldset 1 つ
+     expected: [["プロブレム・診断", []]]
+          got: []
+2) … jp_referral ルートの入れ子が SECTION → ENTRY → CLUSTER の順に fieldset になり、テンプレート上の名前が legend になる
+3) … 同じアーキタイプの 2 つのルートの項目は、それぞれのルートの fieldset に入る
+     expected: ["紹介状の詳細情報", "サービス依頼", "紹介元医療機関"]
+          got: []
+4) 統合レイアウト（実ブラウザ） jp_referral の帳票（ルートの入れ子が深い）でも、横スクロールが出ない
+     expected to find css "fieldset.root-group legend" but there were no matches
+```
+
+### Green
+
+- 開発機の全 suite: 390 例 0 失敗、2 pending。rubocop 違反なし、brakeman の警告 0
+- 実ブラウザ（1280×720）で、jp_referral の帳票（入れ子 5 段）に横スクロールが出ない

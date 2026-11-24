@@ -1,0 +1,12 @@
+<%# skoba/anlage#119: ルート（SECTION → ENTRY → 埋め込み CLUSTER）ごとの入れ子。legend はテンプレート上の名前 %>
+<fieldset class="root-group">
+  <legend><%= node.label %></legend>
+  <% node.items.each do |item| %>
+    <% if item.is_a?(Opt::FormLayout::Node) %>
+      <%= render "forms/root_group", node: item %>
+    <% else %>
+      <%= render "templates/field", field: item, disabled: @template.preview_only?,
+                 value: @values[item["name"]], error: @errors[item["name"]] %>
+    <% end %>
+  <% end %>
+</fieldset>
