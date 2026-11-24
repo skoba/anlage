@@ -13,6 +13,7 @@ module QueryBuilder
     ENGINE_HOPS = %w[magnitude name value].freeze
     UPSTREAM_NOTES = { "defining_code" => "10 項", "time" => "11 項", "archetype_details" => "25 項" }.freeze
     NUMERIC_TYPES = %w[DV_QUANTITY DV_COUNT].freeze
+    TEMPORAL_TYPES = %w[DV_DATE_TIME DV_DATE DV_TIME].freeze
     VALUE_TYPES = %w[DV_TEXT DV_CODED_TEXT DV_DATE_TIME DV_DATE DV_TIME DV_BOOLEAN DV_DURATION DV_URI DV_EHR_URI].freeze
 
     class Lint
@@ -33,6 +34,7 @@ module QueryBuilder
       @aql = aql
       @corpus = corpus
       @findings = []
+      @resolved = {} # IdentifiedPath → [cards, hops, text]（節とホップが通ったもの。型と値集合の検査が使う）
     end
 
     def lint
@@ -41,6 +43,7 @@ module QueryBuilder
 
       @bindings = collect_bindings(query.from_clause.containment)
       identified_paths(query).each { |path| check_identified_path(path) }
+      comparisons(query.where_clause&.expression).each { |comparison| check_comparison(comparison) }
       Lint.new(@findings)
     end
 
@@ -116,13 +119,14 @@ module QueryBuilder
         return report(:error, :path, "アーキタイプ #{binding.archetype_id} に節 #{node_path} は無い。候補: #{candidates.join('、')}", path: text)
       end
 
-      check_hops(hops_of(path), cards, text)
+      hops = hops_of(path)
+      @resolved[path] = [ cards, hops, text ] if check_hops(hops, cards, text)
     end
 
     # 節のあとの属性ホップ。[] と ["value"]（RM オブジェクトの射影）、["name", "value"]（要素名）は型を問わず許す。
     # ["value", x] は x がエンジンに届くこと、カードの rm_type に x があることを見る
     def check_hops(hops, cards, text)
-      return if hops.empty? || hops == %w[value] || hops == %w[name value]
+      return true if hops.empty? || hops == %w[value] || hops == %w[name value]
       return report(:error, :hop, "#{text} のホップ #{hops.join('/')} は value から始まっていない", path: text) unless hops.first == "value"
 
       rm_types = cards.map { |card| card.dig("semantics", "rm_type") }.compact.uniq
@@ -137,10 +141,51 @@ module QueryBuilder
       end
 
       allowed = rm_types.any? { |type| (hop == "magnitude" && NUMERIC_TYPES.include?(type)) || (hop == "value" && VALUE_TYPES.include?(type)) }
-      return if allowed
+      return true if allowed
 
       usable = rm_types.map { |type| NUMERIC_TYPES.include?(type) ? "value/magnitude" : "value/value" }.uniq
       report(:error, :hop, "#{rm_types.join('／')} のカードに value/#{hop} は無い。使えるのは #{usable.join('、')}", path: text)
+    end
+
+    # --- WHERE の比較: リテラルの型が終端の型に合うか
+
+    def comparisons(node)
+      case node
+      when Model::Comparison then [ node ]
+      when Model::AndExpr, Model::OrExpr then comparisons(node.left) + comparisons(node.right)
+      when Model::NotExpr then comparisons(node.operand)
+      else []
+      end
+    end
+
+    def check_comparison(comparison)
+      path, literal = [ comparison.left, comparison.right ].partition { |operand| operand.is_a?(Model::IdentifiedPath) }.map(&:first)
+      return unless path && literal.is_a?(Model::Literal) && @resolved.key?(path)
+
+      cards, hops, text = @resolved[path]
+      return unless hops.size == 2 && hops.first == "value"
+
+      rm_types = cards.map { |card| card.dig("semantics", "rm_type") }.compact.uniq
+      value = literal.value
+      if hops.last == "magnitude" && !value.is_a?(Numeric)
+        report(:error, :type, "#{text}（magnitude）は数値と比べる。#{value.inspect} は数値ではない", path: text)
+      elsif hops.last == "value" && !value.is_a?(String)
+        report(:error, :type, "#{text}（#{rm_types.join('／')} の value）は文字列と比べる。#{value.inspect} は文字列ではない", path: text)
+      elsif hops.last == "value" && rm_types.all? { |type| TEMPORAL_TYPES.include?(type) } && !iso8601?(value)
+        report(:error, :type, "#{text}（#{rm_types.join('／')}）は ISO 8601 の文字列と比べる（例 \"2026-01-01T00:00:00\"）。#{value.inspect} は読めない", path: text)
+      end
+    end
+
+    def iso8601?(value)
+      Time.iso8601(value)
+      true
+    rescue ArgumentError
+      begin
+        Date.iso8601(value)
+        true
+      rescue ArgumentError
+        false
+      end
     end
 
     def hops_of(path)

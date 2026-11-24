@@ -121,5 +121,45 @@ RSpec.describe QueryBuilder::Linter do
         expect(lint.findings.first.message).to include("units", "magnitude")
       end
     end
+
+    describe "型" do
+      it "magnitude と文字列リテラルの比較は error（型）" do
+        lint = lint(<<~AQL)
+          SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+          WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > "110"
+        AQL
+
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :type ] ])
+        expect(lint.findings.first.message).to include("magnitude", "数値")
+      end
+
+      it "DV_DATE_TIME の value/value に ISO 8601 で読めない文字列は error（型）。読める文字列は通る" do
+        bad = lint(<<~AQL)
+          SELECT ev/data[at0001]/items[at0003]/value/value
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+          WHERE ev/data[at0001]/items[at0003]/value/value >= "2026年1月1日"
+        AQL
+        good = lint(<<~AQL)
+          SELECT ev/data[at0001]/items[at0003]/value/value
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+          WHERE ev/data[at0001]/items[at0003]/value/value >= "2026-01-01T00:00:00" AND ev/data[at0001]/items[at0003]/value/value < "2026-07-01T00:00:00"
+        AQL
+
+        expect(bad.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :type ] ])
+        expect(bad.findings.first.message).to include("ISO 8601")
+        expect(good.findings).to be_empty
+      end
+
+      it "DV_TEXT の value/value と数値リテラルの比較は error（型）" do
+        lint = lint(<<~AQL)
+          SELECT i/activities[at0001]/description[at0009]/items[at0062]/value/value
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS INSTRUCTION i[openEHR-EHR-INSTRUCTION.service_request.v1]
+          WHERE i/activities[at0001]/description[at0009]/items[at0062]/value/value = 3
+        AQL
+
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :type ] ])
+      end
+    end
   end
 end
