@@ -116,7 +116,8 @@ module Opt
       klass.new(
         archetype_node_id: entry["archetype_id"],
         archetype_details: archetyped(entry["archetype_id"]),
-        name: dv_text(entry["concept"]),
+        # name はテンプレート上の名前。キーが無い登録済みの web_template では concept（skoba/anlage#109）
+        name: dv_text(entry["label"] || entry["concept"]),
         language: code_phrase(OpenehrRails.default_language, "ISO_639-1"),
         encoding: code_phrase(OpenehrRails.default_encoding, "IANA_character-sets"),
         subject: OpenEHR::RM::Common::Generic::PartySelf.new(external_ref: nil),
@@ -153,7 +154,7 @@ module Opt
 
       case entry["rm_type"]
       when "OBSERVATION"
-        wrap_in_history(outer_segs.reverse, item_tree)
+        wrap_in_history(outer_segs.reverse, item_tree, entry)
       else
         raise UnsupportedShape, "unexpected wrapper depth for #{entry['rm_type']}" if outer_segs.any?
 
@@ -179,7 +180,7 @@ module Opt
       end
       OpenEHR::RM::DataStructures::ItemStructure::ItemTree.new(
         archetype_node_id: node_id,
-        name: dv_text(entry["concept"]),
+        name: dv_text(node_label(entry, node_id) || entry["concept"]),
         items: items
       )
     end
@@ -194,21 +195,21 @@ module Opt
     end
 
     # outer_segs: [[HISTORY attr, node_id], [EVENT attr, node_id]], outermost first.
-    def wrap_in_history(outer_segs, item_tree)
+    def wrap_in_history(outer_segs, item_tree, entry)
       raise UnsupportedShape, "OBSERVATION without a HISTORY/EVENT wrapper" unless outer_segs.size == 2
 
       (_, history_node_id), (_, event_node_id) = outer_segs
 
       event = OpenEHR::RM::DataStructures::History::PointEvent.new(
         archetype_node_id: event_node_id,
-        name: dv_text("event"),
+        name: dv_text(node_label(entry, event_node_id) || "event"),
         time: dv_date_time(Time.current),
         data: item_tree
       )
 
       OpenEHR::RM::DataStructures::History::History.new(
         archetype_node_id: history_node_id,
-        name: dv_text("history"),
+        name: dv_text(node_label(entry, history_node_id) || "history"),
         origin: dv_date_time(Time.current),
         events: [ event ]
       )
@@ -269,6 +270,11 @@ module Opt
       label = COMPOSITION_CATEGORY_LABELS[code] || (default_label if code == default_code) ||
               raise(UnsupportedShape, "composition category code #{code} has no known label")
       dv_coded_text(label, code, "openehr")
+    end
+
+    # 構造ノード（HISTORY・EVENT・ITEM_TREE）の、テンプレートの用語での名前（skoba/anlage#109）
+    def node_label(entry, node_id)
+      entry.dig("node_labels", node_id)
     end
 
     def archetyped(archetype_id)
