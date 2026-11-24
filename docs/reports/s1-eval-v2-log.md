@@ -57,3 +57,9 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
 - Red: `NoMethodError: undefined method 'from_v2' for module Evaluation::Questions`（4 examples, 2 failures）
 - Green: `Questions.from_v2(dir)`。ファイル名順に `*.yml` を読む。kind ごとの必須キー（card: query・expected／aql: query・dataset・reference_aql・expected_rows）、
   未知の kind・status・match は `InvalidQuestion` で止める（黙って母数を変えない）。4 examples, 0 failures
+
+## R4 サイクル 3: card の採点器（2026-11-24）
+
+- Red: `NameError: uninitialized constant Evaluation::CardScorer`
+- Green: `app/lib/evaluation/card_scorer.rb`。rank（期待集合のどれかが最初に出た 0 始まりの順位）、hit@1・hit@3、recall@3（集合）、逆順位、完全失敗、
+  負例違反（forbidden が top-3 に出る）。match: archetype は at_code を見ない（v1 互換）。9 examples, 0 failures（questions_spec と合わせて）
