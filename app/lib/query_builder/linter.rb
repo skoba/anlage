@@ -8,10 +8,12 @@ module QueryBuilder
     # FROM の 1 変数の結び付け。archetype_id は ArchetypePredicate のあるときだけ（c、e は nil）
     Binding = Struct.new(:variable, :class_name, :archetype_id, keyword_init: true)
 
-    # 現行エンジンの終端ホップ（openehr 2.4.3 path_evaluator.rb ALLOWED_TERMINAL_HOPS）。それ以外は実行時に
-    # "unsupported path attribute" になる（docs/upstream-candidates.md 10・11・25 項）
-    ENGINE_HOPS = %w[magnitude name value].freeze
-    UPSTREAM_NOTES = { "defining_code" => "10 項", "time" => "11 項", "archetype_details" => "25 項" }.freeze
+    # 現行エンジンの終端ホップ（openehr 2.5.0 path_evaluator.rb:23 ALLOWED_TERMINAL_HOPS）。それ以外は実行時に
+    # "unsupported path attribute" になる（docs/upstream-candidates.md 25 項など）
+    ENGINE_HOPS = %w[code_string defining_code magnitude name time value].freeze
+    UPSTREAM_NOTES = { "archetype_details" => "25 項" }.freeze
+    # コード値（DV_CODED_TEXT だけ。設計書 6.2）
+    CODE_HOPS = %w[value defining_code code_string].freeze
     NUMERIC_TYPES = %w[DV_QUANTITY DV_COUNT].freeze
     TEMPORAL_TYPES = %w[DV_DATE_TIME DV_DATE DV_TIME].freeze
     VALUE_TYPES = %w[DV_TEXT DV_CODED_TEXT DV_DATE_TIME DV_DATE DV_TIME DV_BOOLEAN DV_DURATION DV_URI DV_EHR_URI].freeze
@@ -137,9 +139,11 @@ module QueryBuilder
       return report(:error, :hop, "#{text} のホップ #{hops.join('/')} は value から始まっていない", path: text) unless hops.first == "value"
 
       rm_types = cards.map { |card| card.dig("semantics", "rm_type") }.compact.uniq
+      return check_code_hops(hops, rm_types, text) if hops[1] == "defining_code"
+
       hop = hops[1]
       unless ENGINE_HOPS.include?(hop)
-        note = UPSTREAM_NOTES[hop] || "10・11・25 項の類"
+        note = UPSTREAM_NOTES[hop] || "25 項の類"
         return report(:error, :hop, "現行の AQL エンジンは value/#{hop} に届かない（終端ホップは #{ENGINE_HOPS.join('/')} のみ。" \
                                     "docs/upstream-candidates.md #{note}）", path: text)
       end
@@ -150,8 +154,20 @@ module QueryBuilder
       allowed = rm_types.any? { |type| (hop == "magnitude" && NUMERIC_TYPES.include?(type)) || (hop == "value" && VALUE_TYPES.include?(type)) }
       return true if allowed
 
-      usable = rm_types.map { |type| NUMERIC_TYPES.include?(type) ? "value/magnitude" : "value/value" }.uniq
-      report(:error, :hop, "#{rm_types.join('／')} のカードに value/#{hop} は無い。使えるのは #{usable.join('、')}", path: text)
+      report(:error, :hop, "#{rm_types.join('／')} のカードに value/#{hop} は無い。使えるのは #{usable_hops(rm_types).join('、')}", path: text)
+    end
+
+    def check_code_hops(hops, rm_types, text)
+      unless hops == CODE_HOPS
+        return report(:error, :hop, "コード値は #{CODE_HOPS.join('/')} と書く（#{hops.join('/')} では届かない）", path: text)
+      end
+      return true if rm_types.include?("DV_CODED_TEXT")
+
+      report(:error, :hop, "#{rm_types.join('／')} のカードに #{CODE_HOPS.join('/')} は無い。使えるのは #{usable_hops(rm_types).join('、')}", path: text)
+    end
+
+    def usable_hops(rm_types)
+      rm_types.map { |type| NUMERIC_TYPES.include?(type) ? "value/magnitude" : "value/value" }.uniq
     end
 
     # --- WHERE の比較: リテラルの型が終端の型に合うか
@@ -170,10 +186,13 @@ module QueryBuilder
       return unless path && literal.is_a?(Model::Literal) && @resolved.key?(path)
 
       cards, hops, text = @resolved[path]
+      value = literal.value
+      if hops == CODE_HOPS && !value.is_a?(String)
+        return report(:error, :type, "#{text}（コード値）は文字列と比べる。#{value.inspect} は文字列ではない", path: text)
+      end
       return unless hops.size == 2 && hops.first == "value"
 
       rm_types = cards.map { |card| card.dig("semantics", "rm_type") }.compact.uniq
-      value = literal.value
       if hops.last == "magnitude" && !value.is_a?(Numeric)
         report(:error, :type, "#{text}（magnitude）は数値と比べる。#{value.inspect} は数値ではない", path: text)
       elsif hops.last == "value" && !value.is_a?(String)
@@ -183,28 +202,31 @@ module QueryBuilder
       end
     end
 
-    # --- 値集合: DV_CODED_TEXT の value/value に対する = と MATCHES のリテラルが code_list の label にあるか。
+    # --- 値集合: DV_CODED_TEXT に対する = と MATCHES のリテラルが code_list にあるか。
+    # 表示文字列（value/value）は label と、コード値（value/defining_code/code_string）は code と照合する（設計書 6.2）。
     # code_list が空（外部値集合。コンテンツ防火壁により手元に展開しない）なら info。
-    # コード値（defining_code）での条件は openehr 2.5.0 のあと（判断 D4）
     def check_value_set(condition)
       path, literals = value_set_operands(condition)
       return unless path && @resolved.key?(path)
 
       cards, hops, text = @resolved[path]
-      return unless hops == %w[value value]
+      return unless hops == %w[value value] || hops == CODE_HOPS
 
       coded = cards.select { |card| card.dig("semantics", "rm_type") == "DV_CODED_TEXT" }
       return if coded.empty?
 
-      labels = coded.flat_map { |card| Array(card.dig("constraints", "value", "code_list")).map { |entry| entry["label"] } }.compact.uniq
-      if labels.empty?
+      entries = coded.flat_map { |card| Array(card.dig("constraints", "value", "code_list")) }.uniq
+      if entries.empty?
         return report(:info, :value_set, "#{text} は外部値集合（code_list が空）なので、値が値集合にあるかは検査できない", path: text)
       end
 
-      unknown = literals.reject { |value| labels.include?(value) }
+      by_code = hops == CODE_HOPS
+      allowed = entries.map { |entry| entry[by_code ? "code" : "label"] }.compact
+      unknown = literals.reject { |value| allowed.include?(value) }
       return if unknown.empty?
 
-      report(:error, :value_set, "#{text} の値集合に #{unknown.map(&:inspect).join('、')} は無い。許される値: #{labels.join('／')}", path: text)
+      listing = by_code ? "許されるコード: #{entries.map { |entry| "#{entry['code']}（#{entry['label']}）" }.join('／')}" : "許される値: #{allowed.join('／')}"
+      report(:error, :value_set, "#{text} の値集合に #{unknown.map(&:inspect).join('、')} は無い。#{listing}", path: text)
     end
 
     def value_set_operands(condition)

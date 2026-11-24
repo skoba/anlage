@@ -99,14 +99,30 @@ RSpec.describe QueryBuilder::Linter do
         expect(lint.findings.first.message).to include("DV_TEXT", "magnitude", "value/value")
       end
 
-      it "value/defining_code/code_string は現行エンジンが届かないので error（終端ホップ）に上流候補 10 項を添える" do
+      # openehr 2.5.0 で value/defining_code/code_string に届く（path_evaluator.rb ALLOWED_TERMINAL_HOPS。設計書 6.2）
+      it "DV_CODED_TEXT の value/defining_code/code_string は通る（コード値の射影）" do
         lint = lint(<<~AQL)
           SELECT ev/data[at0001]/items[at0073]/value/defining_code/code_string
           FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
         AQL
 
-        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :hop ] ])
-        expect(lint.findings.first.message).to include("defining_code", "upstream-candidates.md", "10")
+        expect(lint.findings).to be_empty
+      end
+
+      it "DV_TEXT のカードに value/defining_code/code_string は error（終端ホップ）。途中で切れた value/defining_code も error" do
+        text = lint(<<~AQL)
+          SELECT i/activities[at0001]/description[at0009]/items[at0062]/value/defining_code/code_string
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS INSTRUCTION i[openEHR-EHR-INSTRUCTION.service_request.v1]
+        AQL
+        partial = lint(<<~AQL)
+          SELECT ev/data[at0001]/items[at0073]/value/defining_code
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+        AQL
+
+        expect(text.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :hop ] ])
+        expect(text.findings.first.message).to include("DV_TEXT", "value/value")
+        expect(partial.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :hop ] ])
+        expect(partial.findings.first.message).to include("value/defining_code/code_string")
       end
 
       it "value だけ（RM オブジェクトの射影）と name/value（要素名）は許し、value/units は現行エンジンが届かないので error（終端ホップ）" do
@@ -181,6 +197,30 @@ RSpec.describe QueryBuilder::Linter do
 
         expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :value_set ] ])
         expect(lint.findings.first.message).to include("疑惑", "疑い", "推定", "確定")
+      end
+
+      def certainty_code(where)
+        lint(<<~AQL)
+          SELECT ev/data[at0001]/items[at0002]/value/value
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+          WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string #{where}
+        AQL
+      end
+
+      it "コード値（code_string）の MATCHES {\"at0074\"} と = \"at0076\" は code_list のコードに含まれ、findings 無し" do
+        expect(certainty_code('MATCHES {"at0074", "at0075"}').findings).to be_empty
+        expect(certainty_code('= "at0076"').findings).to be_empty
+      end
+
+      it "code_list に無いコード（at0099）と、コードの位置に書いた表示文字列（疑い）は error（値集合）に、許されるコードを表示つきで添える" do
+        lint = certainty_code('MATCHES {"at0074", "at0099", "疑い"}')
+
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :value_set ] ])
+        expect(lint.findings.first.message).to include('"at0099"', '"疑い"', "at0074（疑い）", "at0075（推定）", "at0076（確定）")
+      end
+
+      it "コード値と数値リテラルの比較は error（型）" do
+        expect(certainty_code("= 74").findings.map { |finding| [ finding.severity, finding.code ] }).to include([ :error, :type ])
       end
 
       it "code_list の無い DV_CODED_TEXT（傷病名 at0002、外部値集合）は info（検査できない）" do
