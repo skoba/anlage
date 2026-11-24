@@ -68,7 +68,7 @@ Anlageが実証しようとしているのは、openEHR標準の役割の転換�
   `rake demo:reset` 第一実装（`#47`）
 - 11/5 凍結の受入条件（`bundle exec rspec spec/demo/` green、デモクエリ 4 件を
   POST 経路の spec で検証済み、実ブラウザ system spec green）は **充足済み**
-- 依存: openehr 2.4.3／openehr-rails 0.7.1、Ruby 4.0.10
+- 依存: openehr 2.5.0／openehr-rails 0.8.0、Ruby 4.0.10（2026-11-24 更新）
 - **次**: Phase 3 デモ統合 `#47`（実装 10/14〜10/24、リハ 1 10/25）——
   共通ナビ・保存後の次アクション → 取り込み画面 → UI 語彙（`docs/demo/ui-vocabulary.md`）
   → BMI 自動計算（`config/form_behaviors.yml`）→ `demo:reset` 第二実装

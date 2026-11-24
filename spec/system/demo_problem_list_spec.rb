@@ -36,7 +36,7 @@ RSpec.describe "デモ動線: ProblemList のフォーム入力→保存→AQL�
              o/data[at0001]/items[at0073]/value/value AS certainty
       FROM EHR e CONTAINS COMPOSITION c
            CONTAINS EVALUATION o[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
-      WHERE o/data[at0001]/items[at0073]/value/value MATCHES {"疑い", "推定"}
+      WHERE o/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0074", "at0075"}
     AQL
 
     result = OpenehrRails::Aql::Executor.execute(query)

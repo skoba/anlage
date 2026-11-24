@@ -321,9 +321,10 @@ module Opt
     # R4で実測確認済み（版数付きSNOMED表記
     # `[SNOMED-CT(2003)::271649006]`もgem側で正規化されず素通し）。
     #
-    # これでAnlage側の迂回実装は無くなり、`#31`の迂回保有者は
-    # openehr-rails側のnil-guard（`parser.rb`の`populate_term_bindings!`）
-    # 1箇所に集約された。上流解消時はそちらの撤去だけで完了する。
+    # これでAnlage側の迂回実装は無くなった。openehr 2.5.0（`skoba/openehr-ruby#31`）からは
+    # 上流の`OPTParser`自身がterm_bindingsを入れ、openehr-rails 0.8.0の
+    # `populate_term_bindings!`はnil-guardで何もしない。経路と出力は変わらない
+    # （golden 4件が無変更で通ることで確認、`skoba/anlage#90`）。
     def extract_code_bindings(opt)
       bindings = Hash.new { |hash, key| hash[key] = [] }
 
