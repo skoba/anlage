@@ -20,6 +20,9 @@ module Opt
     # gem全体の唯一の実測慣例値。OPT・gem設定のいずれにも情報源なし
     RM_VERSION = "1.0.4"
 
+    # openEHR 用語（terminology id "openehr"）の composition category グループの rubric
+    COMPOSITION_CATEGORY_LABELS = { "431" => "persistent", "433" => "event" }.freeze
+
     ENTRY_CLASSES = {
       "OBSERVATION" => OpenEHR::RM::Composition::Content::Entry::Observation,
       "EVALUATION" => OpenEHR::RM::Composition::Content::Entry::Evaluation,
@@ -39,7 +42,7 @@ module Opt
         name: dv_text(@template.web_template["concept"] || @template.template_id),
         language: code_phrase(OpenehrRails.default_language, "ISO_639-1"),
         territory: code_phrase(OpenehrRails.default_territory, "ISO_3166-1"),
-        category: dv_coded_text(*OpenehrRails.default_category, "openehr"),
+        category: category,
         composer: OpenEHR::RM::Common::Generic::PartyIdentified.new(name: OpenehrRails.default_composer_name),
         content: build_content
       )
@@ -255,6 +258,17 @@ module Opt
       else
         dv_text(raw_value.to_s)
       end
+    end
+
+    # OPT が絞っているコード（web_template["category_code"]）を使い、無ければ設定の既定値
+    # （OpenehrRails.default_category は [コード, 表示] の順）。表示は openEHR 用語の
+    # composition category の rubric（skoba/anlage#87）。
+    def category
+      default_code, default_label = OpenehrRails.default_category
+      code = @template.web_template["category_code"] || default_code
+      label = COMPOSITION_CATEGORY_LABELS[code] || (default_label if code == default_code) ||
+              raise(UnsupportedShape, "composition category code #{code} has no known label")
+      dv_coded_text(label, code, "openehr")
     end
 
     def archetyped(archetype_id)
