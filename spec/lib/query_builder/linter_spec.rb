@@ -17,4 +17,16 @@ RSpec.describe QueryBuilder::Linter do
       expect(lint.findings.first.message).to be_present
     end
   end
+
+  describe "変数" do
+    it "FROM で宣言していない変数を SELECT／WHERE に使うと error（変数）になり、その変数名を path に持つ" do
+      lint = lint(<<~AQL)
+        SELECT x/name/value FROM EHR e CONTAINS COMPOSITION c
+        WHERE y/data[at0001]/items[at0002]/value/value = "a"
+      AQL
+
+      expect(lint.findings.map { |finding| [ finding.severity, finding.code, finding.path ] })
+        .to eq([ [ :error, :variable, "x" ], [ :error, :variable, "y" ] ])
+    end
+  end
 end

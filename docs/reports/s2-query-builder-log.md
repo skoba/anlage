@@ -15,3 +15,9 @@
 
 - Red: `NameError: uninitialized constant QueryBuilder`
 - Green: `app/lib/query_builder/finding.rb`、`app/lib/query_builder/linter.rb`。`QueryValidator.validate!` の `InvalidQuery` を error（syntax）に写す。1 example, 0 failures
+
+## R3 サイクル 2: 変数（2026-11-24）
+
+- Red: findings が空（2 examples, 1 failure）
+- Green: FROM の containment を歩いて `Binding`（variable・class_name・archetype_id）を集め、SELECT／WHERE の `IdentifiedPath` を出現順に集めて照合。
+  未宣言は error（variable）。2 examples, 0 failures
