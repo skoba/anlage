@@ -50,3 +50,11 @@
 - Red: at0073 に `MATCHES {"疑い", "疑惑"}` で findings が空、at0002（外部値集合）で info が出ない（16 examples, 2 failures）
 - Green: WHERE の `=` と `MATCHES`（リテラルの値リスト）を集め、DV_CODED_TEXT の `value/value` なら `constraints.value.code_list[].label` と照合。
   無い値は error（value_set）に許される値を添える。code_list が空（外部値集合）は info（検査できない。コンテンツ防火壁により展開しない）。16 examples, 0 failures
+
+## R8 サイクル 8・9: name 述語と永続的な未対応（2026-11-24）
+
+- Red: name 述語で warning が出ない、`VERSIONED_COMPOSITION` で `unsupported` が出ない（18 examples, 2 failures）
+- Green: パスの述語に value（名前）があれば warning（name_predicate、24 項・openehr-ruby#60）。`QueryValidator` の `UnsupportedFeature` は error（unsupported）に写す
+- 実測: `VERSION v`・`LENGTH(...)` は構文（`InvalidQuery`: expected IDENTIFIER）で落ち、`QueryValidator` の未対応に届くのは `VERSIONED_COMPOSITION` と
+  `MATCHES {TERMINOLOGY(...)}`。spec は前者で固定。18 examples, 0 failures
+- 設計書 3 節のリンタの TODO 9 項目はすべて green。次はビルダー（2.2）

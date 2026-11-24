@@ -195,5 +195,24 @@ RSpec.describe QueryBuilder::Linter do
         expect(lint.findings.find { |finding| finding.code == :value_set }.message).to include("外部", "検査できない")
       end
     end
+
+    describe "name 述語と永続的な未対応" do
+      it "name 述語（[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']）は warning（上流候補 24 項）。ok? は true のまま" do
+        lint = lint(<<~AQL)
+          SELECT i/protocol[at0008]/items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']/items[at0001]/value/value
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS INSTRUCTION i[openEHR-EHR-INSTRUCTION.service_request.v1]
+        AQL
+
+        expect(lint.ok?).to be(true)
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :warning, :name_predicate ] ])
+        expect(lint.findings.first.message).to include("紹介先医療機関", "24")
+      end
+
+      it "QueryValidator が永続的に未対応とするもの（VERSIONED_COMPOSITION の FROM。VERSION は構文で落ちる）は error（unsupported）に写す" do
+        lint = lint("SELECT c/name/value FROM EHR e CONTAINS VERSIONED_COMPOSITION vc CONTAINS COMPOSITION c")
+
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :unsupported ] ])
+      end
+    end
   end
 end

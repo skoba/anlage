@@ -57,6 +57,9 @@ module QueryBuilder
     rescue OpenehrRails::Aql::InvalidQuery => e
       report(:error, :syntax, e.message)
       nil
+    rescue OpenehrRails::Aql::UnsupportedFeature => e
+      report(:error, :unsupported, e.message)
+      nil
     end
 
     # --- FROM
@@ -106,6 +109,7 @@ module QueryBuilder
       return report(:error, :variable, "変数 #{path.variable} は FROM で宣言されていない", path: path.variable) unless binding
 
       text = path_text(path)
+      warn_name_predicates(path, text)
       unless binding.archetype_id
         return report(:info, :path, "変数 #{path.variable}（#{binding.class_name}）にアーキタイプの述語が無いので、パスは検査しない", path: text)
       end
@@ -234,6 +238,18 @@ module QueryBuilder
       segments = Array(path.path&.segments)
       last = segments.rindex { |segment| segment.predicate }
       (last ? segments[(last + 1)..] : segments).map(&:attribute)
+    end
+
+    # name 述語（[archetype_id, '名前']／[at0001, '名前']）は現行エンジンが値を捨てて兄弟に fan-out する（上流候補 24 項、openehr-ruby#60）
+    def warn_name_predicates(path, text)
+      names = Array(path.path&.segments).filter_map do |segment|
+        predicate = segment.predicate
+        predicate.value if predicate.is_a?(Model::ArchetypePredicate) || predicate.is_a?(Model::NodePredicate)
+      end
+      return if names.empty?
+
+      report(:warning, :name_predicate, "name 述語 #{names.map(&:inspect).join('、')} は現行の AQL エンジンが捨て、同じアーキタイプの兄弟に広がる" \
+                                        "（docs/upstream-candidates.md 24 項、openehr-ruby#60 の解消まで）", path: text)
     end
 
     # 述語を持つ最後の PathPart までが節、残りは属性のホップ。述語が archetype／node 以外（標準述語）なら nil（検査しない）
