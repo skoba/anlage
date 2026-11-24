@@ -1,0 +1,175 @@
+# S1（評価 v2）の計画
+
+裁定 ID: R-20261124-11（作業列 1〜3）。進め方は R-20261124-8（計画書を push してそのまま実装に進む。統括が事後に読む）。
+状態: **push 済み・実装中**。LLM は使わない。
+
+- 基準点: anlage main `6c100e0`（openehr 2.4.3、openehr-rails 0.8.0、Ruby 4.0.10）
+- 出口: v1 の 17 問を v2 の枠組みで再現する pin が green、`aql` 種の問いがデータセット上で採点できる、
+  ゴールド v2 の案を `draft` で置いてゲート報告（作業列 3。臨床のレビューは人間）
+- 進行ログ: `docs/reports/s1-eval-v2-log.md`（R1〜）
+- 前身: WP4（`docs/design/wp4-plan.md`、`skoba/anlage#14`）。将来課題節の 3 点（期待集合・負例・保留問）を本計画が引き受ける
+
+## 1. いまの状態（実測）
+
+- 評価器は `lib/tasks/pathcards.rake` の `pathcards:eval` 1 本。`spec/fixtures/pathcards_eval_seed.yml` を読み、
+  `Opt::PathcardSearch.call(query)` の結果で `identity.archetype_id` が `expected_archetype_id` に一致する
+  最初の順位を rank とする（`expected_at_code` は読み込むだけで採点に使っていない）
+- 指標: Top-1・Top-3・完全失敗率・MRR・`intent_tag` 別の hit 数。実行のたびに `docs/reports/wp4-eval-log.md` へ自動追記する
+  （2026-08-26 に同一値が 3 回並んだ。自動追記は雑音になっている）
+- 母数は 17 問（`draft: true` の q21 を除く）。直近の実測は Top-1 14/17（82.35%）、Top-3 15/17（88.24%）、
+  完全失敗 2/17（11.76%）、MRR 0.8529（`spec/lib/tasks/pathcards_eval_spec.rb` が pin）
+- ゴールドの注記に、v1 の形式では表せない要求が既に書かれている:
+  - 期待集合: q10「血圧」・q14「血圧測定」は {at0004, at0005} の両方が正解（注記に「期待集合の第 1 号」と明記）
+  - 順位つき第 2 候補: q08「発症」は at0077 が主、at0002 が第 2 候補
+  - 負例: q15 旧クエリ「臨床検査」が ProblemList at0003「臨床的に認識された日時」と bigram「臨床」で偽陽性競合。
+    q18 注記「既往歴 → problem_diagnosis は約 2 割しか正しくない」（表層の包含 ≠ 指示対象の包含）
+  - 保留問: 「既往歴 → OBSERVATION.story」（q21 draft、jp_referral にのみカードあり）、
+    「検体 → CLUSTER.specimen」（コーパスに無く出題不能。v0.3 待ち）
+- AQL の実行は `OpenehrRails::Aql::Executor.execute(aql)` → `OpenEHR::AQL::ResultSet`（`columns`・`rows`）。
+  デモクエリ 5 件は `spec/demo/` で期待行と照合済み。初期状態は `rake demo:reset`
+  （fixture 5 件の登録 ＋ `Demo::SampleCompositions.load!`）で、`spec/demo/cross_template_query_spec.rb` が
+  spec の中からこの状態を作って引いている
+- エンジンの制約（`docs/upstream-candidates.md` 10・11・24・25 項）: `defining_code`／`events/time`／
+  `archetype_details` に到達できない、name 述語が捨てられる。コード値の条件は openehr 2.5.0（#49）待ち
+  （R-20261124-11 の 5。それまで値集合の表示文字列の一致で仮置き）
+- テスト DB は worktree ごとの SQLite（`config/database.yml` の `storage/test.sqlite3`）。書く側と並行して rspec を回せる
+
+## 2. 設計
+
+### 2.1 問いの形式（YAML）
+
+1 問は `kind`（`card`／`aql`）と `status`（既定 `active`、`draft`、`pending`）を持つ。
+
+```yaml
+# kind: card — 問い（日本語）→ 期待するカードの集合
+- id: c010
+  kind: card
+  query: "血圧"
+  expected:                       # 期待集合。1 つでも出れば hit、全部出れば recall 1.0
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
+  match: card                     # card = archetype_id と at_code の両方 / archetype = archetype_id のみ（v1 互換）
+  forbidden: []                   # 負例。top-k（既定 3）に出たら「負例違反」
+  intent_tag: bigram成立想定
+  notes: "..."
+  reviewed_by:
+  reviewed_at:
+
+# kind: aql — 問い（日本語）→ 参照 AQL をデータセット上で実行した結果
+- id: a001
+  kind: aql
+  query: "収縮期血圧が 110 mmHg を超える記録"
+  dataset: demo_initial           # 名前つきデータセット（2.3）
+  reference_aql: |
+    SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic
+    FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+    WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > 110
+  expected_rows: [[120.0]]        # 行の多重集合。ordered: true のときだけ順序も見る
+  cards: [ { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 } ]  # 使うカード（S2 の入力）
+
+# status: pending — 正解がコーパスに無い保留問。母数に入れず、期待先がコーパスに現れたら「保留解除候補」として報告する
+- id: c019
+  kind: card
+  status: pending
+  query: "検体"
+  expected: [ { archetype_id: openEHR-EHR-CLUSTER.specimen.v1 } ]
+  pending_until: "CLUSTER.specimen を含む OPT（jp_referral v0.3 等）がコーパスに入る"
+```
+
+- `draft` は人間レビュー前（v1 と同じ意味）。`pending` は正解不在。どちらも採点の母数に入れず、件数と理由を報告に出す
+- `expected` の要素は `archetype_id` 必須、`at_code` 任意。`match: card` で `at_code` が無い要素は archetype 一致で見る
+- `aql` 種の採点対象は **AQL 文字列**（既定は `reference_aql` 自身）。S1 では「参照 AQL が期待行を返す」ことがゴールドの
+  健全性の pin になり、S2（クエリビルダーが組んだ AQL）・S4（LLM が書いた AQL）は同じ採点器に別の AQL を渡す
+
+### 2.2 v1 からの移行
+
+- **v1 のゴールド本体（`spec/fixtures/pathcards_eval_seed.yml`）は変更しない**（人間の専有領域。`CLAUDE.md`「評価データの人間レビュー中の編集範囲」）
+- v2 の読み込み器に v1 アダプタを置き、各エントリを `kind: card`・`match: archetype`・`expected: [{archetype_id, at_code}]` に写す
+  （`draft: true` → `status: draft`）。これで v1 の採点と同じ意味になり、**最初の pin**（Top-1 14/17 ほか）を v2 の枠組みで再現する
+- 同じ 17 問を `match: card` でも集計し、at_code まで見たときの数字を報告に並べる（新しい情報。pin ではない）
+- v2 固有の問いは `spec/fixtures/evaluation/v2/*.yml` に置く。ゴールドの案は `status: draft` で入れ、ゲート報告で人間に回す
+- `pathcards:eval` と `spec/lib/tasks/pathcards_eval_spec.rb` は v2 の pin が green になっても**残す**
+  （撤去はファイルの削除＝「必ず止まる」。ゴールド v2 が確定したあとに別の PR で提案する）
+
+### 2.3 データセット
+
+- `demo_initial`: `rake demo:reset` と同じ手順（fixture 5 件を `Template.build_from_opt_xml` → `PathcardExtractor` → save、
+  `Demo::SampleCompositions.load!`）で作る初期状態。決定的で、`spec/demo/cross_template_query_spec.rb` が既に spec の中で使っている
+- データセットは名前で参照し、実装は `Evaluation::Datasets` に集める。S2 以降で別の初期状態（例: 件数の多いもの）を足せる
+- rake からの実行は dev DB に対して行う（`demo:reset` 済みを前提にする。`aql` 種は dataset が `demo_initial` のとき、
+  直前に `demo:reset` 相当を走らせるかを `RESET=1` で選ぶ。既定は走らせない＝dev DB を壊さない）
+
+### 2.4 採点
+
+| 種 | 指標 | 定義 |
+|---|---|---|
+| card | hit@1、hit@3 | 期待集合のどれか 1 つが top-k に出る（v1 の Top-1・Top-3 と同じ。期待集合が 1 要素なら同値） |
+| card | recall@3 | top-3 に出た期待要素の数 ÷ 期待集合の大きさ（集合評価。v1 には無い） |
+| card | MRR | 期待集合のどれかが最初に出た順位の逆数の平均（出なければ 0） |
+| card | 完全失敗 | 期待集合のどれも結果に出ない |
+| card | 負例違反 | `forbidden` の要素が top-3 に出る |
+| card | intent_tag 別 | hit（top-3 以内）の数 ÷ 問題数（v1 と同じ軸） |
+| aql | 一致 | 実行結果の行の多重集合が `expected_rows` と一致（`ordered: true` なら順序も）。不一致は差分（余分・不足の行）を出す |
+| aql | 実行不能 | `OpenehrRails::Aql::InvalidQuery`／`UnsupportedFeature` を捕まえて「実行不能」に数える（例外で止めない） |
+| 共通 | draft／pending | 件数と理由。pending は期待先のアーキタイプがコーパス（`Template.active` のカード）に現れたら「保留解除候補」 |
+
+行の比較: 数値は Float に、文字列はそのまま、nil はそのまま。RM オブジェクトが返る列は `ResultSet#to_json` と同じ写像で JSON 値に落として比べる。
+
+### 2.5 報告
+
+- `rake evaluation:run` が Markdown を標準出力に出す（見出し、集計表、完全失敗と負例違反の一覧、aql の不一致の差分、draft／pending の一覧）
+- **ファイルへの自動追記はしない**（v1 の `wp4-eval-log.md` で同一値の重複が雑音になった実測）。記録はセッションが `docs/reports/s1-eval-v2-log.md` に貼る
+- 集計値の regression pin は spec（`spec/lib/evaluation/*_spec.rb`）が持つ。合否は CI
+
+### 2.6 置き場所
+
+| 役 | ファイル |
+|---|---|
+| 問いの読み込み（v1 アダプタ、v2 YAML、形式の検査） | `app/lib/evaluation/questions.rb` |
+| データセット | `app/lib/evaluation/datasets.rb` |
+| 実行（card → `Opt::PathcardSearch`、aql → `OpenehrRails::Aql::Executor`） | `app/lib/evaluation/runner.rb` |
+| 採点 | `app/lib/evaluation/card_scorer.rb`、`app/lib/evaluation/aql_scorer.rb` |
+| 報告（Markdown） | `app/lib/evaluation/report.rb` |
+| rake | `lib/tasks/evaluation.rake`（`evaluation:run`） |
+| v2 の問い | `spec/fixtures/evaluation/v2/cards.yml`、`spec/fixtures/evaluation/v2/aql.yml` |
+| spec | `spec/lib/evaluation/questions_spec.rb`、`card_scorer_spec.rb`、`aql_scorer_spec.rb`、`runner_spec.rb`、`report_spec.rb`、`spec/lib/tasks/evaluation_run_spec.rb` |
+
+名前空間は `Evaluation`（`Eval` は `Kernel#eval` と紛れる）。`app/lib/opt`・`app/lib/demo` と同じ置き方。
+
+## 3. テスト TODO（Red から始める spec の見出し）
+
+1. 読み込み: 「v1 の seed をアダプタで読むと、active 17 問・draft 1 問（q21）の `card` 問いになり、`match` は archetype」
+2. 読み込み: 「v2 の YAML は kind ごとの必須キー（card: query・expected／aql: query・dataset・reference_aql・expected_rows）を欠くと読み込みで止まる」「未知の kind・status も止まる」
+3. card の採点: 「期待集合の 1 つが 2 位なら rank 1・hit@3・recall@3 は 1/2・MRR 0.5」「forbidden が top-3 に出たら負例違反」「どれも出なければ完全失敗」
+4. **最初の pin**: 「4 テンプレートを索引し v1 の 17 問を v2 で走らせると、Top-1 14/17・Top-3 15/17・完全失敗 2/17・MRR 0.8529・intent_tag 別 11/11・4/4・0/2 になる」（`spec/lib/tasks/pathcards_eval_spec.rb` と同じ前提・同じ数字）
+5. aql の採点: 「`demo_initial` の上で参照 AQL を実行し、期待行と多重集合として一致すれば一致」「1 行違えば差分（余分・不足）が出る」「`UnsupportedFeature` は実行不能として数える」
+6. pending: 「期待先のアーキタイプがコーパスに無い保留問は母数に入らず、一覧に出る」「jp_referral を索引すると story の保留問が保留解除候補になる」
+7. 報告: 「Markdown に集計表・完全失敗・負例違反・aql 差分・draft／pending の節がある」
+8. rake: 「`evaluation:run` が報告を標準出力に出し、ファイルには書かない」
+
+コミットは 1 サイクル 1 本（Red の出力はログに載せる）。実装の PR は `feat/s1-eval-v2`（計画書の PR とは別）。
+
+## 4. 作業列 3（ゴールド v2 の案。ここで止まる）
+
+案は `status: draft` で `spec/fixtures/evaluation/v2/` に置き、ゲート報告で人間に回す。候補（出所は v1 の注記）:
+
+- 期待集合: q10「血圧」・q14「血圧測定」→ {at0004, at0005}
+- 第 2 候補: q08「発症」→ expected に at0002 を足して集合にするか、順位つきにするかは人間の判断を問う
+- 負例: 「臨床検査」→ forbidden ProblemList at0003（q15 の旧競合）。「既往歴」→ forbidden problem_diagnosis（q18 注記）
+- 保留問の出題化: q21「既往歴 → story」（jp_referral を索引に含めると成立の見込み）、「検体 → CLUSTER.specimen」（pending、v0.3 待ち）
+- aql: デモクエリ 1〜5 を問い（日本語）＋参照 AQL ＋ `demo_initial` の期待行として出題（例: 「2型糖尿病または高血圧症の記録を出所つきで」→ 3 行）
+
+## 5. 自己承認した判断（根拠は `docs/reports/s1-eval-v2-log.md` R1）
+
+| # | 判断 | 捨てた案 |
+|---|---|---|
+| D1 | v1 のゴールドは触らずアダプタで読む | v1 ファイルを v2 形式に書き換える（ゴールド本体に触る） |
+| D2 | `aql` 種の採点対象は AQL 文字列。S1 では参照 AQL 自身を通す | S1 で自然言語→AQL の何かを採点する（S4 の範囲） |
+| D3 | データセットは `demo_initial` 1 つ。`rake demo:reset` と同じ手順 | 評価専用の fixture を新設する（二重管理） |
+| D4 | 自動追記をやめ、報告は標準出力。pin は spec | v1 と同じ自動追記（重複の実測あり） |
+| D5 | `pathcards:eval` は残す | 置き換えて消す（削除＝必ず止まる） |
+| D6 | 名前空間 `Evaluation`、置き場所 `app/lib/evaluation/` | `Eval`、`lib/` 直下 |
+
+## 6. 範囲外
+
+検索実装の改良（S3）、クエリビルダーとリンタ（S2、`docs/design/s2-query-builder-plan.md` で別に計画）、ゴールドの臨床判断、CI への rake の定期実行、コード値の条件（openehr 2.5.0 の後）。
