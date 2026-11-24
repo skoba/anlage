@@ -63,3 +63,11 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
 - Red: `NameError: uninitialized constant Evaluation::CardScorer`
 - Green: `app/lib/evaluation/card_scorer.rb`。rank（期待集合のどれかが最初に出た 0 始まりの順位）、hit@1・hit@3、recall@3（集合）、逆順位、完全失敗、
   負例違反（forbidden が top-3 に出る）。match: archetype は at_code を見ない（v1 互換）。9 examples, 0 failures（questions_spec と合わせて）
+
+## R5 サイクル 4: 実行器と最初の pin（2026-11-24）
+
+- Red: `NameError: uninitialized constant Evaluation::Runner`
+- Green: `app/lib/evaluation/runner.rb`。active の card の問いを `Opt::PathcardSearch` で引いて `CardScorer` で採点、draft／pending は一覧に残す。
+  `Run#card_summary` が questions・hit_at_1・hit_at_3・complete_failures・mrr・recall_at_3・violations・by_intent を返す
+- **pin の実測**（4 テンプレートを索引、v1 の 17 問をアダプタで読む）: Top-1 14/17、Top-3 15/17、完全失敗 2/17（q16・q18）、MRR 0.8529、
+  intent_tag 別 11/11・4/4・0/2 ── `spec/lib/tasks/pathcards_eval_spec.rb` と同じ数字。2 examples, 0 failures
