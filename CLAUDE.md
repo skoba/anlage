@@ -109,6 +109,19 @@ Anlageは、openehr-rails-startupから生成されたopenEHRベースEHRの参�
   名指ししているときだけ(2026-11-23 追加)
 - 根拠と採らなかった案は `docs/design/session-isolation-plan.md`
 
+## 依存の方針(2026-11-24 導入。裁定 R-20261124-2)
+
+- 依存するライブラリは、できるだけ最新のリリース版を使う
+- 古い版に固定するときは、理由と固定を解く条件を、その場所(`Gemfile` のコメントなど)と
+  Issue の両方に書く
+- 依存の不具合は、上流の修正を使う方向で進める。回避策はつなぎで、消す条件を書く
+  (実例: `spec/support/capybara_chrome_storage_reset.rb` と `skoba/anlage#74`)
+- 未リリースのコードに依存するのは、上流に修正があってリリースを待てないときだけ。
+  コミットの SHA で固定し、リリースが出たら RubyGems の版に戻す
+- 上流への報告とコメントは人間が行う。セッションは再現の手順と文面の案を用意する
+- 依存の更新は 1 件ずつ CI で合否を決める。マージは人間
+  (依存 gem の追加と更新は「必ず止まる 2」のまま)
+
 ## Codexとの分業（openehr-ruby CLAUDE.mdと同旨）
 
 - **Codexはworking treeの納品のみ行う。コミットはしない。** Claude Codeが
