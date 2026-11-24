@@ -103,9 +103,12 @@ class TemplatesController < ApplicationController
 
   def preview_composition(content)
     parsed = JSON.parse(content)
-    @composition_template = Template.active.find_by(template_id: parsed["archetype_node_id"])
+    # template_id は archetype_details から引く。#54 より前の形（archetype_details が無く、
+    # ルートの archetype_node_id に template_id が入っている）も受け付ける。
+    template_id = parsed.dig("archetype_details", "template_id", "value") || parsed["archetype_node_id"]
+    @composition_template = Template.active.find_by(template_id: template_id)
     unless @composition_template
-      render_upload_error("no registered template matches this composition (template_id=#{parsed['archetype_node_id'].inspect})")
+      render_upload_error("no registered template matches this composition (template_id=#{template_id.inspect})")
       return
     end
 

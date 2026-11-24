@@ -27,6 +27,25 @@ RSpec.describe "Polymorphic dropzone", type: :request do
       expect(Template.count).to eq(1) # no new template registered
     end
 
+    # skoba/anlage#54 より前に保存された Composition は、ルートの archetype_node_id に
+    # template_id を持ち、archetype_details を持たない。その形も引き続き受け付ける。
+    it "#54 より前の形（ルートの archetype_node_id が template_id）の Composition も受け付ける" do
+      template = Template.build_from_opt_xml(opt_path.read).tap(&:save!)
+      values = template.fields.index_with { "42" }.transform_keys { |f| f["name"] }
+      hash = JSON.parse(OpenEHR::Serializer::RMJSONSerializer.new(Opt::CompositionBuilder.new(template, values).build).serialize)
+      hash["archetype_node_id"] = template.template_id
+      hash.delete("archetype_details")
+
+      file = Tempfile.new([ "composition", ".json" ])
+      file.write(JSON.generate(hash))
+      file.flush
+
+      post templates_preview_path, params: { file: upload(file.path, filename: "composition.json", type: "application/json") }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("記入済みの帳票")
+    end
+
     it "rejects a composition whose template isn't registered" do
       template = Template.build_from_opt_xml(opt_path.read) # not saved
       values = template.fields.index_with { "1" }.transform_keys { |f| f["name"] }

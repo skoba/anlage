@@ -38,8 +38,10 @@ RSpec.describe "demo:reset" do
       .to all(match([ a_string_matching(/./), "1.0.0", true, "saveable" ]))
     expect(Composition.joins(:template).order("templates.template_id").pluck("templates.template_id"))
       .to eq(%w[CardiologyEncounter LabResultReport ProblemList ProblemList bmi_calculation])
-    # RM 側は Composition 名で見る（フォーム経路の Composition はルートに archetype_details を持たず
-    # template_id 列が nil になる。既存の欠陥、log R10）
+    # RM 側は template_id 列でも Composition 名でも見える（フォーム経路の Composition もルートに
+    # archetype_details を持つ。skoba/anlage#54）
+    expect(OpenehrRails::Rm::Composition.order(:template_id).pluck(:template_id))
+      .to eq(%w[CardiologyEncounter LabResultReport ProblemList ProblemList bmi_calculation jp_referral])
     expect(OpenehrRails::Rm::Composition.order(:name_value).pluck(:name_value))
       .to eq(%w[CardiologyEncounter LabResultReport ProblemList ProblemList bmi_calculation jp_referral])
     expect(OpenehrRails::Rm::Composition.where(uid: Composition.pluck(:uid)).count).to eq(5)

@@ -56,6 +56,15 @@ RSpec.describe "Forms and Compositions", type: :request do
       expect(response.body).to include("COMPOSITION")
     end
 
+    # skoba/anlage#54: openehr-rails の GraphBuilder はルートの archetype_details.template_id を
+    # template_id 列に入れる。フォーム経路の記録もテンプレート別に絞り込める。
+    it "フォームから保存すると、RM グラフの template_id 列に template_id が入る" do
+      post template_compositions_path(template.template_id), params: { values: valid_values }
+
+      expect(OpenehrRails::Rm::Composition.pluck(:template_id)).to eq([ template.template_id ])
+      expect(Composition.last.rm_composition.dig("archetype_details", "template_id", "value")).to eq(template.template_id)
+    end
+
     it "フォームから保存した身長CompositionをAQLのCONTAINSで照会できる" do
       height_template = Template.build_from_opt_xml(
         Rails.root.join("spec/fixtures/opt/bmi_calculation.opt").read
