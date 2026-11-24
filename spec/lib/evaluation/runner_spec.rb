@@ -28,6 +28,13 @@ RSpec.describe Evaluation::Runner do
       expect(run.card_results.reject { |result| result.score.hit_at_3 }.map { |result| result.question.id }).to eq([ "q16", "q18" ])
     end
 
+    # regression pin（R-20261124-15）: rank を持たない問いは全要素が同じ順位として読む。上の集計は rank の導入の前後で同じで、
+    # 順位の組を持つ問いは無い
+    it "v1 の 17 問は順位の組を持たず、順位遵守の母数は 0、許容の出現も 0" do
+      expect(run.card_summary).to include(ranked_questions: 0, order_kept: 0, order_pairs: 0, order_pairs_kept: 0, acceptables: 0)
+      expect(run.card_summary.fetch(:recall_at_3)).to be_within(0.00005).of(0.8824)
+    end
+
     it "draft の問いは採点せず一覧に残す（q21）" do
       expect(run.drafts.map(&:id)).to eq([ "q21" ])
       expect(run.card_results.map { |result| result.question.id }).not_to include("q21")

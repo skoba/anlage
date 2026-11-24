@@ -10,10 +10,13 @@ RSpec.describe Evaluation::Report do
                              expected: [ { archetype_id: BP_V2, at_code: "at0004" } ], **options)
   end
 
-  def card_result(question, rank:, violations: [])
+  def card_result(question, rank:, violations: [], order: [ 0, 0 ], acceptables: [])
+    pairs, kept = order
     score = Evaluation::CardScorer::Score.new(rank: rank, hit_at_1: rank == 0, hit_at_3: !rank.nil? && rank < 3,
                                               recall_at_3: rank.nil? ? 0.0 : 1.0, reciprocal_rank: rank ? 1.0 / (rank + 1) : 0.0,
-                                              complete_failure: rank.nil?, violations: violations)
+                                              complete_failure: rank.nil?, violations: violations,
+                                              order_pairs: pairs, order_pairs_kept: kept,
+                                              order_kept: pairs.zero? ? nil : pairs == kept, acceptables: acceptables)
     Evaluation::Runner::CardResult.new(question: question, results: [], score: score)
   end
 
@@ -59,6 +62,27 @@ RSpec.describe Evaluation::Report do
                                 "## draft（1 問、母数外）\n\n- c21: 既往歴",
                                 "## 保留問（1 問、母数外）\n\n- c19: 検体 — specimen を含む OPT がコーパスに入る")
     expect(markdown).not_to include("保留解除候補")
+  end
+
+  # 順位と許容（docs/design/s1-eval-v2-plan.md 7 節、R-20261124-15）
+  it "順位の組を持つ問いが無ければ、順位遵守は 0/0、許容の出現は 0/3 で、一覧は（なし）" do
+    expect(markdown).to include("| 順位遵守 | 0/0（組 0/0） |", "| 許容の出現 | 0/3 |",
+                                "### 順位が守られなかった問い\n\n（なし）", "### 許容の出現\n\n（なし）")
+  end
+
+  it "順位遵守（問い単位と組の数）、守られなかった問い、許容が top-3 に出た問いを出す" do
+    kept = card_result(card_question("c08", "発症", intent_tag: "bigram成立想定"), rank: 0, order: [ 1, 1 ])
+    broken = card_result(card_question("c09", "診断", intent_tag: "bigram成立想定"), rank: 0, order: [ 2, 1 ])
+    plain = card_result(card_question("c15", "臨床検査", intent_tag: "複合語"), rank: 0,
+                        acceptables: [ { archetype_id: PD_V1, at_code: "at0002" } ])
+    ranked_run = Evaluation::Runner::Run.new(card_results: [ kept, broken, plain ], aql_results: [], drafts: [], pendings: [],
+                                             corpus_archetype_ids: [])
+
+    expect(described_class.render(ranked_run, label: "x")).to include(
+      "| 順位遵守 | 1/2 (50.00%)（組 2/3） |", "| 許容の出現 | 1/3 |",
+      "### 順位が守られなかった問い\n\n- c09: 診断（組 1/2）",
+      "### 許容の出現\n\n- c15: 臨床検査 → #{PD_V1} at0002"
+    )
   end
 
   it "期待先がコーパスに現れた保留問は「保留解除候補」と印が付く" do

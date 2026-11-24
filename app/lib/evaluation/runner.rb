@@ -31,6 +31,7 @@ module Evaluation
       def card_summary
         scores = card_results.map(&:score)
         total = scores.size
+        ranked = scores.select { |score| score.order_pairs.positive? }
         {
           questions: total,
           hit_at_1: scores.count(&:hit_at_1),
@@ -39,6 +40,12 @@ module Evaluation
           mrr: total.zero? ? 0.0 : scores.sum(&:reciprocal_rank) / total,
           recall_at_3: total.zero? ? 0.0 : scores.sum(&:recall_at_3) / total,
           violations: scores.count { |score| score.violations.any? },
+          # 順位（docs/design/s1-eval-v2-plan.md 7.2）: 順位の組を持つ問いだけが母数。rank の無い問いは入らない
+          ranked_questions: ranked.size,
+          order_kept: ranked.count(&:order_kept),
+          order_pairs: ranked.sum(&:order_pairs),
+          order_pairs_kept: ranked.sum(&:order_pairs_kept),
+          acceptables: scores.count { |score| score.acceptables.any? },
           by_intent: by_intent
         }
       end
