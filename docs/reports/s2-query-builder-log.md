@@ -10,3 +10,8 @@
   `OpenEHR::AQL::Model` は freeze された値オブジェクト（`identified_path.rb`・`object_path.rb`・`predicate.rb`・`where_clause.rb`）。
   カードの `constraints.value.code_list` は at0073 で `[{code: at0074, label: 疑い}, …]`、at0002（外部値集合）は空
 - 自己承認した判断は設計書 4 節 D1〜D5
+
+## R2 サイクル 1: 構文（2026-11-24）
+
+- Red: `NameError: uninitialized constant QueryBuilder`
+- Green: `app/lib/query_builder/finding.rb`、`app/lib/query_builder/linter.rb`。`QueryValidator.validate!` の `InvalidQuery` を error（syntax）に写す。1 example, 0 failures
