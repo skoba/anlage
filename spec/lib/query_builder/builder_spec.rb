@@ -4,10 +4,10 @@ require "rails_helper"
 # カード・アーキタイプ ID・at-code は実物（spec/fixtures/opt/*.opt から抽出）。期待する AQL は評価 v2 の参照 AQL
 # （spec/fixtures/evaluation/v2/aql.yml の a001〜a005）と同じ形（AS の別名だけ無い）。
 RSpec.describe QueryBuilder::Builder do
-  BP = "openEHR-EHR-OBSERVATION.blood_pressure.v2".freeze
-  PD = "openEHR-EHR-EVALUATION.problem_diagnosis.v1".freeze
-  LAB = "openEHR-EHR-OBSERVATION.laboratory_test_result.v1".freeze
-  ANALYTE = "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1".freeze
+  QB_BP = "openEHR-EHR-OBSERVATION.blood_pressure.v2".freeze
+  QB_PD = "openEHR-EHR-EVALUATION.problem_diagnosis.v1".freeze
+  QB_LAB = "openEHR-EHR-OBSERVATION.laboratory_test_result.v1".freeze
+  QB_ANALYTE = "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1".freeze
 
   before do
     %w[CardiologyEncounter ProblemList LabResultReport jp_referral].each do |fixture_name|
@@ -29,12 +29,12 @@ RSpec.describe QueryBuilder::Builder do
     described_class.build(**selection)
   end
 
-  let(:systolic) { card("CardiologyEncounter", BP, "at0004") }
-  let(:diagnosis) { card("ProblemList", PD, "at0002") }
-  let(:certainty) { card("ProblemList", PD, "at0073") }
-  let(:onset) { card("ProblemList", PD, "at0077") }
-  let(:analyte_name) { card("LabResultReport", ANALYTE, "at0024") }
-  let(:analyte_result) { card("LabResultReport", ANALYTE, "at0001") }
+  let(:systolic) { card("CardiologyEncounter", QB_BP, "at0004") }
+  let(:diagnosis) { card("ProblemList", QB_PD, "at0002") }
+  let(:certainty) { card("ProblemList", QB_PD, "at0073") }
+  let(:onset) { card("ProblemList", QB_PD, "at0077") }
+  let(:analyte_name) { card("LabResultReport", QB_ANALYTE, "at0024") }
+  let(:analyte_result) { card("LabResultReport", QB_ANALYTE, "at0001") }
 
   describe ".kind（カードの型 → 条件の種類）" do
     it "DV_QUANTITY は number、code_list のある DV_CODED_TEXT は code、DV_DATE_TIME は date、外部値集合の DV_CODED_TEXT と DV_TEXT は text" do
@@ -49,7 +49,7 @@ RSpec.describe QueryBuilder::Builder do
 
       expect(aql).to eq(<<~AQL.chomp)
         SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude
-        FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[#{BP}]
+        FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[#{QB_BP}]
         WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > 110
       AQL
     end
@@ -59,7 +59,7 @@ RSpec.describe QueryBuilder::Builder do
 
       expect(aql).to eq(<<~AQL.chomp)
         SELECT ev/data[at0001]/items[at0002]/value/value
-        FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[#{PD}]
+        FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[#{QB_PD}]
         WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0074"}
       AQL
     end
@@ -70,7 +70,7 @@ RSpec.describe QueryBuilder::Builder do
 
       expect(aql).to eq(<<~AQL.chomp)
         SELECT c/name/value, ev/data[at0001]/items[at0002]/value/value
-        FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[#{PD}]
+        FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[#{QB_PD}]
         WHERE ev/data[at0001]/items[at0002]/value/value MATCHES {"2型糖尿病", "高血圧症"}
       AQL
     end
@@ -79,9 +79,9 @@ RSpec.describe QueryBuilder::Builder do
       aql = build(columns: [ analyte_result ], conditions: [ { card: analyte_name, operator: "=", value: "空腹時血糖" } ])
 
       expect(aql).to eq(<<~AQL.chomp)
-        SELECT o/data[at0001]/events[at0002]/data[at0003]/items[#{ANALYTE}]/items[at0001]/value/magnitude
-        FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[#{LAB}]
-        WHERE o/data[at0001]/events[at0002]/data[at0003]/items[#{ANALYTE}]/items[at0024]/value/value = "空腹時血糖"
+        SELECT o/data[at0001]/events[at0002]/data[at0003]/items[#{QB_ANALYTE}]/items[at0001]/value/magnitude
+        FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[#{QB_LAB}]
+        WHERE o/data[at0001]/events[at0002]/data[at0003]/items[#{QB_ANALYTE}]/items[at0024]/value/value = "空腹時血糖"
       AQL
     end
 
@@ -104,8 +104,8 @@ RSpec.describe QueryBuilder::Builder do
     end
 
     it "SECTION 配下のカード（jp_referral の problem_diagnosis）からも、ProblemList のカードと同じ AQL を組む（テンプレートを横断する 1 本の変数）" do
-      nested = { columns: [ card("jp_referral", PD, "at0002") ],
-                 conditions: [ { card: card("jp_referral", PD, "at0073"), operator: "MATCHES", value: [ "at0074" ] } ] }
+      nested = { columns: [ card("jp_referral", QB_PD, "at0002") ],
+                 conditions: [ { card: card("jp_referral", QB_PD, "at0073"), operator: "MATCHES", value: [ "at0074" ] } ] }
       flat = { columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0074" ] } ] }
 
       expect(build(**nested)).to eq(build(**flat))
