@@ -28,6 +28,41 @@ RSpec.describe "デモ動線: 共通ナビと保存後の次アクション", ty
     end
   end
 
+  # skoba/anlage#95（M3 の W1・W2）: ナビは左に置き、いまの画面の項目に印（aria-current）を付ける。
+  # engine の画面（AQL 照会）にも同じナビを出す。文言は変えない。
+  describe "統合レイアウト（#95）" do
+    def current_items
+      Nokogiri::HTML(response.body).css("nav#app_nav a[aria-current='page']").map { _1.text.strip }
+    end
+
+    it "ナビは作業面（main#workspace）の外にあり、作業面に画面の中身が入る" do
+      get "/compositions"
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.css("body > nav#app_nav")).not_to be_empty
+      expect(document.css("body > main#workspace h1").map(&:text)).to eq([ "カルテ記録一覧" ])
+    end
+
+    it "いまの画面の項目に印が付く（帳票はテンプレート、カルテ記録は一覧の項目）" do
+      {
+        "/" => [ "テンプレート" ], "/templates" => [ "テンプレート" ], "/forms/#{template.template_id}" => [ "テンプレート" ],
+        "/compositions" => [ "カルテ記録一覧" ], "/pathcards/search" => [ "パスカード検索" ]
+      }.each do |path, expected|
+        get path
+
+        expect(current_items).to eq(expected), "#{path} の印"
+      end
+    end
+
+    it "AQL 照会（engine の画面）にも同じ 4 リンクが出て、AQL 照会に印が付く" do
+      get "/openehr/query"
+
+      expect(response).to have_http_status(:ok)
+      expect(links_in("nav#app_nav")).to eq(NAV_LINKS)
+      expect(current_items).to eq([ "AQL 照会" ])
+    end
+  end
+
   describe "保存後のカルテ記録画面" do
     before do
       values = template.fields.to_h { [ _1["name"], _1["rm_type"] == "DV_QUANTITY" ? "120" : "some text" ] }

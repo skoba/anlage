@@ -24,16 +24,13 @@
   </head>
 
   <body>
-    <%# skoba/anlage#47: 文言は docs/demo/ui-vocabulary.md（正典） %>
-    <nav id="app_nav">
-      <%= link_to "テンプレート", templates_path %>
-      <%= link_to "カルテ記録一覧", compositions_path %>
-      <%= link_to "パスカード検索", pathcards_search_path %>
-      <%= link_to "AQL 照会", openehr_rails.query_console_path %>
-    </nav>
-    <% if notice.present? %>
-      <p id="flash"><%= notice %></p>
-    <% end %>
-    <%= yield %>
+    <%# skoba/anlage#95: 左ナビと作業面（docs/design/m3-plan.md W1） %>
+    <%= render "layouts/nav", current: nav_current %>
+    <main id="workspace">
+      <% if notice.present? %>
+        <p id="flash"><%= notice %></p>
+      <% end %>
+      <%= yield %>
+    </main>
   </body>
 </html>

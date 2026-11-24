@@ -1,0 +1,24 @@
+<%# skoba/anlage#95（docs/design/m3-plan.md W2）: openehr-rails engine の画面（AQL 照会など）を、
+    anlage と同じ左ナビ＋作業面に入れる。engine の layout（gem の
+    app/views/layouts/openehr_rails/application.html.erb）を、アプリの側の同じパスで上書きしている。
+    gem は変えない。engine の画面が前提にする表・通知などの最低限のスタイルは、gem 0.8.0 の layout から
+    .openehr-engine の下に写した（engine 自身のナビは出さない）。gem の layout が変わったら見直す。 %>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Anlage</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+  </head>
+
+  <body>
+    <%= render "layouts/nav", current: :aql %>
+    <main id="workspace" class="openehr-engine">
+      <% if notice.present? %><p class="notice"><%= notice %></p><% end %>
+      <% if alert.present? %><p class="alert"><%= alert %></p><% end %>
+      <%= yield %>
+    </main>
+  </body>
+</html>
