@@ -29,4 +29,63 @@ RSpec.describe QueryBuilder::Linter do
         .to eq([ [ :error, :variable, "x" ], [ :error, :variable, "y" ] ])
     end
   end
+
+  context "CardiologyEncounter・ProblemList・jp_referral が索引済みの場合" do
+    before do
+      %w[CardiologyEncounter ProblemList jp_referral].each do |fixture_name|
+        template = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture_name}.opt").read)
+        template.pathcards = Opt::PathcardExtractor.call(template).cards
+        template.save!
+      end
+    end
+
+    describe "パスの実在" do
+      it "存在する節パス（血圧 at0004）は findings 無しで ok?" do
+        lint = lint(<<~AQL)
+          SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+          WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > 110
+        AQL
+
+        expect(lint.findings).to be_empty
+        expect(lint.ok?).to be(true)
+      end
+
+      it "存在しない節（items[at0099]）は error（パス）で、同じアーキタイプの候補パスを添える" do
+        lint = lint(<<~AQL)
+          SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0099]/value/magnitude
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+        AQL
+
+        finding = lint.findings.first
+        expect(lint.findings.size).to eq(1)
+        expect(finding).to have_attributes(severity: :error, code: :path, path: "o/data[at0001]/events[at0006]/data[at0003]/items[at0099]/value/magnitude")
+        expect(finding.message).to include("openEHR-EHR-OBSERVATION.blood_pressure.v2", "data[at0001]/events[at0006]/data[at0003]/items[at0004]",
+                                           "data[at0001]/events[at0006]/data[at0003]/items[at0005]")
+      end
+
+      it "SECTION 配下の ENTRY（jp_referral の problem_diagnosis）も、アーキタイプのルートから相対に切って見つける" do
+        lint = lint(<<~AQL)
+          SELECT ev/data[at0001]/items[at0002]/value/value AS diagnosis
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+        AQL
+
+        expect(lint.findings).to be_empty
+      end
+
+      it "アーキタイプの述語が無い変数（c、e）のパスは検査せず info にする" do
+        lint = lint("SELECT c/name/value FROM EHR e CONTAINS COMPOSITION c")
+
+        expect(lint.ok?).to be(true)
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code, finding.path ] }).to eq([ [ :info, :path, "c/name/value" ] ])
+      end
+
+      it "索引に無いアーキタイプを FROM に書くと error（パス）" do
+        lint = lint("SELECT o/data[at0001]/items[at0004]/value/magnitude FROM EHR e CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.pulse.v2]")
+
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :path ] ])
+        expect(lint.findings.first.message).to include("openEHR-EHR-OBSERVATION.pulse.v2", "索引")
+      end
+    end
+  end
 end

@@ -18,12 +18,13 @@ module QueryBuilder
       def ok? = findings.none?(&:error?)
     end
 
-    def self.lint(aql)
-      new(aql).lint
+    def self.lint(aql, corpus: Corpus.active)
+      new(aql, corpus).lint
     end
 
-    def initialize(aql)
+    def initialize(aql, corpus)
       @aql = aql
+      @corpus = corpus
       @findings = []
     end
 
@@ -88,9 +89,58 @@ module QueryBuilder
     end
 
     def check_identified_path(path)
-      return if @bindings.key?(path.variable)
+      binding = @bindings[path.variable]
+      return report(:error, :variable, "変数 #{path.variable} は FROM で宣言されていない", path: path.variable) unless binding
 
-      report(:error, :variable, "変数 #{path.variable} は FROM で宣言されていない", path: path.variable)
+      text = path_text(path)
+      unless binding.archetype_id
+        return report(:info, :path, "変数 #{path.variable}（#{binding.class_name}）にアーキタイプの述語が無いので、パスは検査しない", path: text)
+      end
+      unless @corpus.include?(binding.archetype_id)
+        return report(:error, :path, "アーキタイプ #{binding.archetype_id} は索引（active のテンプレートのカード）に無い", path: text)
+      end
+
+      node_path = node_path_of(path)
+      return if node_path.nil? || node_path.empty? # ルート自身（o/name/value など）は節の検査をしない
+
+      cards = @corpus.cards_at(binding.archetype_id, node_path)
+      return unless cards.empty?
+
+      candidates = @corpus.node_paths(binding.archetype_id).keys
+      report(:error, :path, "アーキタイプ #{binding.archetype_id} に節 #{node_path} は無い。候補: #{candidates.join('、')}", path: text)
+    end
+
+    # 述語を持つ最後の PathPart までが節、残りは属性のホップ。述語が archetype／node 以外（標準述語）なら nil（検査しない）
+    def node_path_of(path)
+      return "" unless path.path
+
+      segments = path.path.segments
+      last = segments.rindex { |segment| segment.predicate }
+      return "" unless last
+
+      segments[0..last].map do |segment|
+        next segment.attribute unless segment.predicate
+
+        text = predicate_text(segment.predicate)
+        return nil unless text
+
+        "#{segment.attribute}[#{text}]"
+      end.join("/")
+    end
+
+    def predicate_text(predicate)
+      case predicate
+      when Model::ArchetypePredicate then predicate.archetype_id
+      when Model::NodePredicate then predicate.code
+      end
+    end
+
+    # 人が読める AQL 片（ObjectPath#to_s は述語をオブジェクトのまま埋めるので自前で組む）
+    def path_text(path)
+      segments = Array(path.path&.segments).map do |segment|
+        segment.predicate ? "#{segment.attribute}[#{predicate_text(segment.predicate) || '…'}]" : segment.attribute
+      end
+      [ path.variable, *segments ].join("/")
     end
 
     def report(severity, code, message, path: nil)
