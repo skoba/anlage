@@ -71,3 +71,12 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
   `Run#card_summary` が questions・hit_at_1・hit_at_3・complete_failures・mrr・recall_at_3・violations・by_intent を返す
 - **pin の実測**（4 テンプレートを索引、v1 の 17 問をアダプタで読む）: Top-1 14/17、Top-3 15/17、完全失敗 2/17（q16・q18）、MRR 0.8529、
   intent_tag 別 11/11・4/4・0/2 ── `spec/lib/tasks/pathcards_eval_spec.rb` と同じ数字。2 examples, 0 failures
+
+## R6 サイクル 5: aql の採点器とデータセット demo_initial（2026-11-24）
+
+- Red: `NameError: uninitialized constant Evaluation::AqlScorer`
+- Green: `app/lib/evaluation/datasets.rb`（`demo_initial` は `rake demo:reset` を呼ぶ。手順を写さない）、
+  `app/lib/evaluation/aql_scorer.rb`（`OpenehrRails::Aql::Executor` で実行、行を多重集合で比較、`ordered: true` で順序も。
+  `OpenehrRails::Aql::Error` は unexecutable に数える。採点対象の AQL は `aql:` で差し替え可）
+- 実測（demo_initial）: 収縮期 > 110 → `[[120.0]]`。横断の傷病名 → 3 行（順序を入れ替えても match、ordered なら mismatch）。
+  `value/defining_code/code_string` → `UnsupportedFeature: unsupported path attribute "defining_code" …`（上流候補 10 項の再現）。5 examples, 0 failures
