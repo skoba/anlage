@@ -28,6 +28,22 @@ RSpec.describe "統合レイアウト（実ブラウザ）", type: :system, js: 
     end
   end
 
+  # skoba/anlage#100: 版の差分は長い path を並べる。折り返して、横スクロールを出さない
+  it "版の差分の画面でも、横スクロールが出ない" do
+    xml = Rails.root.join("spec/fixtures/opt/patient_blood_pressure.opt").read
+    [ [ xml, "1.0.0", "superseded" ], [ xml.sub("Systolic", "Systolic Pressure"), "1.0.1", "active" ] ].each do |source, version, status|
+      template = Template.build_from_opt_xml(source)
+      template.assign_attributes(version: version, status: status)
+      template.pathcards = Opt::PathcardExtractor.call(template).cards
+      template.save!
+    end
+
+    visit "/templates/patient_blood_pressure.v1/diff?from=1.0.0&to=1.0.1"
+
+    expect(page).to have_css("#pathcard_diff .diff-changed", count: 1)
+    expect(horizontal_scroll?).to be(false)
+  end
+
   it "AQL 照会からナビでテンプレートに戻れる" do
     visit templates_path
     within("nav#app_nav") { click_link "AQL 照会" }

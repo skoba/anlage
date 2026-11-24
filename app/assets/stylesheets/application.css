@@ -92,3 +92,9 @@ body {
 .openehr-engine .notice { background: #ecfdf5; border: 1px solid #34d399; padding: .5rem .75rem; border-radius: 4px; }
 .openehr-engine .alert { background: #fef2f2; border: 1px solid #f87171; padding: .5rem .75rem; border-radius: 4px; }
 .openehr-engine details pre { background: #f8f9fa; padding: .75rem; overflow-x: auto; font-size: .85rem; }
+
+/* skoba/anlage#100: 版差分の path は等幅、長ければ折り返す（1280×720 で横スクロールを出さない） */
+code.archetype-path {
+  font-family: monospace;
+  overflow-wrap: anywhere;
+}

@@ -24,6 +24,17 @@ class TemplatesController < ApplicationController
     head :not_found unless @template
   end
 
+  # 登録済みの 2 つの版の差分（skoba/anlage#100）: 項目（Opt::TemplateDiff）とパスカード（Opt::PathcardDiff）
+  def diff
+    versions = Template.where(template_id: params[:template_id]).index_by(&:version)
+    @from = versions[params[:from]]
+    @to = versions[params[:to]]
+    return head :not_found unless @from && @to
+
+    @field_diff = Opt::TemplateDiff.call(@from, @to)
+    @pathcard_diff = Opt::PathcardDiff.call(@from.pathcards, @to.pathcards)
+  end
+
   # Parses and validates an uploaded OPT without persisting it (the
   # "fitting room"): summary + a live form preview, so the visitor can
   # inspect the template before deciding to register it.

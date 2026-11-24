@@ -29,7 +29,8 @@
 <section id="template_versions">
   <h2>版の履歴</h2>
   <ul>
-    <% @versions.each do |version| %>
+    <% @versions.each_with_index do |version, index| %>
+      <% previous = @versions[index + 1] %>
       <li>
         <% label = "登録版 v#{version.version}" %>
         <% if version == @template %>
@@ -40,6 +41,9 @@
           <%= link_to label, template_version_path(version.template_id, version.version) %>
         <% end %>
         <%= version.status == "active" ? "有効" : "置き換え済み" %><%= "（この版）" if version == @template %>
+        <% if previous %>
+          <%= link_to "前の版との差分", template_diff_path(version.template_id, from: previous.version, to: version.version) %>
+        <% end %>
       </li>
     <% end %>
   </ul>
