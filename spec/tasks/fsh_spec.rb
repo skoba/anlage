@@ -81,7 +81,7 @@ RSpec.describe "fsh:export / fsh:verify" do
       expect(fsh_files.values.join).to include("* category contains ckm 1..1")
     end
 
-    it "CKM fixture 5 件の skipped は空、jp_referral は葉 0 の service_request と単葉 EVALUATION（clinical_synopsis ×2）が skip-and-report に載る" do
+    it "CKM fixture 5 件の skipped は空、jp_referral は service_request（葉 20、写像表に行が無い）と単葉 EVALUATION（clinical_synopsis ×2）が skip-and-report に載る" do
       skipped = fixture_paths.to_h do |path|
         generator = OpenehrRails::Fhir::FshGenerator.new(Opt::SafeParser.parse(path.read))
         generator.to_fsh_files
@@ -93,11 +93,13 @@ RSpec.describe "fsh:export / fsh:verify" do
       # → Condition ×2）とも value[x]/component を出さず skipped へ（0.7.0 では多葉のみ）。
       # jp_referral v0.2 の Sushi は 8 → 0 Errors（docs/reports/fsh-log.md R9）。写像自体は
       # rails #47-#49 待ち（docs/upstream-candidates.md 17 項）。
+      # openehr-rails 0.9.0（rails #47、上流候補 17 項）: FieldExtractor が INSTRUCTION の activities／protocol を
+      # 辿るようになり、service_request の葉は 0 → 20（実測、skoba/anlage#111）。ServiceRequest の写像表はまだ無い。
       expect(skipped.keys.size).to eq(6)
       expect(skipped.except("jp_referral.opt").values).to all(be_empty)
       jp = skipped.fetch("jp_referral.opt")
       expect(jp.map { |e| [ e.archetype_id, e.resource_type, e.leaf_count ] }).to eq([
-        [ "openEHR-EHR-INSTRUCTION.service_request.v1", "ServiceRequest", 0 ],
+        [ "openEHR-EHR-INSTRUCTION.service_request.v1", "ServiceRequest", 20 ],
         [ "openEHR-EHR-EVALUATION.clinical_synopsis.v1", "Condition", 1 ],
         [ "openEHR-EHR-EVALUATION.clinical_synopsis.v1", "Condition", 1 ]
       ])

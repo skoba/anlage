@@ -62,13 +62,11 @@ module Opt
       (content_items || []).flat_map { |item| item["_type"] == "SECTION" ? content_entries(item["items"]) : [ item ] }
     end
 
+    # data の要素と、protocol の要素（skoba/anlage#111）を合わせて返す
     def items_for(entry, entry_node)
       data = entry_node["data"] || {}
-      if entry["rm_type"] == "OBSERVATION"
-        data.dig("events", 0, "data", "items")
-      else
-        data["items"]
-      end
+      data_items = entry["rm_type"] == "OBSERVATION" ? data.dig("events", 0, "data", "items") : data["items"]
+      Array(data_items) + Array(entry_node.dig("protocol", "items"))
     end
 
     def extract_value(field, dv)

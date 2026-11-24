@@ -113,7 +113,8 @@ module Opt
         raise UnsupportedShape, "entry rm_type #{entry['rm_type']} is not supported yet"
       end
 
-      klass.new(
+      branches = branches_of(entry, klass)
+      attributes = {
         archetype_node_id: entry["archetype_id"],
         archetype_details: archetyped(entry["archetype_id"]),
         # name はテンプレート上の名前。キーが無い登録済みの web_template では concept（skoba/anlage#109）
@@ -121,8 +122,24 @@ module Opt
         language: code_phrase(OpenehrRails.default_language, "ISO_639-1"),
         encoding: code_phrase(OpenehrRails.default_encoding, "IANA_character-sets"),
         subject: OpenEHR::RM::Common::Generic::PartySelf.new(external_ref: nil),
-        data: build_data(entry)
-      )
+        data: build_data(entry, branches.fetch("data", []))
+      }
+      # protocol は、値が入った要素があるときだけ付ける（skoba/anlage#111）
+      attributes[:protocol] = build_protocol(entry, branches["protocol"]) if (branches["protocol"] || []).intersect?(filled_fields(entry))
+      klass.new(**attributes)
+    end
+
+    # entry の field を、entry 直下の属性（data／protocol）ごとに分ける（skoba/anlage#111。openehr-rails 0.9.0 から
+    # protocol 配下の ELEMENT も field になる）。値が入っているのに組めない属性があれば UnsupportedShape。
+    BRANCHES = { "data" => ENTRY_CLASSES.values, "protocol" => [ ENTRY_CLASSES["OBSERVATION"], ENTRY_CLASSES["EVALUATION"] ] }.freeze
+
+    def branches_of(entry, klass)
+      branches = (entry["fields"] || []).group_by { |field| wrapper_chain(field["path"], entry).first&.first }
+      filled = filled_fields(entry)
+      unsupported = branches.select { |attr, fields| fields.intersect?(filled) && !BRANCHES.fetch(attr, []).include?(klass) }.keys
+      raise UnsupportedShape, "entry #{entry['archetype_id']} has fields under #{unsupported.join(', ')}, which is not supported yet for #{entry['rm_type']}" if unsupported.any?
+
+      branches
     end
 
     # 送信値が blank（nil／""）の要素は Composition に含めない（skoba/anlage#34。要素単位・
@@ -135,22 +152,8 @@ module Opt
     # 埋め込み CLUSTER 一段（skoba/anlage#38）: 全 field に共通の枝（ITEM_TREE まで）を取り、
     # その先に `items[<archetype_id>]` 一段だけ残る field は CLUSTER（archetype_details 付き）に
     # まとめる。二段以上は UnsupportedShape のまま（#30 と同じ 12 月）。
-    def build_data(entry)
-      fields = filled_fields(entry)
-      raise UnsupportedShape, "entry #{entry['archetype_id']} has no fields" if fields.blank?
-
-      chains = fields.map { |f| wrapper_chain(f["path"], entry) }
-      common = chains.min_by(&:size)
-      groups = fields.zip(chains).group_by do |_field, chain|
-        rest = chain[common.size..]
-        raise UnsupportedShape, "entry #{entry['archetype_id']} fields span more than one branch (#{chains.uniq.inspect})" unless chain[0, common.size] == common && rest.size <= 1
-        raise UnsupportedShape, "entry #{entry['archetype_id']}: embedded node #{rest.first.inspect} is not an archetype root" if rest.size == 1 && !rest.first[1].start_with?("openEHR-")
-
-        rest.first&.last
-      end
-
-      item_tree_seg, *outer_segs = common.reverse
-      item_tree = build_item_tree(item_tree_seg, entry, groups)
+    def build_data(entry, branch_fields)
+      item_tree, outer_segs = build_branch(entry, branch_fields)
 
       case entry["rm_type"]
       when "OBSERVATION"
@@ -160,6 +163,35 @@ module Opt
 
         item_tree
       end
+    end
+
+    def build_protocol(entry, branch_fields)
+      item_tree, outer_segs = build_branch(entry, branch_fields)
+      raise UnsupportedShape, "unexpected wrapper depth for the protocol of #{entry['rm_type']}" if outer_segs.any?
+
+      item_tree
+    end
+
+    # 1 つの属性（data／protocol）の配下の field から、ITEM_TREE と、その外側の segment を返す。
+    # 骨格（ITEM_TREE までの枝）は、その属性の全 field の path から取る。値が入った要素だけを items に入れる
+    # （data に値が無く protocol だけに値があるときは、data は要素の無い ITEM_TREE になる）。
+    def build_branch(entry, branch_fields)
+      raise UnsupportedShape, "entry #{entry['archetype_id']} has no fields" if branch_fields.blank?
+
+      chains = branch_fields.map { |f| wrapper_chain(f["path"], entry) }
+      common = chains.min_by(&:size)
+      filled = filled_fields(entry)
+      groups = branch_fields.zip(chains).group_by do |_field, chain|
+        rest = chain[common.size..]
+        raise UnsupportedShape, "entry #{entry['archetype_id']} fields span more than one branch (#{chains.uniq.inspect})" unless chain[0, common.size] == common && rest.size <= 1
+        raise UnsupportedShape, "entry #{entry['archetype_id']}: embedded node #{rest.first.inspect} is not an archetype root" if rest.size == 1 && !rest.first[1].start_with?("openEHR-")
+
+        rest.first&.last
+      end
+      groups = groups.transform_values { |pairs| pairs.select { |field, _chain| filled.include?(field) } }.reject { |_key, pairs| pairs.empty? }
+
+      item_tree_seg, *outer_segs = common.reverse
+      [ build_item_tree(item_tree_seg, entry, groups), outer_segs ]
     end
 
     # [[attr, node_id], ...] from outermost to innermost, excluding everything
