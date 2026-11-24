@@ -44,3 +44,10 @@ Acceptance criteria:
 6. ゴールド v2 の案を `draft` で置いてゲート報告（臨床のレビューは人間。R-20261124-11 作業列 3）
 
 Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ（S2）、ゴールドの臨床判断、CI への rake の定期実行。
+
+## R2 サイクル 1: v1 シードのアダプタ読み込み（2026-11-24）
+
+- Red: `spec/lib/evaluation/questions_spec.rb` → `NameError: uninitialized constant Evaluation`（読み込み時エラー、0 examples）
+- Green: `app/lib/evaluation/question.rb`（1 問の値オブジェクト。kind／status／match）、
+  `app/lib/evaluation/questions.rb`（`from_v1_seed`。draft → status: draft、expected は 1 要素、match: archetype）。2 examples, 0 failures
+- 実測: v1 の seed は active 17・draft 1（q21）。q10 の expected_at_code は空（nil に写す）
