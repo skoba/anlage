@@ -25,7 +25,7 @@ RSpec.describe "デモ動線: 保存後の次アクション（実ブラウザ�
       expect(page).to have_link("同じ帳票にもう 1 件入力", href: "/forms/CardiologyEncounter")
       expect(page).to have_link("カルテ記録一覧", href: "/compositions")
       expect(page).to have_link("AQL 照会", href: "/openehr/query")
-      expect(page).to have_link("FHIR プロファイル", href: "/fhir/r5/StructureDefinition/openehr-observation-blood-pressure-v2")
+      expect(page).to have_link("テンプレートの詳細", href: "/templates/CardiologyEncounter")
     end
 
     # 1280×720: 共通ナビは左に縦 1 列（skoba/anlage#95）で、横スクロールは出ない（canonical JSON を開いても）

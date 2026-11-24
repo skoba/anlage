@@ -76,6 +76,17 @@ RSpec.describe "テンプレートの詳細と版の履歴", type: :request do
       ])
     end
 
+    # skoba/anlage#102（M3 の W6）: そのテンプレートのすべての FHIR プロファイルへのリンク（OPT のエントリ順）
+    it "FHIR プロファイルの欄に、すべてのプロファイルへのリンクが出る" do
+      get "/templates/patient_blood_pressure.v1"
+
+      expect(document.css("#template_fhir_profiles > h2").text).to eq("FHIR プロファイル")
+      expect(document.css("#template_fhir_profiles li a").map { [ _1.text, _1["href"] ] }).to eq([
+        [ "openehr-observation-heart-rate-pulse-v1", "/fhir/r5/StructureDefinition/openehr-observation-heart-rate-pulse-v1" ],
+        [ "openehr-observation-blood-pressure-v1", "/fhir/r5/StructureDefinition/openehr-observation-blood-pressure-v1" ]
+      ])
+    end
+
     it "登録されていない template_id は 404" do
       get "/templates/no_such_template"
 
