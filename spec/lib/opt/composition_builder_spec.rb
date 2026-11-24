@@ -346,3 +346,47 @@ RSpec.describe Opt::CompositionBuilder, "#109 ノードの名前" do
       .to eq(%w[laboratory_test_result history event])
   end
 end
+
+# skoba/anlage#111（M2 の F）: openehr-rails 0.9.0 は ENTRY の protocol 配下の ELEMENT も field にする
+# （ProblemList.opt の「最終更新日」at0070、protocol[at0032]）。CARE_ENTRY の protocol を ITEM_TREE として組む。
+RSpec.describe Opt::CompositionBuilder, "#111 ENTRY の protocol" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!).reload }
+
+  def evaluation_for(values)
+    described_class.new(template, values).build.content.first
+  end
+
+  it "ProblemList は protocol 配下の field（最終更新日）を持ち、保存可能のまま" do
+    expect(template.fields.map { |f| f["path"][%r{/(data|protocol)\[at\d+\]/items\[at\d+\]}] })
+      .to include("/protocol[at0032]/items[at0070]")
+    expect(template.web_template.values_at("form_capability", "form_capability_reason")).to eq([ "saveable", nil ])
+  end
+
+  it "data と protocol の両方に値があれば、data の ITEM_TREE と protocol の ITEM_TREE を別々に組む" do
+    evaluation = evaluation_for("problem_diagnosis_at0002" => "高血圧症", "problem_diagnosis_at0070" => "2026-11-24")
+
+    expect(evaluation.data.archetype_node_id).to eq("at0001")
+    expect(evaluation.data.items.map(&:archetype_node_id)).to eq(%w[at0002])
+    expect(evaluation.protocol.archetype_node_id).to eq("at0032")
+    expect(evaluation.protocol.items.map { |item| [ item.archetype_node_id, item.value.value ] }).to eq([ [ "at0070", "2026-11-24" ] ])
+  end
+
+  it "protocol に値が無ければ、protocol は付けない（これまでどおり）" do
+    expect(evaluation_for("problem_diagnosis_at0002" => "高血圧症").protocol).to be_nil
+  end
+
+  it "protocol だけに値があるときも、入力を捨てない（data は要素の無い ITEM_TREE）" do
+    evaluation = evaluation_for("problem_diagnosis_at0070" => "2026-11-24")
+
+    expect(evaluation.data.archetype_node_id).to eq("at0001")
+    expect(evaluation.data.items).to be_blank
+    expect(evaluation.protocol.items.map(&:archetype_node_id)).to eq(%w[at0070])
+  end
+
+  it "組んだ Composition を RM グラフにコミットでき、reader が protocol の値も読み戻す" do
+    values = { "problem_diagnosis_at0002" => "高血圧症", "problem_diagnosis_at0070" => "2026-11-24" }
+    commit = Opt::RmCompositionCommitter.call(template, values)
+
+    expect(Opt::CompositionReader.call(template, JSON.generate(commit.canonical_hash))).to eq(values)
+  end
+end
