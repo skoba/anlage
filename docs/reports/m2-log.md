@@ -193,3 +193,64 @@ D（INSTRUCTION を組む作業）は、この答えと openehr-rails 0.9.0 の�
 
 - 変更は 1 行（`code_phrase` が `TerminologyID.new(value:)` で組む）
 - 開発機の全 suite: 258 例 0 失敗、3 pending。`spec/demo/` と FHIR の spec は緑のまま（regression pin）
+
+## R5 作業列 3（`skoba/anlage#90`）: openehr 2.4.3 → 2.5.0（2026-11-24）
+
+ブランチ `chore/90-openehr-2.5.0`。基準点は main `91715f0`。計画は
+`docs/design/openehr-2.5.0-adoption-plan.md` 4 節の 1（承認済み、R-20261124-4）。**マージは人間**（依存を変える PR）。
+
+### 着手の条件（実測）
+
+- RubyGems の openehr 2.5.0: sha256 `8eb126bfda72a16aeb608f2fba9e4259aca95800196e0b21136d9eb3ed42f10b`
+  （`https://rubygems.org/api/v1/versions/openehr.json`、公開は 2026-11-24T12:18:23Z）
+- 上流の記録（skoba/openehr-ruby `86f9f8a` の `docs/reports/round2-log.md` R4、138 行）の値と一致
+- 2.5.0 に入った項目（タグ `v2.5.0` の `History.txt`）: #60・#31・#43・#48・#58・#49 の 6 件。#59 は入っていない
+
+### 自己承認した判断
+
+1. **`Gemfile.lock` は、openehr の 2 行（版と checksum）だけを書き換えた**。
+   `bundle update openehr --conservative` は、nokogiri・sqlite3・mini_portile2 の行（プラットフォーム別の行）まで
+   消した（11 行減）。裁定は「変えるのは `Gemfile.lock` と計画書 1 節の spec・文書だけ」なので、lock を戻して
+   2 行だけ直し、`bundle install` が lock を変えずに通ることを確かめた。2.4.3 と 2.5.0 の実行時の依存は同じ（`gem spec` の比較）
+2. **デモ Q2 も本来形に置き換えた**（#49 が 2.5.0 に入ったため。R-20261124-4 問い 2）
+3. **実ブラウザの system spec（`spec/system/demo_problem_list_spec.rb`）のクエリも、Q2 の本来形にそろえた**。
+   この spec は「デモクエリ 2 と同じ MATCHES」と書いていて、計画書 1 節の一覧には無い。期待する行は変えていない
+4. **`README.md` の依存の行を実際の版に直した**（2.5.0／0.8.0。これまでの記載は 2.4.3／0.7.1 で、0.8.0 への更新が漏れていた）
+5. **`Opt::TemplateTerms` の撤去は混ぜていない**（#58 は入った。計画書 4 節の 3 のとおり、次の別の PR）
+
+### Red
+
+lock を 2.5.0 にした直後の全 suite（258 例 1 失敗 2 pending）。pending が通るようになったことを RSpec が失敗として知らせる:
+
+```
+rspec ./spec/integration/jp_referral_aql_spec.rb:54 # jp_referral: 手動写像 Composition からの AQL 統一性（#23 (4)） 構造骨格（実 at-code）を直接コミットし、紹介先医療機関を name 述語で引ける
+```
+
+デモ Q2・Q4 の本来形は、lock を 2.4.3 に戻して Red を確かめた:
+
+```
+1) デモクエリ（フォーム保存経路経由） 2. MATCHES 値リスト（コード値の複数一致） …
+     OpenehrRails::Aql::UnsupportedFeature:
+       unsupported path attribute "defining_code" on a OpenEHR::RM::DataTypes::Text::DvCodedText
+2) デモクエリ（フォーム保存経路経由） 4. 日付範囲WHERE（期間絞り込み） OBSERVATION のイベント時刻が期間内の Composition のみ期待件数（1件）で抽出できる
+     OpenehrRails::Aql::UnsupportedFeature:
+       unsupported path attribute "time" on a OpenEHR::RM::DataStructures::History::PointEvent
+```
+
+### Green（2.5.0）
+
+- 開発機の全 suite: 258 例 0 失敗、2 pending（残る 2 件は手写像の元が未供給の skip。人間の入力待ち）
+- regression pin: golden 4 件、`spec/models/template_spec.rb`、`spec/demo/`、実ブラウザの system spec は、
+  期待値を変えずに緑（Q2・Q4 と上の 3 を除く）
+- rubocop: 違反なし
+
+### 計画書 3 節の「未確認」の結果
+
+1. #60: openehr-rails 0.8.0 の実行系を通しても name 述語が効く（上の Red がその証拠。`[ "X病院", "2型糖尿病" ]` を返す）
+2. #43: openehr-rails 0.8.0 の `FieldExtractor` の path は変わらない（`template_spec.rb` と golden が無変更で緑）
+3. #31: code_binding は同じ内容（golden が無変更で緑）
+
+### 次
+
+- `Opt::TemplateTerms` の撤去（#58）。この PR のマージのあとに、別の Issue と PR で
+- H（`#23` (4)）の残り 2 件は、手写像の元を待つ
