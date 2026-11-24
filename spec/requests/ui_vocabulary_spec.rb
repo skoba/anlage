@@ -50,7 +50,7 @@ RSpec.describe "UI 語彙（docs/demo/ui-vocabulary.md）", type: :request do
     it "一覧: 見出し「カルテ記録一覧」と空状態" do
       get compositions_path
 
-      expect(texts("body > h1")).to eq([ "カルテ記録一覧" ])
+      expect(texts("main#workspace > h1")).to eq([ "カルテ記録一覧" ])
       expect(response.body).to include("カルテ記録はまだありません。")
     end
   end
@@ -60,7 +60,7 @@ RSpec.describe "UI 語彙（docs/demo/ui-vocabulary.md）", type: :request do
       register("CardiologyEncounter", with_pathcards: true)
       get "/pathcards/search", params: { q: "収縮期" }
 
-      expect(texts("body > h1")).to eq([ "パスカード検索" ])
+      expect(texts("main#workspace > h1")).to eq([ "パスカード検索" ])
       expect(doc.at_css("label[for=q]").text.strip).to eq("探したい項目")
       expect(doc.at_css("input[type=submit]")["value"]).to eq("検索")
       expect(texts(".pathcard dt").uniq).to eq(%w[テンプレート アーキタイプ ノード アーキタイプパス])

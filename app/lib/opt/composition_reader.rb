@@ -34,7 +34,7 @@ module Opt
 
       values = {}
       @template.entries.each do |entry|
-        entry_node = (composition["content"] || []).find { |c| c["archetype_node_id"] == entry["archetype_id"] }
+        entry_node = content_entries(composition["content"]).find { |c| c["archetype_node_id"] == entry["archetype_id"] }
         next unless entry_node
 
         items = items_for(entry, entry_node)
@@ -57,6 +57,11 @@ module Opt
 
     private
 
+    # SECTION は items を辿って、配下の ENTRY を平らに並べる（skoba/anlage#80）
+    def content_entries(content_items)
+      (content_items || []).flat_map { |item| item["_type"] == "SECTION" ? content_entries(item["items"]) : [ item ] }
+    end
+
     def items_for(entry, entry_node)
       data = entry_node["data"] || {}
       if entry["rm_type"] == "OBSERVATION"
@@ -71,7 +76,8 @@ module Opt
 
       case field["rm_type"]
       when "DV_CODED_TEXT"
-        dv.dig("defining_code", "code_string")
+        # coded_free は DV_TEXT として保存される（#33 裁定 A）。保存されている値の型で読む（skoba/anlage#82）
+        dv["_type"] == "DV_TEXT" ? dv["value"].to_s : dv.dig("defining_code", "code_string")
       when "DV_QUANTITY", "DV_COUNT"
         dv["magnitude"].to_s
       else

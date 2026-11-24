@@ -17,6 +17,24 @@ class TemplatesController < ApplicationController
     @templates = Template.active.order(:template_id)
   end
 
+  # 詳細と版の履歴（skoba/anlage#98）。:version が無ければ有効な版、あればその版（置き換えられた版も）。
+  def show
+    @versions = Template.where(template_id: params[:template_id]).sort_by { |t| Gem::Version.new(t.version) }.reverse
+    @template = params[:version] ? @versions.find { |t| t.version == params[:version] } : @versions.find { |t| t.status == "active" }
+    head :not_found unless @template
+  end
+
+  # 登録済みの 2 つの版の差分（skoba/anlage#100）: 項目（Opt::TemplateDiff）とパスカード（Opt::PathcardDiff）
+  def diff
+    versions = Template.where(template_id: params[:template_id]).index_by(&:version)
+    @from = versions[params[:from]]
+    @to = versions[params[:to]]
+    return head :not_found unless @from && @to
+
+    @field_diff = Opt::TemplateDiff.call(@from, @to)
+    @pathcard_diff = Opt::PathcardDiff.call(@from.pathcards, @to.pathcards)
+  end
+
   # Parses and validates an uploaded OPT without persisting it (the
   # "fitting room"): summary + a live form preview, so the visitor can
   # inspect the template before deciding to register it.
@@ -103,9 +121,12 @@ class TemplatesController < ApplicationController
 
   def preview_composition(content)
     parsed = JSON.parse(content)
-    @composition_template = Template.active.find_by(template_id: parsed["archetype_node_id"])
+    # template_id は archetype_details から引く。#54 より前の形（archetype_details が無く、
+    # ルートの archetype_node_id に template_id が入っている）も受け付ける。
+    template_id = parsed.dig("archetype_details", "template_id", "value") || parsed["archetype_node_id"]
+    @composition_template = Template.active.find_by(template_id: template_id)
     unless @composition_template
-      render_upload_error("no registered template matches this composition (template_id=#{parsed['archetype_node_id'].inspect})")
+      render_upload_error("no registered template matches this composition (template_id=#{template_id.inspect})")
       return
     end
 

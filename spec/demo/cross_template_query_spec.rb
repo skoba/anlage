@@ -5,7 +5,8 @@ Rails.application.load_tasks
 
 # 台本 3' 幕（skoba/anlage#47、裁定 2026-10-20）: 同じ問題・診断アーキタイプを使う ProblemList と
 # jp_referral が、1 本の AQL で同時に引ける（骨格契約の横串一貫性）。name 述語を使わない形
-# （紹介先医療機関で引く形は上流 24 項＝openehr-ruby#60 の解消後）。出所は Composition 名で並記する
+# （紹介先医療機関で引く形は openehr 2.5.0 で引けるようになった。spec/integration/jp_referral_aql_spec.rb。
+# デモクエリ 5 をその形に変えるのは、jp_referral のフォーム保存〔M2〕のあと）。出所は Composition 名で並記する
 # （c/archetype_details/template_id は現行エンジンの終端ホップ外、log R10）。
 # 初期状態（rake demo:reset）で 2 テンプレート・3 件、壇上でフォームから 1 件足すと 4 件。
 RSpec.describe "デモクエリ 5: テンプレート横断の傷病名（demo:reset の初期状態から）", type: :request do

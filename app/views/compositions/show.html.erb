@@ -7,9 +7,8 @@
   <%= link_to "同じ帳票にもう 1 件入力", form_path(template.template_id) %>
   <%= link_to "カルテ記録一覧", compositions_path %>
   <%= link_to "AQL 照会", openehr_rails.query_console_path %>
-  <% if (profile_id = template.fhir_profile_ids.first) %>
-    <%= link_to "FHIR プロファイル", "/fhir/r5/StructureDefinition/#{profile_id}" %>
-  <% end %>
+  <%# skoba/anlage#102: FHIR プロファイルはテンプレートから決まるので、テンプレートの詳細に移した %>
+  <%= link_to "テンプレートの詳細", template_path(template.template_id) %>
 </nav>
 
 <details>

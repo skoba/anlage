@@ -1,0 +1,62 @@
+<%# skoba/anlage#98（M3 の W3・W4）: 文言は docs/demo/ui-vocabulary.md（正典） %>
+<% content_for(:title) { "テンプレート: #{@template.web_template['concept'] || @template.template_id}" } %>
+<h1>テンプレート: <%= @template.web_template["concept"] || @template.template_id %></h1>
+
+<% if @template.status == "superseded" %>
+  <p id="template_superseded" class="form-notice">この版は置き換えられています。
+    <%= link_to "有効な版を見る", template_path(@template.template_id) %></p>
+<% end %>
+
+<dl id="template_detail">
+  <dt>template_id</dt>
+  <dd><%= @template.template_id %></dd>
+  <dt>版</dt>
+  <dd><%= version_label(@template.version, @template.sem_ver) %></dd>
+  <dt>帳票</dt>
+  <dd><%= @template.preview_only? ? "閲覧専用（#{@template.form_capability_reason}）" : "保存できます" %></dd>
+  <dt>項目数</dt>
+  <dd><%= @template.fields.size %></dd>
+  <dt>パスカード</dt>
+  <dd><%= Array(@template.pathcards).size %> 枚</dd>
+</dl>
+
+<p id="template_actions">
+  <% if @template.status == "active" %>
+    <%= link_to "帳票に入力", form_path(@template.template_id) %>
+  <% end %>
+</p>
+
+<%# skoba/anlage#102（M3 の W6）: facade（/fhir/r5/StructureDefinition/:id）は有効な版だけを返すので、有効な版にだけ出す %>
+<% if @template.status == "active" && (profile_ids = @template.fhir_profile_ids).any? %>
+  <section id="template_fhir_profiles">
+    <h2>FHIR プロファイル</h2>
+    <ul>
+      <% profile_ids.each do |profile_id| %>
+        <li><%= link_to profile_id, "/fhir/r5/StructureDefinition/#{profile_id}" %></li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>
+
+<section id="template_versions">
+  <h2>版の履歴</h2>
+  <ul>
+    <% @versions.each_with_index do |version, index| %>
+      <% previous = @versions[index + 1] %>
+      <li>
+        <% label = "登録版 v#{version.version}" %>
+        <% if version == @template %>
+          <strong><%= label %></strong>
+        <% elsif version.status == "active" %>
+          <%= link_to label, template_path(version.template_id) %>
+        <% else %>
+          <%= link_to label, template_version_path(version.template_id, version.version) %>
+        <% end %>
+        <%= version.status == "active" ? "有効" : "置き換え済み" %><%= "（この版）" if version == @template %>
+        <% if previous %>
+          <%= link_to "前の版との差分", template_diff_path(version.template_id, from: previous.version, to: version.version) %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+</section>

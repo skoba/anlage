@@ -49,26 +49,23 @@ RSpec.describe "デモクエリ（フォーム保存経路経由）", type: :req
       expect(saved_diagnosis["_type"]).to eq("DV_TEXT")
       expect(saved_diagnosis["value"]).to eq("Demo diagnosis (at0076)")
 
-      # 実測により訂正: value/defining_code/code_string は現行AQLエンジンの
-      # ALLOWED_TERMINAL_HOPS（openehr gem lib/openehr/aql/engine/path_evaluator.rb）
-      # が magnitude/name/value のみを許可しており、defining_code 経由の
-      # 深追いは "unsupported path attribute" になる（実測確認）。
-      # そのためcode_stringではなくDvCodedTextの表示ラベル（value/value）で
-      # MATCHESする形に訂正した。
+      # 本来形（2026-11-24、openehr 2.5.0 の openehr-ruby#49 で置き換え）: 表示ラベルではなく
+      # コード値（value/defining_code/code_string）で MATCHES する。暫定形はタグ v0.1.0-jcmi46 に残る。
       query = <<~AQL
         SELECT c/name/value AS composition_name,
-               o/data[at0001]/items[at0073]/value/value AS diagnosis_label
+               o/data[at0001]/items[at0073]/value/defining_code/code_string AS certainty_code,
+               o/data[at0001]/items[at0073]/value/value AS certainty_label
         FROM EHR e CONTAINS COMPOSITION c
              CONTAINS EVALUATION o[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
-        WHERE o/data[at0001]/items[at0073]/value/value
-              MATCHES {"疑い", "推定"}
+        WHERE o/data[at0001]/items[at0073]/value/defining_code/code_string
+              MATCHES {"at0074", "at0075"}
       AQL
 
       result = OpenehrRails::Aql::Executor.execute(query)
 
       expect(result.rows).to eq([
-        [ "ProblemList", "疑い" ],
-        [ "ProblemList", "推定" ]
+        [ "ProblemList", "at0074", "疑い" ],
+        [ "ProblemList", "at0075", "推定" ]
       ])
     end
   end
@@ -104,42 +101,36 @@ RSpec.describe "デモクエリ（フォーム保存経路経由）", type: :req
   end
 
   describe "4. 日付範囲WHERE（期間絞り込み）" do
-    it "認識日時が期間内のCompositionのみ期待件数（1件）で抽出できる" do
-      # 実測により訂正: events[at0002]/time は現行AQLエンジンでPathable宣言
-      # されておらずALLOWED_TERMINAL_HOPSにも無いため
-      # "unsupported path attribute" になる（実測確認、
-      # openehr gem lib/openehr/rm/data_structures/history.rb の
-      # path_attribute宣言に time が含まれない）。日時属性のWHERE絞り込みは
-      # 現行エンジンでは実行不能と判断し、代わりにELEMENT値として保持される
-      # DV_DATE_TIMEフィールド（ProblemList at0003「臨床的に認識された日時」、
-      # .../value経由）で代替した。ISO8601同士の文字列比較（辞書順=時間順）に
-      # 依存している点に注意（将来の型付き比較への移行点）。
-      [ "2026-03-15T09:00:00+09:00", "2026-09-01T09:00:00+09:00" ].each do |recognized_at|
-        now = Time.current.iso8601
-        post template_compositions_path(ProblemDiagnosisSeed.template.template_id), params: {
-          values: {
-            "problem_diagnosis_at0002" => "Demo diagnosis (at0074)",
-            "problem_diagnosis_at0077" => now,
-            "problem_diagnosis_at0003" => recognized_at,
-            "problem_diagnosis_at0030" => now,
-            "problem_diagnosis_at0073" => "at0074"
+    include ActiveSupport::Testing::TimeHelpers
+
+    # 本来形（2026-11-24、openehr 2.5.0 の openehr-ruby#48 で置き換え）: OBSERVATION のイベント時刻
+    # （events[at0002]/time）の半開区間で絞る。暫定形（ELEMENT 値の DV_DATE_TIME）はタグ v0.1.0-jcmi46 に残る。
+    # イベント時刻は保存した時刻（Opt::CompositionBuilder）。比較は ISO8601 の文字列比較なので、
+    # 両辺の書式と UTC オフセットをそろえる（RM グラフからの読み戻しは UTC の "…Z"、上流候補 21 項）。
+    it "OBSERVATION のイベント時刻が期間内の Composition のみ期待件数（1件）で抽出できる" do
+      [ "2026-03-15T00:00:00Z", "2026-09-01T00:00:00Z" ].each do |measured_at|
+        travel_to(Time.zone.parse(measured_at)) do
+          post template_compositions_path(HeightSeed.template.template_id), params: {
+            values: {
+              "height" => "170.0",
+              "body_weight" => "70.0",
+              "body_mass_index" => "24.2",
+              "body_mass_index_at0013" => "normal"
+            }
           }
-        }
+        end
       end
 
       query = <<~AQL
-        SELECT o/data[at0001]/items[at0003]/value/value AS recognized_at
+        SELECT o/data[at0001]/events[at0002]/time/value AS measured_at
         FROM EHR e CONTAINS COMPOSITION c
-             CONTAINS EVALUATION o[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
-        WHERE o/data[at0001]/items[at0003]/value/value >= "2026-01-01T00:00:00"
-          AND o/data[at0001]/items[at0003]/value/value < "2026-07-01T00:00:00"
+             CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.height.v2]
+        WHERE o/data[at0001]/events[at0002]/time/value >= "2026-01-01T00:00:00Z"
+          AND o/data[at0001]/events[at0002]/time/value < "2026-07-01T00:00:00Z"
       AQL
 
       result = OpenehrRails::Aql::Executor.execute(query)
 
-      # skoba/anlage#35: canonical JSON は POST された ISO 文字列のまま（Z を付けない）だが、
-      # AQL は RM グラフの date_time_value 列から読み戻すため UTC の iso8601 になる
-      # （docs/upstream-candidates.md 21 項）。ここは AQL の観測値を固定する。
       expect(result.rows).to eq([ [ "2026-03-15T00:00:00Z" ] ])
     end
   end

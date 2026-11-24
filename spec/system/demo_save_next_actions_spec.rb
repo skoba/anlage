@@ -25,12 +25,12 @@ RSpec.describe "デモ動線: 保存後の次アクション（実ブラウザ�
       expect(page).to have_link("同じ帳票にもう 1 件入力", href: "/forms/CardiologyEncounter")
       expect(page).to have_link("カルテ記録一覧", href: "/compositions")
       expect(page).to have_link("AQL 照会", href: "/openehr/query")
-      expect(page).to have_link("FHIR プロファイル", href: "/fhir/r5/StructureDefinition/openehr-observation-blood-pressure-v2")
+      expect(page).to have_link("テンプレートの詳細", href: "/templates/CardiologyEncounter")
     end
 
-    # 1280×720: 共通ナビは 1 行に収まり、横スクロールは出ない（canonical JSON を開いても）
-    nav_rows = page.evaluate_script("[...document.querySelectorAll('#app_nav a')].map(a => a.offsetTop)").uniq
-    expect(nav_rows.size).to eq(1)
+    # 1280×720: 共通ナビは左に縦 1 列（skoba/anlage#95）で、横スクロールは出ない（canonical JSON を開いても）
+    nav_columns = page.evaluate_script("[...document.querySelectorAll('#app_nav a')].map(a => a.offsetLeft)").uniq
+    expect(nav_columns.size).to eq(1)
     expect(horizontally_scrollable?).to be(false)
     find("summary", text: "canonical JSON").click
     expect(page).to have_content("COMPOSITION")

@@ -1,0 +1,56 @@
+<%# skoba/anlage#100（M3 の W5）: 文言は docs/demo/ui-vocabulary.md（正典） %>
+<% content_for(:title) { "版の差分: #{@to.template_id}" } %>
+<h1>版の差分: <%= @to.template_id %>（登録版 v<%= @from.version %> → 登録版 v<%= @to.version %>）</h1>
+
+<p><%= link_to "テンプレートの詳細に戻る", template_path(@to.template_id) %></p>
+
+<section id="field_diff">
+  <h2>項目の差分</h2>
+  <% if @field_diff.any_changes? %>
+    <ul>
+      <% @field_diff.added.each do |field| %>
+        <li class="diff-added">追加: <%= field["label"] %> <code class="archetype-path"><%= field["path"] %></code></li>
+      <% end %>
+      <% @field_diff.removed.each do |field| %>
+        <li class="diff-removed">削除: <%= field["label"] %> <code class="archetype-path"><%= field["path"] %></code></li>
+      <% end %>
+      <% @field_diff.changed.each do |change| %>
+        <li class="diff-changed">変更: <code class="archetype-path"><%= change["path"] %></code>
+          <ul>
+            <% change["after"].each_key do |key| %>
+              <% next if change["before"][key] == change["after"][key] %>
+              <li><%= key %>: <%= change["before"][key].to_json %> → <%= change["after"][key].to_json %></li>
+            <% end %>
+          </ul>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p>項目の差分はありません。</p>
+  <% end %>
+</section>
+
+<section id="pathcard_diff">
+  <h2>パスカードの差分</h2>
+  <% if @pathcard_diff.any_changes? %>
+    <ul>
+      <% @pathcard_diff.added.each do |card| %>
+        <li class="diff-added">追加: <%= pathcard_label(card) %> <code class="archetype-path"><%= card.dig("identity", "path") %></code></li>
+      <% end %>
+      <% @pathcard_diff.removed.each do |card| %>
+        <li class="diff-removed">削除: <%= pathcard_label(card) %> <code class="archetype-path"><%= card.dig("identity", "path") %></code></li>
+      <% end %>
+      <% @pathcard_diff.changed.each do |change| %>
+        <li class="diff-changed">変更: <%= change["label"] %> <code class="archetype-path"><%= change["path"] %></code>
+          <ul>
+            <% change["changes"].each do |item| %>
+              <li><%= pathcard_aspect_label(item["aspect"]) %>: <%= diff_value(item["before"]) %> → <%= diff_value(item["after"]) %></li>
+            <% end %>
+          </ul>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p>パスカードの差分はありません。</p>
+  <% end %>
+</section>

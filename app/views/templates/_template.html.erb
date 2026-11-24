@@ -2,4 +2,5 @@
   <h3><%= template.web_template["concept"] || template.template_id %></h3>
   <p><%= template.template_id %> <span class="version-label"><%= version_label(template.version, template.sem_ver) %></span></p>
   <%= link_to "帳票に入力", form_path(template.template_id) %>
+  <%= link_to "詳細", template_path(template.template_id) %>
 </div>

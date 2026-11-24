@@ -41,3 +41,28 @@ RSpec.describe Opt::CompositionReader do
     )
   end
 end
+
+# skoba/anlage#82: coded_free の field（DV_CODED_TEXT の制約に DV_TEXT の代替がある。#33 裁定 A で DV_TEXT として保存）は、
+# 保存されている値の型で読み戻す。選択肢（DV_CODED_TEXT として保存）は、これまでどおりコードを返す。
+RSpec.describe Opt::CompositionReader, "#82 coded_free の読み戻し" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read) }
+
+  it "自由記述で保存した傷病名（DV_TEXT）を読み戻し、選択肢の診断確度はコードで読み戻す" do
+    values = { "problem_diagnosis_at0002" => "高血圧症", "problem_diagnosis_at0073" => "at0074" }
+    json = OpenEHR::Serializer::RMJSONSerializer.new(Opt::CompositionBuilder.new(template, values).build).serialize
+
+    expect(described_class.call(template, json)).to eq(values)
+  end
+end
+
+# skoba/anlage#80: SECTION 配下に組んだ ENTRY を、reader が同じ値で読み戻す（記入済みの帳票のプレビュー）。
+RSpec.describe Opt::CompositionReader, "#80 SECTION 配下の ENTRY" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).tap(&:save!).reload }
+
+  it "builder が SECTION の items に入れた EVALUATION と OBSERVATION の値を読み戻す" do
+    values = { "problem_diagnosis_at0002" => "高血圧症", "problem_diagnosis_at0073" => "at0074", "story" => "3 か月前から頭痛" }
+    json = OpenEHR::Serializer::RMJSONSerializer.new(Opt::CompositionBuilder.new(template, values).build).serialize
+
+    expect(described_class.call(template, json)).to eq(values)
+  end
+end

@@ -35,6 +35,26 @@ RSpec.describe Opt::CompositionBuilder do
       expect(composition.territory.code_string).to eq("JP")
     end
 
+    # skoba/anlage#54: ルートは COMPOSITION アーキタイプの ID（OPT の definition ルート）を
+    # archetype_node_id に持ち、archetype_details を持つ。template_id は archetype_details に入る。
+    describe "ルート（COMPOSITION）" do
+      it "archetype_node_id は COMPOSITION アーキタイプの ID になる（template_id ではない）" do
+        expect(composition.archetype_node_id).to eq("openEHR-EHR-COMPOSITION.encounter.v1")
+      end
+
+      it "archetype_details に archetype_id、template_id、RM version を持つ" do
+        expect(composition.archetype_details.archetype_id.value).to eq("openEHR-EHR-COMPOSITION.encounter.v1")
+        expect(composition.archetype_details.template_id.value).to eq(template.template_id)
+        expect(composition.archetype_details.rm_version).to eq(described_class::RM_VERSION)
+      end
+
+      it "root_archetype_id を持たない登録済みの web_template（#54 より前の登録）でも、OPT から引いて組む" do
+        template.update!(web_template: template.web_template.except("root_archetype_id"))
+
+        expect(described_class.new(template.reload, values).build.archetype_node_id).to eq("openEHR-EHR-COMPOSITION.encounter.v1")
+      end
+    end
+
     describe "ENTRYのarchetype_details" do
       let(:entry) { template.entries.first }
       let(:built_entry) { composition.content.first }
@@ -165,5 +185,116 @@ RSpec.describe Opt::CompositionBuilder, "#38 埋め込み CLUSTER 一段・#37 u
     quantity = cluster.items.last.value
     expect(quantity.magnitude).to eq(98.0)
     expect(quantity.units).to eq("mg/dL")
+  end
+end
+
+# skoba/anlage#80（M2 の B）: SECTION 配下の ENTRY を、SECTION の items に入れて組む。
+# 実物 fixture: jp_referral.opt v0.2（SECTION referral_details の配下に 5 つの ENTRY）。
+# 値を入れるのは傷病名（EVALUATION）と現病歴（OBSERVATION）だけ。空欄の ENTRY は組まれない（#34）ので、
+# INSTRUCTION と、field 名が衝突する clinical_synopsis ×2 はこの spec に関わらない。
+RSpec.describe Opt::CompositionBuilder, "#80 SECTION 配下の ENTRY" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).tap(&:save!).reload }
+  let(:values) { { "problem_diagnosis_at0002" => "高血圧症", "story" => "3 か月前から頭痛" } }
+  let(:composition) { described_class.new(template, values).build }
+  let(:section) { composition.content.first }
+
+  it "content には SECTION が 1 つ入り、archetype_node_id・テンプレート上の名前・archetype_details を持つ" do
+    expect(composition.content.map(&:class)).to eq([ OpenEHR::RM::Composition::Content::Navigation::Section ])
+    expect(section.archetype_node_id).to eq("openEHR-EHR-SECTION.referral_details.v0")
+    expect(section.name.value).to eq("紹介状の詳細情報")
+    expect(section.archetype_details.archetype_id.value).to eq("openEHR-EHR-SECTION.referral_details.v0")
+    expect(section.archetype_details.template_id.value).to eq("jp_referral")
+  end
+
+  it "SECTION 配下の EVALUATION と OBSERVATION を、SECTION の items に入れて組む" do
+    expect(section.items.map(&:archetype_node_id))
+      .to eq(%w[openEHR-EHR-EVALUATION.problem_diagnosis.v1 openEHR-EHR-OBSERVATION.story.v1])
+
+    evaluation, observation = section.items
+    expect(evaluation.data.archetype_node_id).to eq("at0001")
+    expect(evaluation.data.items.map { |item| [ item.archetype_node_id, item.value.value ] }).to eq([ [ "at0002", "高血圧症" ] ])
+    expect(observation.data.archetype_node_id).to eq("at0001")
+    expect(observation.data.events.first.archetype_node_id).to eq("at0002")
+    expect(observation.data.events.first.data.items.map { |item| [ item.archetype_node_id, item.value.value ] })
+      .to eq([ [ "at0004", "3 か月前から頭痛" ] ])
+  end
+
+  it "組んだ Composition を RM グラフにコミットでき、SECTION 越しの path で引ける" do
+    Opt::RmCompositionCommitter.call(template, values)
+
+    result = OpenehrRails::Aql::Executor.execute(<<~AQL)
+      SELECT e/data[at0001]/items[at0002]/value/value
+      FROM EHR e2 CONTAINS COMPOSITION c CONTAINS EVALUATION e[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+    AQL
+    expect(result.rows).to eq([ [ "高血圧症" ] ])
+  end
+
+  it "content 直下の ENTRY は従来どおり content に直接入る（ProblemList）" do
+    problem_list = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!).reload
+    built = described_class.new(problem_list, { "problem_diagnosis_at0002" => "高血圧症" }).build
+
+    expect(built.content.map(&:class)).to eq([ OpenEHR::RM::Composition::Content::Entry::Evaluation ])
+  end
+end
+
+# skoba/anlage#86: 保存される CODE_PHRASE の terminology_id が値を持つ
+# （docs/design/rm-attributes-without-inputs.md 4 節の 1）。canonical JSON で確かめる。
+RSpec.describe Opt::CompositionBuilder, "#86 terminology_id の値" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!).reload }
+  let(:canonical) do
+    built = described_class.new(template, { "problem_diagnosis_at0002" => "高血圧症", "problem_diagnosis_at0073" => "at0074" }).build
+    JSON.parse(OpenEHR::Serializer::RMJSONSerializer.new(built).serialize)
+  end
+  let(:entry) { canonical["content"].first }
+
+  it "COMPOSITION の言語・地域・category の terminology_id が値を持つ" do
+    expect(canonical.dig("language", "terminology_id", "value")).to eq("ISO_639-1")
+    expect(canonical.dig("territory", "terminology_id", "value")).to eq("ISO_3166-1")
+    expect(canonical.dig("category", "defining_code", "terminology_id", "value")).to eq("openehr")
+  end
+
+  it "ENTRY の言語・文字コードの terminology_id が値を持つ" do
+    expect(entry.dig("language", "terminology_id", "value")).to eq("ISO_639-1")
+    expect(entry.dig("encoding", "terminology_id", "value")).to eq("IANA_character-sets")
+  end
+
+  it "選択肢（DV_CODED_TEXT）の terminology_id が値を持つ" do
+    certainty = entry.dig("data", "items").find { |item| item["archetype_node_id"] == "at0073" }
+
+    expect(certainty.dig("value", "defining_code")).to include("code_string" => "at0074", "terminology_id" => { "_type" => "TERMINOLOGY_ID", "value" => "local" })
+  end
+end
+
+# skoba/anlage#87: COMPOSITION の category は value が表示（event）、code_string がコード（433）。
+# OPT が category を 1 つのコードに絞っていれば、そのコードを使う
+# （docs/design/rm-attributes-without-inputs.md 2 節の規則 1、4 節の 2）。
+RSpec.describe Opt::CompositionBuilder, "#87 COMPOSITION の category" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!).reload }
+  let(:values) { { "problem_diagnosis_at0002" => "高血圧症" } }
+
+  def category_of(template)
+    canonical = JSON.parse(OpenEHR::Serializer::RMJSONSerializer.new(described_class.new(template, values).build).serialize)
+    canonical["category"].then { |c| [ c["value"], c.dig("defining_code", "code_string"), c.dig("defining_code", "terminology_id", "value") ] }
+  end
+
+  it "value は event、code_string は 433、用語体系は openehr" do
+    expect(category_of(template)).to eq(%w[event 433 openehr])
+  end
+
+  it "登録時に、OPT が絞っている category のコードを web_template に持つ（ProblemList.opt は 433）" do
+    expect(template.web_template["category_code"]).to eq("433")
+  end
+
+  it "OPT が category を絞っていれば、設定の既定値ではなく OPT のコードを使う" do
+    allow(OpenehrRails).to receive(:default_category).and_return(%w[431 persistent])
+
+    expect(category_of(template)).to eq(%w[event 433 openehr])
+  end
+
+  it "category_code を持たない登録済みの web_template（#87 より前の登録）では、設定の既定値を正しい向きで使う" do
+    template.update!(web_template: template.web_template.except("category_code"))
+    allow(OpenehrRails).to receive(:default_category).and_return(%w[431 persistent])
+
+    expect(category_of(template.reload)).to eq(%w[persistent 431 openehr])
   end
 end

@@ -71,11 +71,23 @@ class Template < ApplicationRecord
     web_template = {
       "template_id" => opt.template_id.value,
       "concept" => opt.concept,
+      # COMPOSITION アーキタイプの ID（definition ルート）。保存する Composition のルートに使う（skoba/anlage#54）
+      "root_archetype_id" => opt.definition.archetype_id.value,
       "sem_ver" => opt.description&.other_details&.dig("sem_ver").presence,
+      # OPT が COMPOSITION の category を 1 つのコードに絞っていれば、そのコード（skoba/anlage#87）
+      "category_code" => category_code(opt),
+      # SECTION ルートの path → テンプレート上の名前。builder が SECTION の name に使う（skoba/anlage#80）
+      "section_labels" => section_labels(terms),
       "entries" => extractor.entries.map { |entry| serialize_entry(entry, constraints, instance_terms(entry, terms, root_occurrences), terms) }
     }
     # 保存可否は登録時に一度だけ判定（skoba/anlage#36）
     web_template.merge(Opt::FormCapability.call(web_template))
+  end
+
+  # #54 より前に登録された web_template にはキーが無いので、そのときは OPT から引く
+  # （rebuild_web_template! を呼べば web_template に入る）。
+  def root_archetype_id
+    (web_template || {})["root_archetype_id"] || Opt::SafeParser.parse(source_xml).definition.archetype_id.value
   end
 
   def preview_only?
@@ -115,6 +127,20 @@ class Template < ApplicationRecord
       "root_path" => constraint["root_path"],
       "root_label" => root_terms.dig("at0000", "text") || concept
     )
+  end
+
+  def self.category_code(opt)
+    category = opt.definition.attributes&.find { |attribute| attribute.rm_attribute_name == "category" }
+    codes = category&.children&.flat_map { |child| child.attributes || [] }
+                    &.select { |attribute| attribute.rm_attribute_name == "defining_code" }
+                    &.flat_map { |attribute| attribute.children || [] }
+                    &.flat_map { |code_phrase| code_phrase.respond_to?(:code_list) ? Array(code_phrase.code_list) : [] }
+    codes.first if codes&.size == 1
+  end
+
+  def self.section_labels(terms)
+    terms.select { |path, _| path.match?(/\[openEHR-EHR-SECTION\.[^\]]+\]\z/) }
+         .transform_values { |instances| instances.first&.dig("at0000", "text") }.compact
   end
 
   def self.instance_terms(entry, terms, root_occurrences)
@@ -163,7 +189,7 @@ class Template < ApplicationRecord
 
     { "lower" => interval.lower, "upper" => interval.upper }
   end
-  private_class_method :build_web_template, :serialize_entry, :interval_to_h
+  private_class_method :build_web_template, :serialize_entry, :interval_to_h, :section_labels, :category_code
 
   def entries
     (web_template || {})["entries"] || []
