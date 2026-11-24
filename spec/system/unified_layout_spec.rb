@@ -44,6 +44,16 @@ RSpec.describe "統合レイアウト（実ブラウザ）", type: :system, js: 
     expect(horizontal_scroll?).to be(false)
   end
 
+  # skoba/anlage#119: jp_referral の帳票は入れ子の fieldset が 5 段になる。それでも横スクロールを出さない
+  it "jp_referral の帳票（ルートの入れ子が深い）でも、横スクロールが出ない" do
+    Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).save!
+
+    visit "/forms/jp_referral"
+
+    expect(page).to have_css("fieldset.root-group legend", text: "担当医")
+    expect(horizontal_scroll?).to be(false)
+  end
+
   it "AQL 照会からナビでテンプレートに戻れる" do
     visit templates_path
     within("nav#app_nav") { click_link "AQL 照会" }

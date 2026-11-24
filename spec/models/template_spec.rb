@@ -126,13 +126,10 @@ RSpec.describe Template, "#36 form_capability" do
   # skoba/anlage#80（R-20261124-5 問い 2）: 「テンプレートのすべての field を正しく組めるときだけ保存可能」。
   # B（SECTION 配下の ENTRY）だけでは jp_referral は保存可能に変わらない。残る理由は、
   # builder が組めない INSTRUCTION（D）と、2 つのルートで衝突する field 名 clinical_synopsis（C）。
-  it "jp_referral は、SECTION 配下の ENTRY を組めるようになっても preview_only のまま（INSTRUCTION と field 名の衝突）" do
-    capability, reason = capability_of("jp_referral.opt")
-
-    expect(capability).to eq("preview_only")
-    expect(reason).to include("INSTRUCTION")
-    expect(reason).to include("clinical_synopsis")
-    expect(reason).not_to include("unexpected wrapper depth")
+  # skoba/anlage#30（D）のあと: INSTRUCTION は組めるようになった。残る理由は field 名の衝突（C）だけだった。
+  # skoba/anlage#117（C）のあと: 衝突も無くなり、jp_referral は保存可能になる（R-20261124-5 問い 2 の条件がそろった）。
+  it "jp_referral は、SECTION・INSTRUCTION・複数ルートの区別がそろって saveable" do
+    expect(capability_of("jp_referral.opt")).to eq([ "saveable", nil ])
   end
 
   # jp_referral の web_template から、INSTRUCTION と 2 つめの clinical_synopsis を除いた形（実物からの導出）。
@@ -208,5 +205,52 @@ RSpec.describe Template, "#47 sem_ver" do
 
   it "sem_ver を持たない OPT（patient_blood_pressure）は nil" do
     expect(sem_ver_of("patient_blood_pressure.opt")).to be_nil
+  end
+end
+
+# skoba/anlage#111（M2 の F の後半）: openehr-rails 0.9.0 の FieldExtractor は、埋め込みルートの path（[archetype_id]）、
+# 自アーキタイプで名前空間化した名前、値の代替型、要素の occurrences 下限、単位の一覧を自分で出す
+# （上流候補 19・20・22 項）。anlage はそれを訂正せずにそのまま使い、足すのは anlage の規則だけ
+# （required の意味、インスタンス別のラベル、root_label、input_kind）。
+# 値の代替型の期待値は、撤去した Opt::ValueAlternatives の spec（#33）から移した。
+RSpec.describe Template, "#111 web_template の field は 0.9.0 の FieldExtractor の値をそのまま使う" do
+  def fields_of(fixture)
+    xml = Rails.root.join("spec/fixtures/opt/#{fixture}").read
+    gem_fields = OpenehrRails::Opt::FieldExtractor.new(Opt::SafeParser.parse(xml)).entries.flat_map { |e| (e[:fields] || []).map(&:stringify_keys) }
+    [ Template.build_from_opt_xml(xml).fields, gem_fields ]
+  end
+
+  %w[CardiologyEncounter.opt LabResultReport.opt ProblemList.opt bmi_calculation.opt jp_referral.opt patient_blood_pressure.opt].each do |fixture|
+    it "#{fixture}: path・名前・archetype_id・root_path・値の代替型・occurrences 下限が gem と同じ。単位の一覧は gem の値（無ければ空）" do
+      ours, gem = fields_of(fixture)
+
+      keys = %w[path archetype_id root_path rm_type_alternatives min_occurrences]
+      expect(ours.map { |f| f.slice(*keys) }).to eq(gem.map { |f| f.slice(*keys) })
+      # 名前は gem のまま。ただし同じ名前の 2 つめ以降には _2・_3 を付ける（#117）
+      expect(ours.map { |f| f["name"].sub(/_\d+\z/) { |suffix| gem.map { |g| g["name"] }.include?(f["name"]) ? suffix : "" } })
+        .to eq(gem.map { |f| f["name"] })
+      expect(ours.map { |f| f["units_list"] }).to eq(gem.map { |f| f["units_list"] || [] })
+    end
+  end
+
+  it "値の代替型（#33）: ProblemList の傷病名は [DV_TEXT, DV_CODED_TEXT]、診断確度は [DV_CODED_TEXT, DV_TEXT]（OPT の出現順）" do
+    ours, = fields_of("ProblemList.opt")
+
+    expect(ours.to_h { |f| [ f["node_id"], f["rm_type_alternatives"] ] }.values_at("at0002", "at0073"))
+      .to eq([ %w[DV_TEXT DV_CODED_TEXT], %w[DV_CODED_TEXT DV_TEXT] ])
+  end
+
+  it "値の代替型（#33）: SECTION 配下（jp_referral）の傷病名も [DV_TEXT, DV_CODED_TEXT]" do
+    ours, = fields_of("jp_referral.opt")
+
+    expect(ours.find { |f| f["name"] == "problem_diagnosis_at0002" }["rm_type_alternatives"]).to eq(%w[DV_TEXT DV_CODED_TEXT])
+  end
+
+  it "anlage の規則は残す: required は「要素の下限 ≥1」も含み、2 つめの clinical_synopsis はそのルートの名前を持つ" do
+    ours, gem = fields_of("jp_referral.opt")
+
+    expect(ours.count { |f| f["required"] }).to be > gem.count { |f| f["required"] }
+    expect(ours.select { |f| f["name"].start_with?("clinical_synopsis") }.map { |f| [ f["name"], f["label"] ] })
+      .to eq([ %w[clinical_synopsis 症状経過及び検査結果], %w[clinical_synopsis_2 治療経過] ])
   end
 end

@@ -116,11 +116,15 @@ RSpec.describe "テンプレートの詳細と版の履歴", type: :request do
 
   describe "閲覧専用のテンプレート（jp_referral）" do
     it "帳票の行に、閲覧専用であることと理由が出る" do
-      Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).save!
+      # #117 のあと手元の実物の OPT はすべて保存可能なので、登録時の判定を閲覧専用に書き換えて確かめる
+      Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).tap do |t|
+        t.web_template = t.web_template.merge("form_capability" => "preview_only", "form_capability_reason" => "entry rm_type ACTION is not supported yet")
+        t.save!
+      end
 
       get "/templates/jp_referral"
 
-      expect(detail_rows["帳票"]).to start_with("閲覧専用（").and include("INSTRUCTION")
+      expect(detail_rows["帳票"]).to eq("閲覧専用（entry rm_type ACTION is not supported yet）")
       expect(detail_rows["版"]).to eq("登録版 v1.0.0／テンプレート版 0.2.0")
     end
   end

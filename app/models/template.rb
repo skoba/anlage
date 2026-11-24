@@ -65,9 +65,11 @@ class Template < ApplicationRecord
   end
 
   def self.build_web_template(opt, extractor)
-    constraints = Opt::ElementConstraints.call(opt)
     terms = Opt::RootTerms.call(opt)
     root_occurrences = Hash.new(0)
+    # 各 field が属するルート（インスタンス）。field の path と instance_index で結ぶ（skoba/anlage#117。
+    # OPT には content の外〔context〕にも ELEMENT があるので、並び順だけでは結べない）
+    element_roots = Opt::ElementRoots.call(opt).group_by { |element| element["path"] }
     web_template = {
       "template_id" => opt.template_id.value,
       "concept" => opt.concept,
@@ -78,7 +80,7 @@ class Template < ApplicationRecord
       "category_code" => category_code(opt),
       # SECTION ルートの path → テンプレート上の名前。builder が SECTION の name に使う（skoba/anlage#80）
       "section_labels" => section_labels(terms),
-      "entries" => extractor.entries.map { |entry| serialize_entry(entry, constraints, instance_terms(entry, terms, root_occurrences), terms) }
+      "entries" => uniquify_field_names(extractor.entries.map { |entry| serialize_entry(entry, instance_terms(entry, terms, root_occurrences), terms, element_roots) })
     }
     # 保存可否は登録時に一度だけ判定（skoba/anlage#36）
     web_template.merge(Opt::FormCapability.call(web_template))
@@ -108,25 +110,35 @@ class Template < ApplicationRecord
     OpenehrRails::Fhir::ProfileGenerator.new(OpenehrRails::Opt.parse(source_xml)).profiles.map { _1[:id] }
   end
 
-  # ENTRY 自身のルート（インスタンス）の term_definitions。同一アーキタイプの複数 ENTRY
-  # （clinical_synopsis ×2）は entries の並び＝文書順で出現順に結ぶ。埋め込み CLUSTER
-  # ルート配下の field は gem のラベルのまま（現 fixture に複数インスタンスの例が無い）。
-  # 埋め込み CLUSTER 配下の field（skoba/anlage#38）: path を archetype_id 述語に訂正し、
-  # archetype_id を自ルートに、name を自アーキタイプで名前空間化（laboratory_test_analyte_at0001）、
-  # root_label にそのルートのテンプレート名を持たせる（builder が CLUSTER の name に使う）。
-  def self.rewrite_embedded_field(field, corrected_path, constraint, entry, terms)
-    own_archetype_id = constraint.fetch("archetype_id", field["archetype_id"])
-    field["path"] = corrected_path
-    return field if own_archetype_id == entry[:archetype_id]
+  # 埋め込みルート配下の field（skoba/anlage#38）に、そのルートのテンプレート上の名前（root_label）を足す。
+  # builder が CLUSTER の name に使う。path・name・archetype_id・root_path は openehr-rails 0.9.0 の
+  # FieldExtractor がそのまま出す（上流候補 22 項。anlage の訂正は #111 で撤去）。
+  # 埋め込みルート配下の field の、entry より奥のルートの並び（外側から）。各ルートはインスタンスで区別し、
+  # テンプレート上の名前を持つ（skoba/anlage#117）。builder はこれで CLUSTER をインスタンスごとに分け、名前を付ける。
+  # element が FieldExtractor の field と結べない（path が違う）ときは nil（これまでの組み方に落ちる）。
+  def self.root_chain(field, entry, terms, element)
+    return unless element && element["path"] == field["path"]
 
-    concept = own_archetype_id.split(".")[1].to_s.gsub(/[^a-zA-Z0-9]+/, "_")
-    root_terms = terms.fetch(constraint["root_path"], []).first || {}
-    field.merge(
-      "archetype_id" => own_archetype_id,
-      "name" => "#{concept}_#{field['node_id']}",
-      "root_path" => constraint["root_path"],
-      "root_label" => root_terms.dig("at0000", "text") || concept
-    )
+    roots = element["roots"]
+    entry_index = roots.index { |archetype_id, _path, _occurrence| archetype_id == entry[:archetype_id] }
+    return unless entry_index
+
+    roots.drop(entry_index + 1).map do |archetype_id, path, occurrence|
+      { "archetype_id" => archetype_id, "index" => occurrence,
+        "label" => terms.fetch(path, [])[occurrence]&.dig("at0000", "text") || archetype_id.split(".")[1] }
+    end
+  end
+
+  # 同じ名前の field（同じアーキタイプの複数ルート）は、文書順で 2 つめ以降に _2・_3 を付ける（skoba/anlage#117。
+  # openehr-rails 0.8.0 までの FieldExtractor の付け方〔…_at0001_2〕にならう）
+  def self.uniquify_field_names(entries)
+    seen = Hash.new(0)
+    entries.each do |entry|
+      entry["fields"].each do |field|
+        seen[field["name"]] += 1
+        field["name"] = "#{field['name']}_#{seen[field['name']]}" if seen[field["name"]] > 1
+      end
+    end
   end
 
   def self.category_code(opt)
@@ -152,33 +164,27 @@ class Template < ApplicationRecord
     terms.fetch(root_path, [])[index] || {}
   end
 
-  # gem の field に Anlage 側のキーを additive に足す:
-  #   rm_type_alternatives: value 属性の代替 RM 型（OPT 出現順、#33）
+  # gem（openehr-rails 0.9.0）の field に Anlage 側のキーを足す。path・name・値の代替型・occurrences 下限・
+  # 単位の一覧は gem の値をそのまま使う（上流候補 19・20・22 項。anlage の走査 Opt::ElementConstraints は #111 で撤去）:
+  #   label: 同じアーキタイプの複数 ENTRY（clinical_synopsis ×2）は、ルート（インスタンス）ごとの名前
+  #     （gem のラベルは後勝ち）。entries の並び＝文書順で出現順に結ぶ
+  #   root_label: 埋め込みルート配下の field の、ルートのテンプレート上の名前（#38）
   #   input_kind: フォーム入力の方針属性（Opt::InputKind、登録時に一度だけ導出、#33）
-  #   min_occurrences / required: 要素の occurrences 下限（#34。gem の required は
-  #     「entry が必須 かつ 要素が必須」で 0..1 の entry 配下では常に false なので、
-  #     要素自身の下限 ≥1 を required とする）
-  def self.serialize_entry(entry, constraints, instance_terms = {}, terms = {})
-    by_gem_path = Opt::ElementConstraints.by_gem_path(constraints)
-    gem_path_seen = Hash.new(0)
+  #   required: 要素自身の下限 ≥1 も required とする（#34。gem の required は「entry が必須 かつ
+  #     要素が必須」の意味のままで、0..1 の entry 配下では 1..1 の要素も false）
+  #   units_list: 数量でない field は空（gem は nil）
+  def self.serialize_entry(entry, instance_terms = {}, terms = {}, element_roots = nil)
     fields = (entry[:fields] || []).map do |field|
       field = field.stringify_keys
-      # gem の path（埋め込みルートを items[at0000] で書く）を訂正後の path に写す（#38）。
-      # 同じ gem path に複数の要素が写る場合は文書順で結ぶ
-      corrected_path = by_gem_path.fetch(field["path"], [ field["path"] ])[gem_path_seen[field["path"]]] || field["path"]
-      gem_path_seen[field["path"]] += 1
-      constraint = constraints.fetch(corrected_path, { "alternatives" => [ field["rm_type"] ], "min_occurrences" => 0, "archetype_id" => field["archetype_id"], "units_list" => [ field["units"] ].compact })
-      field = rewrite_embedded_field(field, corrected_path, constraint, entry, terms)
+      element = element_roots&.fetch(field["path"], nil)&.at(field["instance_index"].to_i)
       instance_label = instance_terms.dig(field["node_id"], "text") if field["archetype_id"] == entry[:archetype_id]
       field["label"] = instance_label if instance_label.present?
-      field_alternatives = constraint.fetch("alternatives")
-      min_occurrences = constraint.fetch("min_occurrences")
+      chain = root_chain(field, entry, terms, element)
+      field = field.merge("root_chain" => chain, "root_label" => chain.last["label"]) if chain.present?
       field.merge(
-        "rm_type_alternatives" => field_alternatives,
-        "input_kind" => Opt::InputKind.for(field, field_alternatives),
-        "min_occurrences" => min_occurrences,
-        "required" => field["required"] || min_occurrences >= 1,
-        "units_list" => constraint.fetch("units_list", [])
+        "input_kind" => Opt::InputKind.for(field, field["rm_type_alternatives"]),
+        "required" => field["required"] || field["min_occurrences"].to_i >= 1,
+        "units_list" => field["units_list"] || []
       )
     end
     entry.merge(occurrences: interval_to_h(entry[:occurrences]), fields: fields).stringify_keys
@@ -200,7 +206,7 @@ class Template < ApplicationRecord
 
     { "lower" => interval.lower, "upper" => interval.upper }
   end
-  private_class_method :build_web_template, :serialize_entry, :interval_to_h, :section_labels, :category_code, :entry_labels
+  private_class_method :build_web_template, :serialize_entry, :root_chain, :uniquify_field_names, :interval_to_h, :section_labels, :category_code, :entry_labels
 
   def entries
     (web_template || {})["entries"] || []

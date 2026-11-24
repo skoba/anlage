@@ -26,8 +26,18 @@ module Opt
     ENTRY_CLASSES = {
       "OBSERVATION" => OpenEHR::RM::Composition::Content::Entry::Observation,
       "EVALUATION" => OpenEHR::RM::Composition::Content::Entry::Evaluation,
-      "ADMIN_ENTRY" => OpenEHR::RM::Composition::Content::Entry::AdminEntry
+      "ADMIN_ENTRY" => OpenEHR::RM::Composition::Content::Entry::AdminEntry,
+      "INSTRUCTION" => OpenEHR::RM::Composition::Content::Entry::Instruction
     }.freeze
+
+    # ACTIVITY.action_archetype_id は OPT の制約から取り、制約が無ければ任意の ACTION を許す（R-20261124-5）。
+    # 手元の実物の OPT（spec/fixtures/opt/ の 6 つ）には制約を持つものが無いので、いまは既定値だけ（skoba/anlage#30）
+    DEFAULT_ACTION_ARCHETYPE_ID = "/.*/"
+
+    # narrative（案 B、R-20261124-14）のつなぎ方。docs/design/rm-attributes-without-inputs.md 6 節。
+    # DV_TEXT は改行を持てない（RM の不変条件。openehr 2.5.0 rm/data_types/text.rb:102-106）ので、
+    # 要素の区切りは全角のセミコロン（値の側も DV_TEXT なので、改行は入らない）
+    NARRATIVE_SEPARATOR = "；"
 
     def initialize(template, values)
       @template = template
@@ -121,9 +131,15 @@ module Opt
         name: dv_text(entry["label"] || entry["concept"]),
         language: code_phrase(OpenehrRails.default_language, "ISO_639-1"),
         encoding: code_phrase(OpenehrRails.default_encoding, "IANA_character-sets"),
-        subject: OpenEHR::RM::Common::Generic::PartySelf.new(external_ref: nil),
-        data: build_data(entry, branches.fetch("data", []))
+        subject: OpenEHR::RM::Common::Generic::PartySelf.new(external_ref: nil)
       }
+      if klass == ENTRY_CLASSES["INSTRUCTION"]
+        # INSTRUCTION（skoba/anlage#30）: ACTIVITY は 1 つ（jp_referral の activities[at0001]）。timing は付けない（R-20261124-5）
+        attributes[:activities] = [ build_activity(entry, branches.fetch("activities", [])) ]
+        attributes[:narrative] = dv_text(narrative(entry))
+      else
+        attributes[:data] = build_data(entry, branches.fetch("data", []))
+      end
       # protocol は、値が入った要素があるときだけ付ける（skoba/anlage#111）
       attributes[:protocol] = build_protocol(entry, branches["protocol"]) if (branches["protocol"] || []).intersect?(filled_fields(entry))
       klass.new(**attributes)
@@ -131,7 +147,11 @@ module Opt
 
     # entry の field を、entry 直下の属性（data／protocol）ごとに分ける（skoba/anlage#111。openehr-rails 0.9.0 から
     # protocol 配下の ELEMENT も field になる）。値が入っているのに組めない属性があれば UnsupportedShape。
-    BRANCHES = { "data" => ENTRY_CLASSES.values, "protocol" => [ ENTRY_CLASSES["OBSERVATION"], ENTRY_CLASSES["EVALUATION"] ] }.freeze
+    BRANCHES = {
+      "data" => ENTRY_CLASSES.values_at("OBSERVATION", "EVALUATION", "ADMIN_ENTRY"),
+      "protocol" => ENTRY_CLASSES.values_at("OBSERVATION", "EVALUATION", "INSTRUCTION"),
+      "activities" => ENTRY_CLASSES.values_at("INSTRUCTION")
+    }.freeze
 
     def branches_of(entry, klass)
       branches = (entry["fields"] || []).group_by { |field| wrapper_chain(field["path"], entry).first&.first }
@@ -165,6 +185,40 @@ module Opt
       end
     end
 
+    # activities[atX]/description[atY] の ITEM_TREE を description に持つ ACTIVITY（skoba/anlage#30）
+    def build_activity(entry, branch_fields)
+      description, outer_segs = build_branch(entry, branch_fields)
+      raise UnsupportedShape, "unexpected wrapper depth for the activities of #{entry['rm_type']}" unless outer_segs.size == 1
+
+      _attr, node_id = outer_segs.first
+      OpenEHR::RM::Composition::Content::Entry::Activity.new(
+        archetype_node_id: node_id,
+        name: dv_text(node_label(entry, node_id) || "activity"),
+        description: description,
+        action_archetype_id: DEFAULT_ACTION_ARCHETYPE_ID
+      )
+    end
+
+    # 案 B（R-20261124-14）: entry の配下で入力された要素を、文書順（web_template の並び）に「ラベル: 値」で
+    # 改行でつなぐ。埋め込みルートの要素は「ルートの名前／ラベル」。値は帳票で見えるとおり（選択肢は表示名、
+    # 数量は単位付き、日時は時刻付き）。生成系は使わない
+    def narrative(entry)
+      filled_fields(entry).map do |field|
+        label = field["archetype_id"] == entry["archetype_id"] || field["root_label"].blank? ? field["label"] : "#{field['root_label']}／#{field['label']}"
+        "#{label}: #{narrative_value(field)}"
+      end.join(NARRATIVE_SEPARATOR)
+    end
+
+    def narrative_value(field)
+      raw = @values[field["name"]].to_s
+      case field["input_kind"]
+      when "select" then field.dig("code_labels", raw) || raw
+      when "number" then [ raw, Opt::FormValidator.units_for(field, @values) ].compact_blank.join(" ")
+      when "datetime" then [ raw, @values["#{field['name']}__time"] ].compact_blank.join(" ")
+      else raw
+      end
+    end
+
     def build_protocol(entry, branch_fields)
       item_tree, outer_segs = build_branch(entry, branch_fields)
       raise UnsupportedShape, "unexpected wrapper depth for the protocol of #{entry['rm_type']}" if outer_segs.any?
@@ -178,20 +232,50 @@ module Opt
     def build_branch(entry, branch_fields)
       raise UnsupportedShape, "entry #{entry['archetype_id']} has no fields" if branch_fields.blank?
 
+      # 骨格は、最初の埋め込みルートより手前の segment。属性の全 field で同じでなければならない
       chains = branch_fields.map { |f| wrapper_chain(f["path"], entry) }
-      common = chains.min_by(&:size)
-      filled = filled_fields(entry)
-      groups = branch_fields.zip(chains).group_by do |_field, chain|
-        rest = chain[common.size..]
-        raise UnsupportedShape, "entry #{entry['archetype_id']} fields span more than one branch (#{chains.uniq.inspect})" unless chain[0, common.size] == common && rest.size <= 1
-        raise UnsupportedShape, "entry #{entry['archetype_id']}: embedded node #{rest.first.inspect} is not an archetype root" if rest.size == 1 && !rest.first[1].start_with?("openEHR-")
+      skeletons = chains.map { |chain| chain.take_while { |_attr, node_id| !archetype_root?(node_id) } }.uniq
+      raise UnsupportedShape, "entry #{entry['archetype_id']} fields span more than one branch (#{skeletons.inspect})" unless skeletons.size == 1
 
-        rest.first&.last
+      common = skeletons.first
+      filled = filled_fields(entry)
+      # 埋め込みルートより奥の segment（多段の埋め込み CLUSTER、skoba/anlage#30）。ルート以外のノードは未対応
+      pairs = branch_fields.zip(chains).filter_map do |field, chain|
+        rest = chain[common.size..]
+        bad = rest.find { |_attr, node_id| !archetype_root?(node_id) }
+        raise UnsupportedShape, "entry #{entry['archetype_id']}: embedded node #{bad.inspect} is not an archetype root" if bad
+
+        [ field, cluster_keys(field, rest) ] if filled.include?(field)
       end
-      groups = groups.transform_values { |pairs| pairs.select { |field, _chain| filled.include?(field) } }.reject { |_key, pairs| pairs.empty? }
 
       item_tree_seg, *outer_segs = common.reverse
-      [ build_item_tree(item_tree_seg, entry, groups), outer_segs ]
+      [ build_item_tree(item_tree_seg, entry, pairs), outer_segs ]
+    end
+
+    # 埋め込みルートの並びを、CLUSTER をまとめる鍵にする。web_template の root_chain（ルートのインスタンスと名前、
+    # skoba/anlage#117）があればそれを使い、同じアーキタイプの 2 つのルート（紹介元／紹介先）を別の CLUSTER にする。
+    # 無ければ（#117 より前の登録）archetype_id だけで鍵にする
+    def cluster_keys(field, rest)
+      chain = field["root_chain"]
+      return rest.map { |_attr, archetype_id| [ archetype_id, nil, nil ] } unless chain && chain.size == rest.size
+
+      chain.map { |root| [ root["archetype_id"], root["index"], root["label"] ] }
+    end
+
+    def archetype_root?(node_id)
+      node_id.to_s.start_with?("openEHR-")
+    end
+
+    # pairs: [[field, [[archetype_id, インスタンス, 名前], ...（外側から）]], ...]。文書順に、要素はそのまま、
+    # 埋め込みルートは CLUSTER（archetype_details 付き）にインスタンスごとにまとめて、その中を同じ規則で組む
+    def build_items(pairs)
+      pairs.group_by { |_field, roots| roots.first&.take(2) }.flat_map do |key, group|
+        next group.map { |field, _roots| build_element(field) } unless key
+
+        _archetype_id, _index, label = group.first.last.first
+        inner = group.map { |field, roots| [ field, roots.drop(1) ] }
+        [ build_cluster(key.first, inner, label) ]
+      end
     end
 
     # [[attr, node_id], ...] from outermost to innermost, excluding everything
@@ -203,27 +287,31 @@ module Opt
       segments[(entry_index(segments, entry) + 1)...-2]
     end
 
-    # groups: { nil => [[field, chain], ...] (ITEM_TREE 直下), "<archetype_id>" => [...] (埋め込み CLUSTER) }
-    def build_item_tree(item_tree_seg, entry, groups)
+    def build_item_tree(item_tree_seg, entry, pairs)
       _attr, node_id = item_tree_seg
-      items = groups.flat_map do |cluster_archetype_id, pairs|
-        fields = pairs.map(&:first)
-        cluster_archetype_id ? [ build_cluster(cluster_archetype_id, fields) ] : fields.map { |field| build_element(field) }
-      end
       OpenEHR::RM::DataStructures::ItemStructure::ItemTree.new(
         archetype_node_id: node_id,
         name: dv_text(node_label(entry, node_id) || entry["concept"]),
-        items: items
+        items: build_items(pairs)
       )
     end
 
-    def build_cluster(archetype_id, fields)
+    # CLUSTER の name は、そのルートの直下の要素の root_label（テンプレート上の名前）。直下に入力が無ければ、
+    # 奥の要素のラベルからは取れないので、アーキタイプの概念名に落とす
+    def build_cluster(archetype_id, inner, label = nil)
+      own = inner.find { |field, roots| roots.empty? && field["archetype_id"] == archetype_id }&.first
+      label ||= own&.fetch("root_label", nil) || root_label_of(archetype_id)
       OpenEHR::RM::DataStructures::ItemStructure::Representation::Cluster.new(
         archetype_node_id: archetype_id,
-        name: dv_text(fields.first["root_label"] || archetype_id.split(".")[1]),
+        name: dv_text(label || archetype_id.split(".")[1]),
         archetype_details: archetyped(archetype_id),
-        items: fields.map { |field| build_element(field) }
+        items: build_items(inner)
       )
+    end
+
+    # 同じアーキタイプの field の root_label（直下に入力が無い CLUSTER の名前に使う。web_template の文書順で最初のもの）
+    def root_label_of(archetype_id)
+      @template.fields.find { |field| field["archetype_id"] == archetype_id && field["root_label"].present? }&.fetch("root_label")
     end
 
     # outer_segs: [[HISTORY attr, node_id], [EVENT attr, node_id]], outermost first.
