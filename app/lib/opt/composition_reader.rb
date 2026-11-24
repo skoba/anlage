@@ -76,7 +76,8 @@ module Opt
 
       case field["rm_type"]
       when "DV_CODED_TEXT"
-        dv.dig("defining_code", "code_string")
+        # coded_free は DV_TEXT として保存される（#33 裁定 A）。保存されている値の型で読む（skoba/anlage#82）
+        dv["_type"] == "DV_TEXT" ? dv["value"].to_s : dv.dig("defining_code", "code_string")
       when "DV_QUANTITY", "DV_COUNT"
         dv["magnitude"].to_s
       else
