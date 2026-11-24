@@ -72,3 +72,45 @@ openehr-rails の 3 行だけを書き換えた（版、依存の行 `openehr (~
 
 - 登録済みのテンプレートの `web_template` は登録時のまま（0.8.0 で作ったもの）。新しい項目（最終更新日、jp_referral の 20 項目）を
   出すには `rake templates:rebuild_web_template`。セッションは実行していない
+
+## R2 `skoba/anlage#111`: 0.9.0 で要らなくなった迂回の撤去（2026-11-24）
+
+ブランチ `chore/111-remove-field-workarounds`（R1 のブランチの上に積んだ。PR の base は R1 のブランチ）。
+**マージは人間**（ファイルの削除が主な中身。R1 のあと）。
+
+### 実測（撤去の前）
+
+0.9.0 の `FieldExtractor` の素の出力と、anlage が訂正したあとの `web_template` の field を、6 つの fixture で比べた:
+
+| キー | 結果 |
+|---|---|
+| path、name、archetype_id、root_path | 6 つすべてで一致（上流候補 22 項） |
+| rm_type_alternatives | 一致（19 項） |
+| min_occurrences | 一致（20 項） |
+| units_list | 数量の field は一致。数量でない field は gem が nil、anlage が `[]` |
+| required | 違う（gem は意味を変えていない。anlage の規則を残す） |
+| label | jp_referral の 1 つめの clinical_synopsis だけ違う（gem は後勝ちで「治療経過」、anlage は「症状経過及び検査結果」） |
+
+### 撤去したもの
+
+- `app/lib/opt/element_constraints.rb`（OPT を自前で辿って、代替型・下限・単位・path の対応表を作っていた）
+- `app/lib/opt/value_alternatives.rb` と、その spec（期待値は `spec/models/template_spec.rb` に移した）
+- `Template.serialize_entry` の path の訂正（`by_gem_path`）と、`rewrite_embedded_field` の name・archetype_id・root_path の書き換え。
+  残したのは anlage の規則だけ（required、インスタンス別の label、root_label、input_kind、units_list の空配列）
+
+### TDD
+
+この PR は振る舞いを変えない撤去（Refactor）。先に characterization の spec（「#111 web_template の field は 0.9.0 の FieldExtractor の値を
+そのまま使う」、9 例）を足し、撤去の前に緑であることを確かめてから撤去した。撤去のあとも緑。golden 4 件と既存の `template_spec.rb` は無変更で緑
+
+### Green
+
+- 開発機の全 suite: 303 例 0 失敗、2 pending。rubocop 違反なし
+
+### F のうち、この 2 つの PR に入れていないもの
+
+- 16 項（context）: 0.9.0 で `context` が永続化されるようになった。anlage の builder はまだ `context` を付けない。
+  付けるのは設計書（`docs/design/rm-attributes-without-inputs.md`）5 節の 5 で、別の PR。
+  ただし 0.9.0 の既知の制限で、`c/context/start_time` は AQL でまだ引けない（openehr の path 評価が EVENT_CONTEXT を辿れない）。
+  M2 の計画の「紹介日で引ける」は、openehr の次の版を待つ
+- 23 項（FHIR プロファイル id の衝突）: 0.9.0 でも残る（実測）。anlage では直さない
