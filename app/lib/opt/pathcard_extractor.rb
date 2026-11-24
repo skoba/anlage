@@ -19,7 +19,7 @@ module Opt
       @report = {}
       @opt = opt
       @code_bindings = extract_code_bindings(opt)
-      @template_terms = Opt::TemplateTerms.call(@template.source_xml)
+      @template_terms = Opt::RootTerms.call(opt)
       @root_occurrences = Hash.new(0)
 
       Result.new(cards: extract_cards(opt), report: @report)
@@ -45,7 +45,7 @@ module Opt
 
     # containers: 祖先 C_ARCHETYPE_ROOT のテンプレート名（container_labels entry）を
     # ルート→葉の順に積んだ配列。ELEMENT はルートになり得ないので葉には積まない。
-    # terms: 直近のルート（このインスタンス）の term_definitions（Opt::TemplateTerms）。
+    # terms: 直近のルート（このインスタンス）の term_definitions（Opt::RootTerms）。
     def walk(node, path, archetype_id, containers, terms)
       return [] unless node.respond_to?(:attributes) && node.attributes
 
@@ -143,16 +143,11 @@ module Opt
     # 祖先ルート名（スキーマ v1.2 `semantics.container_labels`、skoba/anlage#31）と、
     # このルート（インスタンス）の term_definitions を返す。
     #
-    # 取り込み元は `source_xml` の再解析（Opt::TemplateTerms）。gem のパース結果は
-    # 各 C_ARCHETYPE_ROOT 直下の term_definitions を `component_terminologies[archetype_id]`
-    # に畳み込み、同一アーキテイプの複数埋め込み（紹介元／紹介先の organisation、
-    # clinical_synopsis ×2 等）で per-root の名前（AD の改名）を失う（`skoba/openehr-ruby#58`、
-    # `docs/upstream-candidates.md` 18 項）。WP2 の「経路2」と同型の迂回。
-    # 撤去条件: openehr-ruby#58 が解消し `CArchetypeRoot` が per-root の term_definitions を
-    # 持つ版へ bump した時点で gem 経路へ置換する。
+    # 取り込み元は、パース済みの OPT の各 C_ARCHETYPE_ROOT が持つルート別の term_definitions
+    # （Opt::RootTerms。openehr 2.5.0、`skoba/openehr-ruby#58`）。同じアーキタイプの複数埋め込み
+    # （紹介元／紹介先の organisation、clinical_synopsis ×2 等）でも、ルートごとの名前（AD の改名）が残る。
     #
-    # キーは「archetype_id 述語で書いたルートの RM path」＋「同 path 内の出現順」。
-    # 前提: OPT XML の文書順と gem がパースした attributes/children の走査順が一致すること
+    # キーは「archetype_id 述語で書いたルートの RM path」＋「同 path 内の出現順」
     # （spec「同一アーキタイプの複数ルート」で固定）。
     def enter_root(path, archetype_id, parent_containers)
       index = @root_occurrences[path]
