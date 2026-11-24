@@ -32,9 +32,16 @@ module Opt
 
     private
 
+    # SECTION は items を辿って、配下の ENTRY からも外す（skoba/anlage#80）
     def remove_non_structural_entry_keys(canonical_hash)
-      canonical_hash.fetch("content").each do |entry_hash|
-        NON_STRUCTURAL_ENTRY_KEYS.each { |key| entry_hash.delete(key) }
+      strip_entries(canonical_hash.fetch("content"))
+    end
+
+    def strip_entries(content_items)
+      content_items.each do |item|
+        next strip_entries(item.fetch("items", [])) if item["_type"] == "SECTION"
+
+        NON_STRUCTURAL_ENTRY_KEYS.each { |key| item.delete(key) }
       end
     end
   end

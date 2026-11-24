@@ -187,3 +187,52 @@ RSpec.describe Opt::CompositionBuilder, "#38 埋め込み CLUSTER 一段・#37 u
     expect(quantity.units).to eq("mg/dL")
   end
 end
+
+# skoba/anlage#80（M2 の B）: SECTION 配下の ENTRY を、SECTION の items に入れて組む。
+# 実物 fixture: jp_referral.opt v0.2（SECTION referral_details の配下に 5 つの ENTRY）。
+# 値を入れるのは傷病名（EVALUATION）と現病歴（OBSERVATION）だけ。空欄の ENTRY は組まれない（#34）ので、
+# INSTRUCTION と、field 名が衝突する clinical_synopsis ×2 はこの spec に関わらない。
+RSpec.describe Opt::CompositionBuilder, "#80 SECTION 配下の ENTRY" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).tap(&:save!).reload }
+  let(:values) { { "problem_diagnosis_at0002" => "高血圧症", "story" => "3 か月前から頭痛" } }
+  let(:composition) { described_class.new(template, values).build }
+  let(:section) { composition.content.first }
+
+  it "content には SECTION が 1 つ入り、archetype_node_id・テンプレート上の名前・archetype_details を持つ" do
+    expect(composition.content.map(&:class)).to eq([ OpenEHR::RM::Composition::Content::Navigation::Section ])
+    expect(section.archetype_node_id).to eq("openEHR-EHR-SECTION.referral_details.v0")
+    expect(section.name.value).to eq("紹介状の詳細情報")
+    expect(section.archetype_details.archetype_id.value).to eq("openEHR-EHR-SECTION.referral_details.v0")
+    expect(section.archetype_details.template_id.value).to eq("jp_referral")
+  end
+
+  it "SECTION 配下の EVALUATION と OBSERVATION を、SECTION の items に入れて組む" do
+    expect(section.items.map(&:archetype_node_id))
+      .to eq(%w[openEHR-EHR-EVALUATION.problem_diagnosis.v1 openEHR-EHR-OBSERVATION.story.v1])
+
+    evaluation, observation = section.items
+    expect(evaluation.data.archetype_node_id).to eq("at0001")
+    expect(evaluation.data.items.map { |item| [ item.archetype_node_id, item.value.value ] }).to eq([ [ "at0002", "高血圧症" ] ])
+    expect(observation.data.archetype_node_id).to eq("at0001")
+    expect(observation.data.events.first.archetype_node_id).to eq("at0002")
+    expect(observation.data.events.first.data.items.map { |item| [ item.archetype_node_id, item.value.value ] })
+      .to eq([ [ "at0004", "3 か月前から頭痛" ] ])
+  end
+
+  it "組んだ Composition を RM グラフにコミットでき、SECTION 越しの path で引ける" do
+    Opt::RmCompositionCommitter.call(template, values)
+
+    result = OpenehrRails::Aql::Executor.execute(<<~AQL)
+      SELECT e/data[at0001]/items[at0002]/value/value
+      FROM EHR e2 CONTAINS COMPOSITION c CONTAINS EVALUATION e[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+    AQL
+    expect(result.rows).to eq([ [ "高血圧症" ] ])
+  end
+
+  it "content 直下の ENTRY は従来どおり content に直接入る（ProblemList）" do
+    problem_list = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!).reload
+    built = described_class.new(problem_list, { "problem_diagnosis_at0002" => "高血圧症" }).build
+
+    expect(built.content.map(&:class)).to eq([ OpenEHR::RM::Composition::Content::Entry::Evaluation ])
+  end
+end
