@@ -58,3 +58,39 @@
 
 - layout と `application.css` を変えた。パスカード検索の画面は `main#workspace` の中に入る。
   引く側の PR で `body > …` のセレクタを使っていれば、rebase のときに直す
+
+## R2 W3・W4（`skoba/anlage#98`）: テンプレートの詳細画面と版の履歴（2026-11-24）
+
+ブランチ `feat/98-template-detail`。基準点は main `0d14285`。
+
+### 自己承認した判断
+
+1. **W3 と W4 を 1 つの Issue、1 つの PR にした**。版の履歴は詳細画面の一部で、置き換えられた版の詳細も同じ action と view を使う
+2. **新しい URL は計画書 3 節のとおり 2 つ**（`/templates/:template_id`、`/templates/:template_id/versions/:version`）。
+   `:template_id` の制約は `forms/:template_id` と同じ（`/[^\/]+/`、`format: false`。template_id は `patient_blood_pressure.v1` のように点を含む）
+3. **版の並びは `Gem::Version` で比べる**（`1.0.10` が `1.0.9` より新しくなる。文字列の比較だと逆になる）
+4. **fixture**: 2 つめの版は、実物の OPT のラベルを 1 つ置き換えたもの（`spec/requests/templates_spec.rb` の
+   既存のやり方と同じ、実物からの導出）。取り込みの経路（`POST /templates`）で登録している
+5. **文言を `docs/demo/ui-vocabulary.md` に 1 行足した**（同じコミット）
+
+### Red（実装の前、8 例 6 失敗。404 の 2 例は実装の前から緑）
+
+```
+1) テンプレートの詳細と版の履歴 一覧 カードから詳細に行ける
+     expected [["帳票に入力", "/forms/patient_blood_pressure.v1"]] to include ["詳細", "/templates/patient_blood_pressure.v1"]
+2) … GET /templates/:template_id（有効な版の詳細） 見出しと、template_id・登録版・帳票の可否・項目数・パスカードの枚数が出る
+     expected the response to have status code :ok (200) but it was :not_found (404)
+3) … 詳細から帳票に入力できる
+     expected [] to include ["帳票に入力", "/forms/patient_blood_pressure.v1"]
+4) … 版の履歴に、同じ template_id の版が新しい順に並び、有効な版に印が付く
+     expected: "版の履歴"
+          got: ""
+5) … GET /templates/:template_id/versions/:version（置き換えられた版の詳細） その版の中身が出て、…
+     expected the response to have status code :ok (200) but it was :not_found (404)
+6) … 閲覧専用のテンプレート（jp_referral） 帳票の行に、閲覧専用であることと理由が出る
+     expected nil to start with "閲覧専用（"
+```
+
+### Green
+
+- 開発機の全 suite: 275 例 0 失敗、3 pending。rubocop 違反なし

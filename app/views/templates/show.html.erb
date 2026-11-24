@@ -1,0 +1,46 @@
+<%# skoba/anlage#98（M3 の W3・W4）: 文言は docs/demo/ui-vocabulary.md（正典） %>
+<% content_for(:title) { "テンプレート: #{@template.web_template['concept'] || @template.template_id}" } %>
+<h1>テンプレート: <%= @template.web_template["concept"] || @template.template_id %></h1>
+
+<% if @template.status == "superseded" %>
+  <p id="template_superseded" class="form-notice">この版は置き換えられています。
+    <%= link_to "有効な版を見る", template_path(@template.template_id) %></p>
+<% end %>
+
+<dl id="template_detail">
+  <dt>template_id</dt>
+  <dd><%= @template.template_id %></dd>
+  <dt>版</dt>
+  <dd><%= version_label(@template.version, @template.sem_ver) %></dd>
+  <dt>帳票</dt>
+  <dd><%= @template.preview_only? ? "閲覧専用（#{@template.form_capability_reason}）" : "保存できます" %></dd>
+  <dt>項目数</dt>
+  <dd><%= @template.fields.size %></dd>
+  <dt>パスカード</dt>
+  <dd><%= Array(@template.pathcards).size %> 枚</dd>
+</dl>
+
+<p id="template_actions">
+  <% if @template.status == "active" %>
+    <%= link_to "帳票に入力", form_path(@template.template_id) %>
+  <% end %>
+</p>
+
+<section id="template_versions">
+  <h2>版の履歴</h2>
+  <ul>
+    <% @versions.each do |version| %>
+      <li>
+        <% label = "登録版 v#{version.version}" %>
+        <% if version == @template %>
+          <strong><%= label %></strong>
+        <% elsif version.status == "active" %>
+          <%= link_to label, template_path(version.template_id) %>
+        <% else %>
+          <%= link_to label, template_version_path(version.template_id, version.version) %>
+        <% end %>
+        <%= version.status == "active" ? "有効" : "置き換え済み" %><%= "（この版）" if version == @template %>
+      </li>
+    <% end %>
+  </ul>
+</section>
