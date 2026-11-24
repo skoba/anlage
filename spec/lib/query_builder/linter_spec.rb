@@ -87,5 +87,39 @@ RSpec.describe QueryBuilder::Linter do
         expect(lint.findings.first.message).to include("openEHR-EHR-OBSERVATION.pulse.v2", "索引")
       end
     end
+
+    describe "終端ホップ" do
+      it "DV_TEXT のカード（検査名 at0005 は LabResultReport、ここでは jp_referral の紹介目的 at0062）に value/magnitude は error（終端ホップ）" do
+        lint = lint(<<~AQL)
+          SELECT i/activities[at0001]/description[at0009]/items[at0062]/value/magnitude
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS INSTRUCTION i[openEHR-EHR-INSTRUCTION.service_request.v1]
+        AQL
+
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :hop ] ])
+        expect(lint.findings.first.message).to include("DV_TEXT", "magnitude", "value/value")
+      end
+
+      it "value/defining_code/code_string は現行エンジンが届かないので error（終端ホップ）に上流候補 10 項を添える" do
+        lint = lint(<<~AQL)
+          SELECT ev/data[at0001]/items[at0073]/value/defining_code/code_string
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+        AQL
+
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :hop ] ])
+        expect(lint.findings.first.message).to include("defining_code", "upstream-candidates.md", "10")
+      end
+
+      it "value だけ（RM オブジェクトの射影）と name/value（要素名）は許し、value/units は現行エンジンが届かないので error（終端ホップ）" do
+        lint = lint(<<~AQL)
+          SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value,
+                 o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/name/value,
+                 o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/units
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+        AQL
+
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :hop ] ])
+        expect(lint.findings.first.message).to include("units", "magnitude")
+      end
+    end
   end
 end

@@ -8,6 +8,13 @@ module QueryBuilder
     # FROM の 1 変数の結び付け。archetype_id は ArchetypePredicate のあるときだけ（c、e は nil）
     Binding = Struct.new(:variable, :class_name, :archetype_id, keyword_init: true)
 
+    # 現行エンジンの終端ホップ（openehr 2.4.3 path_evaluator.rb ALLOWED_TERMINAL_HOPS）。それ以外は実行時に
+    # "unsupported path attribute" になる（docs/upstream-candidates.md 10・11・25 項）
+    ENGINE_HOPS = %w[magnitude name value].freeze
+    UPSTREAM_NOTES = { "defining_code" => "10 項", "time" => "11 項", "archetype_details" => "25 項" }.freeze
+    NUMERIC_TYPES = %w[DV_QUANTITY DV_COUNT].freeze
+    VALUE_TYPES = %w[DV_TEXT DV_CODED_TEXT DV_DATE_TIME DV_DATE DV_TIME DV_BOOLEAN DV_DURATION DV_URI DV_EHR_URI].freeze
+
     class Lint
       attr_reader :findings
 
@@ -104,10 +111,42 @@ module QueryBuilder
       return if node_path.nil? || node_path.empty? # ルート自身（o/name/value など）は節の検査をしない
 
       cards = @corpus.cards_at(binding.archetype_id, node_path)
-      return unless cards.empty?
+      if cards.empty?
+        candidates = @corpus.node_paths(binding.archetype_id).keys
+        return report(:error, :path, "アーキタイプ #{binding.archetype_id} に節 #{node_path} は無い。候補: #{candidates.join('、')}", path: text)
+      end
 
-      candidates = @corpus.node_paths(binding.archetype_id).keys
-      report(:error, :path, "アーキタイプ #{binding.archetype_id} に節 #{node_path} は無い。候補: #{candidates.join('、')}", path: text)
+      check_hops(hops_of(path), cards, text)
+    end
+
+    # 節のあとの属性ホップ。[] と ["value"]（RM オブジェクトの射影）、["name", "value"]（要素名）は型を問わず許す。
+    # ["value", x] は x がエンジンに届くこと、カードの rm_type に x があることを見る
+    def check_hops(hops, cards, text)
+      return if hops.empty? || hops == %w[value] || hops == %w[name value]
+      return report(:error, :hop, "#{text} のホップ #{hops.join('/')} は value から始まっていない", path: text) unless hops.first == "value"
+
+      rm_types = cards.map { |card| card.dig("semantics", "rm_type") }.compact.uniq
+      hop = hops[1]
+      unless ENGINE_HOPS.include?(hop)
+        note = UPSTREAM_NOTES[hop] || "10・11・25 項の類"
+        return report(:error, :hop, "現行の AQL エンジンは value/#{hop} に届かない（終端ホップは #{ENGINE_HOPS.join('/')} のみ。" \
+                                    "docs/upstream-candidates.md #{note}）", path: text)
+      end
+      if hops.size > 2
+        return report(:error, :hop, "現行の AQL エンジンは value/#{hops[1..].join('/')} のように 2 段より深く届かない", path: text)
+      end
+
+      allowed = rm_types.any? { |type| (hop == "magnitude" && NUMERIC_TYPES.include?(type)) || (hop == "value" && VALUE_TYPES.include?(type)) }
+      return if allowed
+
+      usable = rm_types.map { |type| NUMERIC_TYPES.include?(type) ? "value/magnitude" : "value/value" }.uniq
+      report(:error, :hop, "#{rm_types.join('／')} のカードに value/#{hop} は無い。使えるのは #{usable.join('、')}", path: text)
+    end
+
+    def hops_of(path)
+      segments = Array(path.path&.segments)
+      last = segments.rindex { |segment| segment.predicate }
+      (last ? segments[(last + 1)..] : segments).map(&:attribute)
     end
 
     # 述語を持つ最後の PathPart までが節、残りは属性のホップ。述語が archetype／node 以外（標準述語）なら nil（検査しない）
