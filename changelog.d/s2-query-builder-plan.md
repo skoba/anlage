@@ -1,0 +1,1 @@
+- Docs: S2（クエリビルダーとリンタ）の設計書 `docs/design/s2-query-builder-plan.md` と進行ログ R1（Refs R-20261124-11）。semver: 影響なし（文書のみ）
