@@ -578,6 +578,11 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 還流先: openehr-ruby
 - ステータス: 観察
 
+## 18 項の追記（2026-11-24）: anlage の迂回を撤去した
+
+- openehr 2.5.0（[skoba/openehr-ruby#58](https://github.com/skoba/openehr-ruby/issues/58)）で `CArchetypeRoot#term_definitions` がルートごとの値を持つようになった
+- anlage の迂回 `Opt::TemplateTerms`（OPT の XML の再解析）を撤去し、`Opt::RootTerms`（パース済みの OPT を辿る）に置き換えた（`skoba/anlage#104`）
+- 実測: 6 つの fixture の OPT すべてで、迂回の出力と gem からの出力が一致した。違いは 1 点だけで、gem はテンプレートのルート（COMPOSITION の definition）の用語も持つ（迂回は持たなかった。キーは `""`）
 ## 19・20・22 項の追記（2026-11-24）: openehr-rails 0.9.0 で解消し、anlage の迂回を撤去した
 
 - 0.9.0 の `FieldExtractor` は、埋め込みルートの path（`[archetype_id]`）、自アーキタイプで名前空間化した field 名、

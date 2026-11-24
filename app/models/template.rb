@@ -28,7 +28,7 @@ class Template < ApplicationRecord
       template_id: opt.template_id.value,
       version: "1.0.0",
       source_xml: source_xml,
-      web_template: build_web_template(opt, extractor, source_xml),
+      web_template: build_web_template(opt, extractor),
       status: "active",
       checksum: Digest::SHA256.hexdigest(source_xml)
     )
@@ -61,11 +61,11 @@ class Template < ApplicationRecord
   # checksum・pathcards・status は変えない。
   def rebuild_web_template!
     opt = Opt::SafeParser.parse(source_xml)
-    update!(web_template: self.class.send(:build_web_template, opt, OpenehrRails::Opt::FieldExtractor.new(opt), source_xml))
+    update!(web_template: self.class.send(:build_web_template, opt, OpenehrRails::Opt::FieldExtractor.new(opt)))
   end
 
-  def self.build_web_template(opt, extractor, source_xml)
-    terms = Opt::TemplateTerms.call(source_xml)
+  def self.build_web_template(opt, extractor)
+    terms = Opt::RootTerms.call(opt)
     root_occurrences = Hash.new(0)
     web_template = {
       "template_id" => opt.template_id.value,

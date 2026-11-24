@@ -1,0 +1,1 @@
+- Feat: AQL のリンタ `QueryBuilder::Linter`（構文、未宣言の変数、節パスの実在、終端ホップ、型、値集合、name 述語、永続的な未対応）。実行はせず、`Template.active` のパスカードだけを知識源にする（Refs R-20261124-11）。semver: minor（開発者向けのクラスの追加。画面・保存・API は変わらない）
