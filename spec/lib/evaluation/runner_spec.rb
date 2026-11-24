@@ -139,10 +139,14 @@ RSpec.describe Evaluation::Runner do
       expect(run.aql_summary).to eq(questions: 5, match: 5, mismatch: 0, unexecutable: 0)
     end
 
-    it "保留問は c019・c021 の 2 問で、解除候補は無い。draft は無い" do
+    it "保留問は c019・c021 の 2 問で、解除候補は無い。draft は S2 の経路の案 3 問（母数外）" do
       expect(run.pendings.map(&:id)).to match_array(%w[c019 c021])
       expect(run.releasable_pendings).to be_empty
-      expect(run.drafts).to be_empty
+      expect(run.drafts.map(&:id)).to match_array(%w[a006 a007 a008])
+    end
+
+    it "確定した aql の 5 問は selection を持たないので、S2 の経路の母数は 0（案の確定を待つ）" do
+      expect(run.builder_summary).to eq(questions: 0, match: 0, mismatch: 0, unexecutable: 0, unbuildable: 0)
     end
   end
 end

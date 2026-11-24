@@ -235,3 +235,46 @@
 - `rake evaluation:run` は、v1 の 17 問の報告と、ゴールド v2 の報告を分けて出す（2.5）。v1 の表を確定の前後で同じに保つ
 - v1 の seed の q21（draft）は v2 の c021 に移して消した（2.2 の「v1 のゴールド本体は変更しない」の例外。裁定 R-20261124-15 の明示の指示）
 
+## 8. S2 の経路（R-20261124-21 の作業列 3）
+
+クエリビルダー（`docs/design/s2-query-builder-plan.md` 6 節）が組んだ AQL を、参照 AQL と同じ採点器に通す。
+
+### 8.1 形式
+
+aql の問いに `selection`（クエリビルダーへの入力）を足せる。無い問いは、これまでどおり参照 AQL だけを採点する。
+
+```yaml
+selection:
+  columns:
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+  conditions:
+    - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+      operator: ">"          # カードの型で決まる（設計書 6.3 の表）
+      value: 110             # 値集合はコードの配列、日付は {from, to}
+  composition_name: false
+```
+
+- カードは `{archetype_id, at_code}` で指す（`cards` と同じ形）。索引（active のカード）で最初に当たるカードを使う。
+  同じアーキタイプが複数のテンプレートにあっても、ビルダーが組む AQL は同じ形になる
+- `columns` が無い、条件に `card`・`operator` が無い `selection` は、読み込みで止める
+
+### 8.2 採点
+
+`Evaluation::BuilderRoute.score(question)`: selection → `QueryBuilder::Builder` → リンタ → `AqlScorer.score(question, aql:)`。
+
+| 結果 | 意味 |
+|---|---|
+| 一致（match） | 組んだ AQL が `expected_rows` と同じ行を返す |
+| 不一致（mismatch） | 行が違う（不足・余分を出す） |
+| 実行不能（unexecutable） | エンジンが実行できない |
+| 組めない（unbuildable） | 索引に無いカード、ビルダーが拒む選択、リンタの error |
+
+- 母数は、active で `selection` を持つ aql の問い。報告は「aql: S2 の経路」の節（母数が 0 なら節を出さない）
+- 参照 AQL の採点（ゴールドの健全性）とは別に数える
+
+### 8.3 ゴールドに足す問い（案。臨床のレビューは人間）
+
+- 案は `spec/fixtures/evaluation/v2/aql_s2.yml` に `status: draft` で置く（a006〜a008）。確定した 11 問は変えない
+- 確定した a001〜a005 に `selection` を足すかどうかは、ゲート報告で問う（足す YAML の案は `docs/reports/s2-query-builder-log.md` R15）
+- 案の健全性（参照 AQL と S2 の経路の両方が期待行に一致）は spec で固定する
+

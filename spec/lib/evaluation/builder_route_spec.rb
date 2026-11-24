@@ -38,4 +38,16 @@ RSpec.describe Evaluation::BuilderRoute do
   it "selection の無い問いは採点しない（nil）" do
     expect(described_class.score(question(nil))).to be_nil
   end
+
+  # ゴールドに足す問いの案（spec/fixtures/evaluation/v2/aql_s2.yml、draft）の健全性。案の期待行は実測で、臨床のレビューは人間。
+  # ゴールドに追随する spec 側の確認で、案が確定・変更されたら同じコミットで直す
+  it "案（draft）の 3 問は、参照 AQL も、selection からビルダーが組んだ AQL も、期待行に一致する" do
+    drafts = Evaluation::Questions.from_v2.select { |question| question.draft? && question.selection }
+
+    expect(drafts.map(&:id)).to match_array(%w[a006 a007 a008])
+    drafts.each do |draft|
+      expect(Evaluation::AqlScorer.score(draft).status).to eq(:match), "#{draft.id} の参照 AQL"
+      expect(described_class.score(draft)).to have_attributes(status: :match), "#{draft.id} の S2 の経路"
+    end
+  end
 end

@@ -186,11 +186,13 @@ RSpec.describe Evaluation::Questions do
 
     PD_ID = "openEHR-EHR-EVALUATION.problem_diagnosis.v1"
 
-    it "11 問: active 9 問（card 4・aql 5）、pending 2 問（c019・c021）、draft は無い" do
-      expect(questions.keys).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015 c019 c021])
+    # a006〜a008 は S2 の経路の案（draft、人間レビュー前。R-20261124-21 の作業列 3）。確定した 11 問は変えていない
+    it "確定した 11 問: active 9 問（card 4・aql 5）、pending 2 問（c019・c021）。ほかに S2 の経路の案 3 問（draft）" do
+      expect(questions.values.reject(&:draft?).map(&:id)).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015 c019 c021])
       expect(questions.values.select(&:active?).map(&:id)).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015])
       expect(questions.values.select(&:pending?).map(&:id)).to match_array(%w[c019 c021])
-      expect(questions.values.select(&:draft?)).to be_empty
+      expect(questions.values.select(&:draft?).map(&:id)).to match_array(%w[a006 a007 a008])
+      expect(questions.values.select(&:draft?)).to all(have_attributes(kind: :aql, selection: be_present))
     end
 
     it "c008「発症」: 第 1 候補は発症日時（at0077）、第 2 候補はプロブレム・診断名（at0002）" do
