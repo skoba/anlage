@@ -110,3 +110,80 @@
 ## 5. 範囲外
 
 自然言語→AQL（S4）、検索の改良（S3）、AQL エンジンの拡張（openehr-ruby）、コード値での条件（2.5.0 のあと）、SNOMED 等の外部値集合の展開（コンテンツ防火壁）。
+
+## 6. ビルダーの本体と画面（R-20261124-21 の作業列 1・2。2.2・2.3 を、openehr 2.5.0 のあとの形に改める）
+
+基準点: anlage main `66f3a85`（openehr 2.5.0、openehr-rails 0.9.0）。この節が 2.2・2.3 と食い違うときは、この節が優先する。
+
+### 6.1 エンジンの変化（実測）
+
+- openehr 2.5.0 の `path_evaluator.rb:23` は `ALLOWED_TERMINAL_HOPS = %w[code_string defining_code magnitude name time value]`。
+  `value/defining_code/code_string` に届く（評価 v2 の a002 が main で一致。`docs/reports/s1-eval-v2-log.md` R12）
+- `LIKE` は glob（`predicate_evaluator.rb:17-21`: `?` は 1 文字、`*` は 0 文字以上、値の全体に一致）。`*` と `?` を文字として書く方法は無い
+- 文字列リテラルは `\\` と `\"` のエスケープを読む（`lexer.rb:74-78`、`read_string`）
+- 1 つの節が複数に当たると `fan-out SELECT paths are not yet supported` で落ちる（`path_evaluator.rb:93-96`）。繰り返しのある節（検査の分析項目が 2 つ以上）は
+  いまのエンジンでは引けない。ビルダーは防がず、実行時の誤りとして画面に出す
+
+### 6.2 リンタの追随（先に直す）
+
+- 終端ホップに `value/defining_code/code_string` を足す（DV_CODED_TEXT だけ）。エンジンのホップ表は 2.5.0 の実物に合わせる
+- 値集合: `code_string` への `=`／`MATCHES` は `code_list[].code` と照合する（表示文字列 `value/value` は従来どおり `label` と照合）
+- `archetype_details`（25 項）は届かないままなので error のまま
+
+### 6.3 ビルダー
+
+`QueryBuilder::Builder.build(columns:, conditions:, composition_name:)` → AQL 文字列。入力はカード（ハッシュ）と条件だけで、自然言語は入らない。
+
+- 変数は ENTRY のアーキタイプ 1 つに 1 本。カードの path を、ENTRY（OBSERVATION／EVALUATION／INSTRUCTION／ACTION／ADMIN_ENTRY）の述語の節で切り、
+  そこから下をパスにする。埋め込み CLUSTER は `items[openEHR-EHR-CLUSTER.x.v1]` のまま辿る
+- FROM は `EHR e CONTAINS COMPOSITION c CONTAINS <RM 型> <変数>[<archetype_id>]`。SECTION は FROM に書かない（CONTAINS は子孫を辿るので、
+  SECTION 配下の ENTRY も同じ 1 本で引ける。同じアーキタイプを持つ複数のテンプレートを横断する。デモクエリ 5 と同じ形）
+- 1 つのクエリで使える ENTRY のアーキタイプは 1 つ。2 つ以上を選ぶと `InvalidSelection`（結合の意味＝同じ文書の中か、同じ患者かを決めていない）
+- 射影: DV_QUANTITY・DV_COUNT は `value/magnitude`、ほかは `value/value`。`composition_name` が真なら先頭に `c/name/value`
+- 条件（カードの型で決まる。`QueryBuilder::Builder.kind(card)`）:
+
+| 種類 | カード | 演算子 | AQL |
+|---|---|---|---|
+| number | DV_QUANTITY、DV_COUNT | `>` `>=` `<` `<=` `=` | `…/value/magnitude > 110` |
+| code | DV_CODED_TEXT で code_list がある | `MATCHES`（コードの配列） | `…/value/defining_code/code_string MATCHES {"at0074"}` |
+| date | DV_DATE_TIME、DV_DATE | `BETWEEN`（from・to。片方だけでもよい） | `…/value/value >= "from" AND …/value/value < "to"` |
+| text | 上のどれでもない（DV_TEXT、外部値集合の DV_CODED_TEXT など） | `=`、`MATCHES`（文字列の配列）、`CONTAINS` | `= "x"`、`MATCHES {"x", "y"}`、`LIKE "*x*"` |
+
+- 値は必ずリテラルとして書く: 数値は `Integer`／`Float` に読めるものだけ、文字列は `\\` と `"` をエスケープする。
+  `CONTAINS` の値に `*`・`?` があれば `InvalidSelection`（glob の文字を文字として書けない）
+- 条件どうしは AND でつなぐ（OR は作らない。範囲外）
+- `QueryBuilder::Runner.call(...)` が、組む → リンタ → error が無ければ `OpenehrRails::Aql::Executor.execute` の順に通す。
+  リンタの error があれば実行しない。実行時の誤り（`OpenehrRails::Aql::Error`）は例外にせず結果に持つ
+
+### 6.4 画面
+
+`GET /queries/new`（名前は「クエリビルダー」）。状態はすべて URL のパラメータに持つ（サーバーにもブラウザにも保存しない。JavaScript は使わない）。
+
+- 流れ: 探したい項目で検索 → カードごとに「表示する項目に足す」「条件に足す」→ 条件は種類に応じた入力（数値と演算子／値集合のチェック／日付の範囲／文字列）
+  → 「AQL を組む」で AQL とリンタの指摘を出す → 「実行」で行を出す
+- カードの参照は `<template_id>|<path>`。active のカードに無い参照は捨てて、その旨を出す
+- 共通ナビに「クエリビルダー」を足す（「パスカード検索」と「AQL 照会」のあいだ）。文言は `docs/demo/ui-vocabulary.md` に同じコミットで足す
+- 実行するのは、ビルダーが組んだ AQL だけ（URL に AQL を受け取らない）。自由な AQL は既存の「AQL 照会」
+
+### 6.5 テスト TODO
+
+リンタ: 1.「DV_CODED_TEXT の value/defining_code/code_string は通る」「DV_TEXT には error」 2.「code_string の MATCHES は code と照合し、無いコードは error に許されるコードを添える」
+
+ビルダー: 3.「血圧 at0004 > 110 から、評価 v2 の a001 と同じ形の AQL」 4.「診断確度のコード at0074 から a002 と同じ形」 5.「文書名つき・文字列の MATCHES から a003 と同じ形」
+6.「埋め込み CLUSTER の分析名 = 空腹時血糖 から a004 と同じ形」 7.「日付の範囲」 8.「SECTION 配下のカード（jp_referral）からも同じ AQL」 9.「包含は LIKE、引用符はエスケープ」
+10.「ENTRY が 2 つ・型に合わない演算子・数値でない値・glob の文字・項目なしは InvalidSelection」 11.「組んだ AQL はどれもリンタを通る」
+
+実行: 12.「demo_initial の上で a001〜a005 と同じ行を返す」「リンタの error があれば実行しない」
+
+画面: 13. request spec（検索、足す、AQL、指摘、実行、ナビ） 14. 実ブラウザの system spec（`spec/system/demo_query_builder_spec.rb`、`js: true`。検索 → 条件 → 実行 → 行）
+
+### 6.6 自己承認した判断
+
+| # | 判断 | 捨てた案 |
+|---|---|---|
+| G1 | SECTION を FROM に書かない | 2.2 の `CONTAINS SECTION s[S]`（テンプレートを横断できなくなる。jp_referral と ProblemList の problem_diagnosis が別の AQL になる） |
+| G2 | ENTRY のアーキタイプは 1 クエリに 1 つ | 複数の ENTRY を AND でつなぐ（結合の意味が臨床の判断になる。要るなら別に計画する） |
+| G3 | コード値の条件は `defining_code/code_string`。表示文字列の仮置き（D4）をやめる | 表示文字列のまま（言語で変わる。裁定 R-20261124-21 の指示） |
+| G4 | 画面の状態は URL だけ。JavaScript を足さない | Stimulus で組み立てる（書く側のレイアウト・JS と重なる。実ブラウザの spec は URL の遷移でも書ける） |
+| G5 | 画面は AQL の文字列を受け取らない | プレビューの AQL を編集して実行（「AQL 照会」と役が重なり、リンタを通らない AQL の入口になる） |
+
