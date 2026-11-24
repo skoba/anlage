@@ -82,6 +82,11 @@ jobs:
           RAILS_ENV: test
         run: bin/rails db:test:prepare
 
+      - name: Show browser versions
+        run: |
+          google-chrome --version
+          chromedriver --version
+
       - name: Run test suite
         env:
           RAILS_ENV: test
