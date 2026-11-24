@@ -236,3 +236,31 @@ RSpec.describe Opt::CompositionBuilder, "#80 SECTION 配下の ENTRY" do
     expect(built.content.map(&:class)).to eq([ OpenEHR::RM::Composition::Content::Entry::Evaluation ])
   end
 end
+
+# skoba/anlage#86: 保存される CODE_PHRASE の terminology_id が値を持つ
+# （docs/design/rm-attributes-without-inputs.md 4 節の 1）。canonical JSON で確かめる。
+RSpec.describe Opt::CompositionBuilder, "#86 terminology_id の値" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!).reload }
+  let(:canonical) do
+    built = described_class.new(template, { "problem_diagnosis_at0002" => "高血圧症", "problem_diagnosis_at0073" => "at0074" }).build
+    JSON.parse(OpenEHR::Serializer::RMJSONSerializer.new(built).serialize)
+  end
+  let(:entry) { canonical["content"].first }
+
+  it "COMPOSITION の言語・地域・category の terminology_id が値を持つ" do
+    expect(canonical.dig("language", "terminology_id", "value")).to eq("ISO_639-1")
+    expect(canonical.dig("territory", "terminology_id", "value")).to eq("ISO_3166-1")
+    expect(canonical.dig("category", "defining_code", "terminology_id", "value")).to eq("openehr")
+  end
+
+  it "ENTRY の言語・文字コードの terminology_id が値を持つ" do
+    expect(entry.dig("language", "terminology_id", "value")).to eq("ISO_639-1")
+    expect(entry.dig("encoding", "terminology_id", "value")).to eq("IANA_character-sets")
+  end
+
+  it "選択肢（DV_CODED_TEXT）の terminology_id が値を持つ" do
+    certainty = entry.dig("data", "items").find { |item| item["archetype_node_id"] == "at0073" }
+
+    expect(certainty.dig("value", "defining_code")).to include("code_string" => "at0074", "terminology_id" => { "_type" => "TERMINOLOGY_ID", "value" => "local" })
+  end
+end
