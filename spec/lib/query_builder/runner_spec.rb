@@ -105,5 +105,4 @@ RSpec.describe QueryBuilder::Runner do
       expect(rows(run(columns: [ systolic, diastolic ], conditions: [ either.call("80"), { card: systolic, operator: ">", value: "200" } ]))).to eq([])
     end
   end
-
 end
