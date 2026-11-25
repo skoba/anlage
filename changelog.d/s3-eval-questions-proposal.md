@@ -1,0 +1,1 @@
+- Docs: 評価に足す card の問いの案 `docs/design/s3-eval-questions-proposal.md`（12 問の案と、いまの検索での実測。ゴールドは変えていない）（Refs R-20261125-2）。利用者に見える変更ではない（文書のみ）
