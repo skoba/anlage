@@ -29,12 +29,21 @@ module Opt
       remove_non_structural_entry_keys(committable_hash)
 
       uid = @uid || SecureRandom.uuid
-      composition = OpenehrRails::Rm::CompositionCommitter.commit(committable_hash, uid: uid, ehr: @ehr, owner: nil)
+      composition = OpenehrRails::Rm::CompositionCommitter.commit(committable_hash, uid: uid, ehr: @ehr, owner: nil,
+                                                                  context_start_time: context_start_time)
 
       Result.new(uid:, composition:, canonical_hash:)
     end
 
     private
+
+    # COMPOSITION の context/start_time（紹介日など。skoba/anlage#146）。新しい記録は保存した時刻
+    # （docs/design/rm-attributes-without-inputs.md 2 節の規則 4）。修正（同じ uid の新しい版）は元の記録の時刻を引き継ぐ。
+    # setting は渡さない（OPT に制約が無く、anlage では決めない。gem が組む）
+    def context_start_time
+      head = @uid && OpenehrRails::Rm::Composition.latest.find_by(uid: @uid)
+      head&.context_start_time || Time.current
+    end
 
     # SECTION は items を辿って、配下の ENTRY からも外す（skoba/anlage#80）
     def remove_non_structural_entry_keys(canonical_hash)
