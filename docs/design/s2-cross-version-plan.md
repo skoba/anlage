@@ -110,3 +110,23 @@ demo_initial のテンプレートのうち、血圧は 2 つの版にある。
 ## 8. 範囲外
 
 at-code やパスが版で変わった項目の対応、単位の変換、3 つ以上の ENTRY をまたぐ結合、評価の問い（サンプルデータが main に入ったあと、R-20261125-6 の問いの案と一緒に出す）。
+
+## 9. ゲートで問うこと: 版の対応の行のレビュー（2026-11-25）
+
+`rake query_builder:version_candidates`（demo_initial の 5 テンプレート）が挙げた候補は 2 件。
+
+| アーキタイプ（版を除く） | 項目 | 版 | ラベル | 型 | 単位 | 値の範囲 | 違い |
+|---|---|---|---|---|---|---|---|
+| openEHR-EHR-OBSERVATION.blood_pressure | at0004 | v1、v2 | v1: Systolic／v2: 収縮期 | DV_QUANTITY | mm[Hg] | 0 以上 1000 未満 | なし |
+| openEHR-EHR-OBSERVATION.blood_pressure | at0005 | v1、v2 | v1: Diastolic／v2: 拡張期 | DV_QUANTITY | mm[Hg] | 0 以上 1000 未満 | なし |
+
+- 2 行とも、`config/version_mappings.yml` に **pending** で置いてある。画面で「版をまたいで引く」をチェックしても、いまは
+  「版の対応が無い項目がある」と出て実行されない（仕組みは、spec の中で active の行を渡して確かめてある）
+
+問うこと:
+
+1. **この 2 行を active にしてよいか**（v1 と v2 の収縮期・拡張期は同じもの、と確かめる）。よければ、`status: active` と
+   `reviewed_by`・`reviewed_at` を書く。この 2 行を active にすると、デモで v1 と v2 の血圧を 1 つの表に引ける
+2. セッションが比べたのは、カードにある情報（at-code、パス、型、単位、値の範囲）だけ。**アーキタイプの改訂の内容**
+   （v1 → v2 で、測定の定義・プロトコルの項目・状態の項目がどう変わったか）は見ていない。対応を認めるのに、それが要るか
+3. ラベルは、v1 が英語（Systolic、Diastolic）、v2 が日本語。まとめた結果の列の見出しは、選んだカードのラベルを使っている
