@@ -35,11 +35,11 @@ RSpec.describe "evaluation:run" do
   # この spec の索引は 4 テンプレート（ProblemList を LabResultReport より先に登録する）。c015「臨床検査」は 4 枚が同点で、
   # 同点の順序を登録順で決めていたあいだは負例（ProblemList at0003）が 1 位に出た。skoba/anlage#122 で順序を決定的にしたので、
   # demo_initial の 5 テンプレート（spec/lib/evaluation/runner_spec.rb）と同じ結果になる
-  it "ゴールド v2 の card 4 問は別の報告に出し、保留問 2 問を並べる（aql は RESET 無しでは読まない）" do
+  it "ゴールド v2 の card 13 問は別の報告に出し、保留問 3 問を並べる（aql は RESET 無しでは読まない）" do
     expect { run_task }.to output(
-      a_string_including("# 評価 v2（phase1-bigram、ゴールド v2）", "## card（4 問）", "| Top-1 | 4/4 (100.00%) |", "| Top-3 | 4/4 (100.00%) |",
-                         "| 負例違反 | 0/4 |",
-                         "| 順位遵守 | 1/1 (100.00%)（組 1/1） |", "## 保留問（2 問、母数外）", "- c019: 検体", "- c021: 既往歴")
+      a_string_including("# 評価 v2（phase1-bigram、ゴールド v2）", "## card（13 問）", "| Top-1 | 8/13 (61.54%) |", "| Top-3 | 10/13 (76.92%) |",
+                         "| 完全失敗 | 2/13 (15.38%) |", "| MRR | 0.6987 |", "| 負例違反 | 0/13 |",
+                         "| 順位遵守 | 1/1 (100.00%)（組 1/1） |", "## 保留問（3 問、母数外）", "- c019: 検体", "- c021: 既往歴", "- c033: 脈拍")
     ).to_stdout
   end
 

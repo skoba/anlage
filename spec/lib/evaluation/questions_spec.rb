@@ -261,13 +261,33 @@ RSpec.describe Evaluation::Questions do
 
     PD_ID = "openEHR-EHR-EVALUATION.problem_diagnosis.v1"
 
-    # a006〜a008 は S2 の経路の案（draft、人間レビュー前。R-20261124-21 の作業列 3）。確定した 11 問は変えていない
-    it "確定した 11 問: active 9 問（card 4・aql 5）、pending 2 問（c019・c021）。ほかに S2 の経路の案 3 問（draft）" do
-      expect(questions.values.reject(&:draft?).map(&:id)).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015 c019 c021])
-      expect(questions.values.select(&:active?).map(&:id)).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015])
-      expect(questions.values.select(&:pending?).map(&:id)).to match_array(%w[c019 c021])
-      expect(questions.values.select(&:draft?).map(&:id)).to match_array(%w[a006 a007 a008])
-      expect(questions.values.select(&:draft?)).to all(have_attributes(kind: :aql, selection: be_present))
+    # a006〜a008 は S2 の経路の案（draft、人間レビュー前。R-20261124-21 の作業列 3）。
+    # 2026-11-25 に card の 9 問（c022〜c024・c026・c027・c029〜c032）と保留問 c033 を足した（R-20261125-7。レビュー済み）。
+    # c034 は負例だけの問いの案（draft）
+    it "確定した 21 問: active 18 問（card 13・aql 5）、pending 3 問（c019・c021・c033）。ほかに案 4 問（draft）" do
+      cards = %w[c008 c010 c014 c015 c022 c023 c024 c026 c027 c029 c030 c031 c032]
+      aqls = %w[a001 a002 a003 a004 a005]
+      expect(questions.values.select(&:active?).map(&:id)).to match_array(cards + aqls)
+      expect(questions.values.select(&:pending?).map(&:id)).to match_array(%w[c019 c021 c033])
+      expect(questions.values.reject(&:draft?).map(&:id)).to match_array(cards + aqls + %w[c019 c021 c033])
+      expect(questions.values.select(&:draft?).map(&:id)).to match_array(%w[a006 a007 a008 c034])
+      expect(questions.values.select { |question| question.draft? && question.aql? }).to all(have_attributes(selection: be_present))
+    end
+
+    it "2026-11-25 に足した 9 問と c033 は、レビューの記録（Kobayashi, Shinji、2026-11-25）を持つ。c026 は診断確度が第 1 候補で、診断名は許容" do
+      added = %w[c022 c023 c024 c026 c027 c029 c030 c031 c032 c033]
+      raw = YAML.load_file(Rails.root.join("spec/fixtures/evaluation/v2/cards.yml"), permitted_classes: [ Date ]).index_by { |entry| entry["id"] }
+
+      expect(added.map { |id| raw.fetch(id).values_at("reviewed_by", "reviewed_at") }.uniq).to eq([ [ "Kobayashi, Shinji", Date.new(2026, 11, 25) ] ])
+      expect(questions.fetch("c026")).to have_attributes(expected: [ { archetype_id: PD_ID, at_code: "at0073", rank: 1 } ],
+                                                         acceptable: [ { archetype_id: PD_ID, at_code: "at0002" } ])
+      expect(questions.fetch("c027").expected).to eq([ { archetype_id: PD_ID, at_code: "at0003" } ])
+    end
+
+    it "c034「肥満度」（案）: 負例だけの問い。負例は body_mass_index.v2 のどのカードも" do
+      expect(questions.fetch("c034")).to have_attributes(
+        status: :draft, negative_only?: true, forbidden: [ { archetype_id: "openEHR-EHR-OBSERVATION.body_mass_index.v2", at_code: nil } ]
+      )
     end
 
     it "c008「発症」: 第 1 候補は発症日時（at0077）、第 2 候補はプロブレム・診断名（at0002）" do
