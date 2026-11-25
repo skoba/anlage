@@ -131,6 +131,6 @@ RSpec.describe "クエリビルダー", type: :request do
 
     nav = doc.css("nav#app_nav a").map { [ _1.text.strip, _1["href"], _1["aria-current"] ] }
     expect(nav).to include([ "クエリビルダー", "/queries/new", "page" ])
-    expect(nav.map(&:first)).to eq(%w[テンプレート カルテ記録一覧 パスカード検索 クエリビルダー] + [ "AQL 照会" ])
+    expect(nav.map(&:first)).to eq(%w[患者 テンプレート カルテ記録一覧 パスカード検索 クエリビルダー] + [ "AQL 照会" ])
   end
 end
