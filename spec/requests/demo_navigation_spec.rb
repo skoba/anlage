@@ -12,6 +12,7 @@ RSpec.describe "デモ動線: 共通ナビと保存後の次アクション", ty
   end
 
   NAV_LINKS = [
+    [ "患者", "/patients" ],
     [ "テンプレート", "/templates" ],
     [ "カルテ記録一覧", "/compositions" ],
     [ "パスカード検索", "/pathcards/search" ],
@@ -20,8 +21,8 @@ RSpec.describe "デモ動線: 共通ナビと保存後の次アクション", ty
   ].freeze
 
   describe "共通ナビ（layout）" do
-    it "テンプレート・帳票・カルテ記録一覧・パスカード検索・クエリビルダーの各画面に同じ 5 リンクが出る" do
-      [ "/", "/templates", "/forms/#{template.template_id}", "/compositions", "/pathcards/search", "/queries/new" ].each do |path|
+    it "テンプレート・帳票・カルテ記録一覧・パスカード検索・クエリビルダーの各画面に同じ 6 リンクが出る" do
+      [ "/", "/patients", "/templates", "/forms/#{template.template_id}", "/compositions", "/pathcards/search", "/queries/new" ].each do |path|
         get path
 
         expect(links_in("nav#app_nav")).to eq(NAV_LINKS), "#{path} のナビ"
@@ -46,7 +47,7 @@ RSpec.describe "デモ動線: 共通ナビと保存後の次アクション", ty
 
     it "いまの画面の項目に印が付く（帳票はテンプレート、カルテ記録は一覧の項目）" do
       {
-        "/" => [ "テンプレート" ], "/templates" => [ "テンプレート" ], "/forms/#{template.template_id}" => [ "テンプレート" ],
+        "/patients" => [ "患者" ], "/" => [ "テンプレート" ], "/templates" => [ "テンプレート" ], "/forms/#{template.template_id}" => [ "テンプレート" ],
         "/compositions" => [ "カルテ記録一覧" ], "/pathcards/search" => [ "パスカード検索" ], "/queries/new" => [ "クエリビルダー" ]
       }.each do |path, expected|
         get path
@@ -55,7 +56,7 @@ RSpec.describe "デモ動線: 共通ナビと保存後の次アクション", ty
       end
     end
 
-    it "AQL 照会（engine の画面）にも同じ 5 リンクが出て、AQL 照会に印が付く" do
+    it "AQL 照会（engine の画面）にも同じ 6 リンクが出て、AQL 照会に印が付く" do
       get "/openehr/query"
 
       expect(response).to have_http_status(:ok)

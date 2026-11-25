@@ -1,6 +1,7 @@
 <%
 disabled ||= false
 value ||= nil
+units_value ||= nil
 error ||= nil
 %>
 <div class="field <%= "field-error" if error %>">
@@ -19,7 +20,7 @@ error ||= nil
     <% units_list = Array(field["units_list"].presence || [ field["units"] ].compact) %>
     <% if units_list.size > 1 %>
       <select id="field_<%= field["name"] %>__units" name="values[<%= field["name"] %>__units]" <%= "disabled" if disabled %>>
-        <% units_list.each do |unit| %><option value="<%= unit %>"><%= unit %></option><% end %>
+        <% units_list.each do |unit| %><option value="<%= unit %>" <%= "selected" if units_value == unit %>><%= unit %></option><% end %>
       </select>
     <% elsif units_list.size == 1 %>
       <span class="units"><%= units_list.first %></span>

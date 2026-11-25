@@ -11,6 +11,38 @@
   <%= link_to "テンプレートの詳細", template_path(template.template_id) %>
 </nav>
 
+<%# skoba/anlage#138: 修正と版の履歴（文言は docs/demo/ui-vocabulary.md） %>
+<% versions = @composition.versions.to_a %>
+<% if @composition.deleted? %>
+  <p class="form-notice">このカルテ記録は削除済みです。</p>
+<% elsif @composition.latest_version? %>
+  <% if @editable %>
+    <p><%= link_to "修正", edit_composition_path(@composition), id: "edit_composition" %></p>
+  <% else %>
+    <p class="form-notice">この記録は修正できません（読み戻せない形を含みます。<a href="https://github.com/skoba/anlage/issues/30">#30</a>）。</p>
+  <% end %>
+  <%# skoba/anlage#140: 削除は論理削除（削除の版を足す） %>
+  <% if @composition.uid.present? %>
+    <%= button_to "削除", composition_path(@composition), method: :delete, form: { data: { turbo_confirm: "このカルテ記録を削除しますか？" } } %>
+  <% end %>
+<% else %>
+  <p class="form-notice">この版は置き換えられています。<%= link_to "最新の版を見る", composition_path(versions.last), id: "latest_version" %></p>
+<% end %>
+
+<h2 id="version_history">版の履歴</h2>
+<ol class="versions">
+  <% versions.each.with_index(1) do |version, number| %>
+    <li>
+      <% label = "版 #{number}（#{version.created_at}）" %>
+      <% if version == @composition %>
+        <%= label %>（この版）
+      <% else %>
+        <%= link_to label, composition_path(version) %>
+      <% end %>
+    </li>
+  <% end %>
+</ol>
+
 <details>
   <summary>canonical JSON</summary>
   <pre><%= JSON.pretty_generate(@composition.rm_composition) %></pre>

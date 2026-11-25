@@ -85,6 +85,29 @@ RSpec.describe Evaluation::Report do
     )
   end
 
+  # S2 の経路（R-20261124-21 の作業列 3）
+  it "S2 の経路の集計（一致・不一致・実行不能・組めない）と、一致しなかった問いの理由と AQL を出す。selection を持つ問いが無ければ節を出さない" do
+    expect(markdown).not_to include("S2 の経路")
+
+    question = Evaluation::Question.new(id: "a03", kind: :aql, query: "疑いの傷病名", dataset: "demo_initial", reference_aql: "SELECT 3",
+                                        expected_rows: [ [ "疑い" ] ], selection: { columns: [], conditions: [] })
+    reference = Evaluation::AqlScorer::Score.new(status: :match, rows: [], missing: [], extra: [])
+    ok = Evaluation::Runner::AqlResult.new(question: question, score: reference,
+                                           builder_score: Evaluation::BuilderRoute::Score.new(status: :match, aql: "SELECT ok", missing: [], extra: []))
+    ng = Evaluation::Runner::AqlResult.new(question: question, score: reference,
+                                           builder_score: Evaluation::BuilderRoute::Score.new(status: :unbuildable, aql: nil, missing: [], extra: [],
+                                                                                              error: "索引にカードが無い: x at0001"))
+    diff = Evaluation::Runner::AqlResult.new(question: question, score: reference,
+                                             builder_score: Evaluation::BuilderRoute::Score.new(status: :mismatch, aql: "SELECT ng", missing: [ [ "疑い" ] ], extra: []))
+    route_run = Evaluation::Runner::Run.new(card_results: [], aql_results: [ ok, ng, diff ], drafts: [], pendings: [], corpus_archetype_ids: [])
+
+    expect(described_class.render(route_run, label: "x")).to include(
+      "## aql: S2 の経路（クエリビルダーが組んだ AQL。3 問）", "| 一致 | 1/3 |", "| 不一致 | 1/3 |", "| 実行不能 | 0/3 |", "| 組めない | 1/3 |",
+      "- a03: 疑いの傷病名 — 組めない: 索引にカードが無い: x at0001",
+      "- a03: 疑いの傷病名 — 不一致: 不足 [[\"疑い\"]] 余分 []（SELECT ng）"
+    )
+  end
+
   it "期待先がコーパスに現れた保留問は「保留解除候補」と印が付く" do
     releasable = Evaluation::Runner::Run.new(
       card_results: [], aql_results: [], drafts: [],

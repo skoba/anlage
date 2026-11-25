@@ -47,7 +47,12 @@ module Opt
                     items
           end
           element = scope&.find { |i| i["archetype_node_id"] == field["node_id"] }
-          values[field["name"]] = extract_value(field, element["value"]) if element
+          next unless element
+
+          values[field["name"]] = extract_value(field, element["value"])
+          # skoba/anlage#138: 数量の単位も読み戻す（builder の入力と同じ <name>__units）
+          units = element.dig("value", "units") if field["rm_type"] == "DV_QUANTITY"
+          values["#{field['name']}__units"] = units if units.present?
         end
       end
       values

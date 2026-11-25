@@ -1,0 +1,2 @@
+- カルテ記録を修正できるようにした（skoba/anlage#138、R-20261124-20）。記録の画面の「修正」で、前の版の値が入った帳票を開き、保存すると同じ uid の新しい版になる（RM の版）。記録の画面に「版の履歴」を出し、カルテ記録一覧には各記録の新しい版だけを出す。読み戻して組み直すと内容が変わる記録（jp_referral の INSTRUCTION など、#30 の残り）には修正を出さない。数量の単位も読み戻すようにした
+  - 利用者に見える変更: はい。新しい URL（`GET /compositions/:id/edit`、`PATCH /compositions/:id`）、記録の画面の「修正」と「版の履歴」、一覧の行が版ごとから記録ごとに。`Opt::CompositionReader` は `<name>__units` も返す。`Opt::RmCompositionCommitter.call` に `uid:` を足した

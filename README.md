@@ -57,6 +57,48 @@ Anlageが実証しようとしているのは、openEHR標準の役割の転換�
   [`docs/upstream-candidates.md`](docs/upstream-candidates.md) 10・11項参照。
 - **デモクエリのspec化**: 会話記録に依存しない、実行可能な形でのデモクエリ4本
   （[`docs/demo/aql-queries.md`](docs/demo/aql-queries.md)）
+- **SECTION・INSTRUCTION・複数ルートを持つテンプレートの保存**: 診療情報提供書（jp_referral）を帳票から保存し、
+  紹介先医療機関と傷病名を AQL で引ける（[`spec/system/demo_referral_spec.rb`](spec/system/demo_referral_spec.rb)）。
+  必須の規則は「入れ物を書くなら必須」（[`docs/design/required-rule.md`](docs/design/required-rule.md)）
+- **テンプレートの管理**: 詳細・版の履歴・2 つの版の差分（項目とパスカード）
+  （[`spec/requests/template_detail_spec.rb`](spec/requests/template_detail_spec.rb)、
+  [`spec/requests/template_diff_screen_spec.rb`](spec/requests/template_diff_screen_spec.rb)）
+- **患者（EHR）とカルテ記録**: 患者を作って選び、保存した記録をその EHR に結び付ける。記録の修正（openEHR の版）と
+  論理削除（[`spec/requests/patients_spec.rb`](spec/requests/patients_spec.rb)、
+  [`spec/requests/records_to_ehr_spec.rb`](spec/requests/records_to_ehr_spec.rb)、
+  [`spec/requests/record_versions_spec.rb`](spec/requests/record_versions_spec.rb)、
+  [`spec/requests/record_delete_spec.rb`](spec/requests/record_delete_spec.rb)）
+- **パスカード検索とクエリビルダー**: 項目を言葉で探し、表示する項目と条件を選ぶと AQL が組まれ、検査を通してから実行される
+  （[`docs/design/s2-query-builder-plan.md`](docs/design/s2-query-builder-plan.md)）
+
+できないこと・気を付けることは [`docs/known-limitations.md`](docs/known-limitations.md)（**認証が無い**ので、実在の患者のデータを入れない）。
+
+## 動かし方
+
+### 開発機（Ruby 4.0.10）
+
+```sh
+bundle install
+bin/rails db:prepare
+bin/rails server          # http://localhost:3000
+bundle exec rspec         # テスト（system spec に Chrome が要る）
+```
+
+### Docker
+
+イメージは本番用の設定（`RAILS_ENV=production`）。`config/master.key` が無くても、`SECRET_KEY_BASE` を渡せば起動する。
+データ（SQLite）は `/rails/storage` に置かれるので、volume にする。
+
+```sh
+docker build -t anlage .
+docker run -d --name anlage -p 8080:80 \
+  -e SECRET_KEY_BASE=$(openssl rand -hex 64) \
+  -v anlage-storage:/rails/storage anlage
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/up   # 200
+```
+
+http://localhost:8080/ を開き、テンプレートの画面に OPT を取り込む。試しの OPT は
+[`spec/fixtures/opt/`](spec/fixtures/opt/)（出所は [`docs/demo/opt-catalog.md`](docs/demo/opt-catalog.md)）。
 
 ## Current focus
 
