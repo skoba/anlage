@@ -1,0 +1,86 @@
+# 評価 v2 のゴールド（aql 種、S2 の経路つき）の案。裁定 R-20261124-21 の作業列 3。docs/design/s1-eval-v2-plan.md 8 節。
+# すべて status: draft（人間レビュー前。採点の母数に入らない）。レビュー確定時に status を外す。
+#
+# 形式は aql.yml と同じで、selection（クエリビルダーへの入力）を足したもの:
+#   selection.columns（表示する項目。カードを {archetype_id, at_code} で指す）/
+#   selection.conditions（card・operator・value。operator はカードの型で決まる: 数値は > >= < <= =、値集合は MATCHES とコードの配列、
+#   日付は BETWEEN と {from, to}、文字列は =・MATCHES・CONTAINS）/ selection.composition_name（文書名を先頭に出す）
+# 採点は 2 通り: reference_aql が expected_rows を返すか（ゴールドの健全性）、selection からビルダーが組んだ AQL が同じ行を返すか（S2 の経路）。
+#
+# 人間レビューの範囲: 問いの文言が臨床的に自然か、参照 AQL と selection が問いの意図を表しているか、期待行がその意図の正解か。
+# アーキタイプ ID と at-code は実物（spec/fixtures/pathcards/*.golden.json）。期待行は demo_initial での実測（docs/reports/s2-query-builder-log.md R15）。
+
+- id: a006
+  kind: aql
+  status: draft
+  query: "病名に「糖尿病」を含む記録を、出所の文書名つきで"
+  dataset: demo_initial
+  reference_aql: |
+    SELECT c/name/value AS composition_name,
+           ev/data[at0001]/items[at0002]/value/value AS diagnosis
+    FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+    WHERE ev/data[at0001]/items[at0002]/value/value LIKE "*糖尿病*"
+  expected_rows: [["ProblemList", "2型糖尿病"], ["jp_referral", "2型糖尿病"]]
+  cards:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+        operator: CONTAINS
+        value: "糖尿病"
+    composition_name: true
+  notes: "文字列の包含（S2 の条件型: 包含。AQL の LIKE は glob で、*糖尿病* と書く）。テンプレート横断（ProblemList と jp_referral）。a003 は病名を列挙する形（MATCHES）で、こちらは部分一致。【人間に問う】「糖尿病を含む」は臨床の問いとして自然か（1型・2型・妊娠糖尿病などをまとめて引く意図）"
+  reviewed_by:
+  reviewed_at:
+
+- id: a007
+  kind: aql
+  status: draft
+  query: "診断確度が「疑い」または「確定」の傷病名"
+  dataset: demo_initial
+  reference_aql: |
+    SELECT ev/data[at0001]/items[at0002]/value/value AS diagnosis
+    FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+    WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0074", "at0076"}
+  expected_rows: [["高血圧症"], ["2型糖尿病"]]
+  cards:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
+        operator: MATCHES
+        value: [at0074, at0076]
+  notes: "値集合のコードを 2 つ選ぶ形（at0074 疑い、at0076 確定）。a002 はコード 1 つ。demo_initial には確定の記録が無いので、期待行は a002 と同じ 2 行（診断確度の無い jp_referral の 1 件は入らない）。【人間に問う】確定の記録が無いデータで、この問いをゴールドに置く意味があるか（確定の記録を足すなら、初期データは書く側）"
+  reviewed_by:
+  reviewed_at:
+
+- id: a008
+  kind: aql
+  status: draft
+  query: "拡張期血圧が 90 mmHg 未満の記録の、収縮期と拡張期"
+  dataset: demo_initial
+  reference_aql: |
+    SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic,
+           o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude AS diastolic
+    FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+    WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude < 90
+  expected_rows: [[120.0, 80.0]]
+  cards:
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+      - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
+        operator: "<"
+        value: 90
+  notes: "2 つの項目を表示し、表示しない側の条件ではなく拡張期で絞る（S2 の条件型: 数値、演算子 <）。a001 は収縮期 1 列。demo_initial の血圧は CardiologyEncounter の 120/80 の 1 件"
+  reviewed_by:
+  reviewed_at:

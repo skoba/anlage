@@ -52,8 +52,27 @@ module Evaluation
         intent_tag: entry["intent_tag"], notes: entry["notes"],
         dataset: entry["dataset"], reference_aql: entry["reference_aql"], expected_rows: entry["expected_rows"],
         ordered: entry.fetch("ordered", false), cards: card_refs(entry["cards"]),
-        pending_until: entry["pending_until"], source: path.to_s
+        pending_until: entry["pending_until"], source: path.to_s, selection: selection(id, entry["selection"])
       )
+    end
+
+    # S2 の経路の入力（クエリビルダーの選択）。カードは {archetype_id, at_code} で指す。値はそのまま渡す（検査はビルダーとリンタ）
+    def selection(id, raw)
+      return nil if raw.nil?
+
+      columns = card_refs(raw["columns"])
+      raise InvalidQuestion, "#{id}: selection に columns（表示する項目）が無い" if columns.empty?
+
+      conditions = Array(raw["conditions"]).map do |condition|
+        unless condition.is_a?(Hash) && condition["card"].is_a?(Hash) && condition["operator"]
+          raise InvalidQuestion, "#{id}: selection の条件には card と operator が要る（#{condition.inspect}）"
+        end
+
+        value = condition["value"]
+        value = value.transform_keys(&:to_sym) if value.is_a?(Hash)
+        { card: card_refs([ condition["card"] ]).first, operator: condition["operator"].to_s, value: value }
+      end
+      { columns: columns, conditions: conditions, composition_name: raw["composition_name"] ? true : false }
     end
 
     def enum!(id, key, value, allowed)

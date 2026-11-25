@@ -120,6 +120,47 @@ RSpec.describe Evaluation::Questions do
       expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /r3.*rank/)
     end
 
+    # S2 の経路（R-20261124-21 の作業列 3、docs/design/s1-eval-v2-plan.md 8 節）: aql の問いは、クエリビルダーへの入力（selection）を持てる
+    it "aql の問いの selection（表示する項目、条件、文書名）を読む。カードは archetype_id と at_code で指す" do
+      write("aql.yml", <<~YAML)
+        - id: a001
+          kind: aql
+          query: "収縮期血圧が 110 mmHg を超える記録"
+          dataset: demo_initial
+          reference_aql: "SELECT 1"
+          expected_rows: [[120.0]]
+          selection:
+            columns:
+              - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+            conditions:
+              - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+                operator: ">"
+                value: 110
+            composition_name: true
+        - id: a002
+          kind: aql
+          query: "身長"
+          dataset: demo_initial
+          reference_aql: "SELECT 2"
+          expected_rows: []
+      YAML
+
+      a001, a002 = described_class.from_v2(dir)
+      bp = { archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2", at_code: "at0004" }
+
+      expect(a001.selection).to eq(columns: [ bp ], conditions: [ { card: bp, operator: ">", value: 110 } ], composition_name: true)
+      expect(a002.selection).to be_nil
+    end
+
+    it "selection に columns が無い、条件に card・operator が無い問いは読み込みで止まる" do
+      base = "id: s1, kind: aql, query: q, dataset: demo_initial, reference_aql: SELECT, expected_rows: []"
+      write("bad.yml", "- { #{base}, selection: { conditions: [] } }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /s1.*columns/)
+
+      write("bad.yml", "- { #{base}, selection: { columns: [ { archetype_id: a, at_code: at0001 } ], conditions: [ { value: 1 } ] } }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /s1.*card/)
+    end
+
     it "kind ごとの必須キーを欠く問い、未知の kind・status・match は読み込みで止まる" do
       write("bad_card.yml", "- { id: x1, kind: card, query: 血圧 }\n")
       expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x1.*expected/)
@@ -145,11 +186,13 @@ RSpec.describe Evaluation::Questions do
 
     PD_ID = "openEHR-EHR-EVALUATION.problem_diagnosis.v1"
 
-    it "11 問: active 9 問（card 4・aql 5）、pending 2 問（c019・c021）、draft は無い" do
-      expect(questions.keys).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015 c019 c021])
+    # a006〜a008 は S2 の経路の案（draft、人間レビュー前。R-20261124-21 の作業列 3）。確定した 11 問は変えていない
+    it "確定した 11 問: active 9 問（card 4・aql 5）、pending 2 問（c019・c021）。ほかに S2 の経路の案 3 問（draft）" do
+      expect(questions.values.reject(&:draft?).map(&:id)).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015 c019 c021])
       expect(questions.values.select(&:active?).map(&:id)).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015])
       expect(questions.values.select(&:pending?).map(&:id)).to match_array(%w[c019 c021])
-      expect(questions.values.select(&:draft?)).to be_empty
+      expect(questions.values.select(&:draft?).map(&:id)).to match_array(%w[a006 a007 a008])
+      expect(questions.values.select(&:draft?)).to all(have_attributes(kind: :aql, selection: be_present))
     end
 
     it "c008「発症」: 第 1 候補は発症日時（at0077）、第 2 候補はプロブレム・診断名（at0002）" do

@@ -3,7 +3,8 @@ module Evaluation
   # 採点の母数は status: active のみ。draft（人間レビュー前）と pending（正解不在の保留問）は一覧に残す。
   class Runner
     CardResult = Struct.new(:question, :results, :score, keyword_init: true)
-    AqlResult = Struct.new(:question, :score, keyword_init: true)
+    # builder_score: S2 の経路（selection からビルダーが組んだ AQL）の採点。selection の無い問いは nil
+    AqlResult = Struct.new(:question, :score, :builder_score, keyword_init: true)
 
     class Run
       attr_reader :card_results, :aql_results, :drafts, :pendings
@@ -20,6 +21,13 @@ module Evaluation
         statuses = aql_results.map { |result| result.score.status }
         { questions: statuses.size, match: statuses.count(:match), mismatch: statuses.count(:mismatch),
           unexecutable: statuses.count(:unexecutable) }
+      end
+
+      # S2 の経路（docs/design/s1-eval-v2-plan.md 8 節）。母数は selection を持つ aql の問い
+      def builder_summary
+        statuses = aql_results.filter_map { |result| result.builder_score&.status }
+        { questions: statuses.size, match: statuses.count(:match), mismatch: statuses.count(:mismatch),
+          unexecutable: statuses.count(:unexecutable), unbuildable: statuses.count(:unbuildable) }
       end
 
       # 保留問のうち、期待先のアーキタイプがすべてコーパス（active のテンプレートのカード）に現れたもの。
@@ -93,7 +101,9 @@ module Evaluation
     def score_aql_by_dataset(questions)
       questions.group_by(&:dataset).flat_map do |dataset, group|
         Datasets.build(dataset)
-        group.map { |question| AqlResult.new(question: question, score: AqlScorer.score(question)) }
+        group.map do |question|
+          AqlResult.new(question: question, score: AqlScorer.score(question), builder_score: BuilderRoute.score(question))
+        end
       end
     end
 

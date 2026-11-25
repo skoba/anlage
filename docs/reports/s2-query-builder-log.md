@@ -102,3 +102,74 @@
 - 直し: 新しい spec の定数に `QB_` の接頭辞。spec 全体で重複する定数名が無いことを確かめた（`grep` で重複 0）
 - 全 suite（worktree、SQLite）: 399 examples, 0 failures, 2 pending。rubocop 146 files, no offenses
 
+## R14 PR #121 のマージ（2026-11-24）
+
+- main が進み（書く側の #113・#116・#118・#120）、`app/assets/stylesheets/application.css` が競合した。両方とも末尾への追記で、両方を残して解消（`640b6b0`、merge）
+- 取り込み後の全 suite（worktree）: 424 examples, 0 failures, 2 pending。head の CI run 45412098750 green
+- PR #121 → main `946838c`（セッションがマージ。止まらずに進めてよい範囲の実装、head の CI green、競合なし）
+
+## R15 ゲート報告: 評価 v2 に足す S2 の経路の問い（作業列 3。ゴールドの確定は人間）（2026-11-24）
+
+**判断を求めること**: (1) 案の 3 問（`spec/fixtures/evaluation/v2/aql_s2.yml`、draft）を、臨床のレビューで確定してよいか。
+(2) 確定済みの a001〜a005 に `selection` を足してよいか（下の YAML。ゴールド本体なので、セッションは足していない）。
+
+### 入れたもの（枠組み。計画書 `docs/design/s1-eval-v2-plan.md` 8 節）
+
+- aql の問いは `selection`（クエリビルダーへの入力）を持てる。`Evaluation::BuilderRoute` が、selection → ビルダー → リンタ → 期待行との照合で採点する
+- 結果は 一致／不一致／実行不能／組めない。報告に「aql: S2 の経路」の節（母数が 0 なら出さない）
+- Red／Green: 読み込みと採点器は `uninitialized constant Evaluation::BuilderRoute` → 49 examples, 0 failures。集計と報告は 16 examples, 2 failures → 61 examples, 0 failures
+- 訂正: 計画書 8 節は、実装のコミットのあとに書いた（先に書くべきだった）。中身は実装と同じ
+
+### 案の 3 問と実測（demo_initial。案を active と見なして採点。情報）
+
+| id | 問い | 条件型 | 参照 AQL | S2 の経路 |
+|---|---|---|---|---|
+| a006 | 病名に「糖尿病」を含む記録を、出所の文書名つきで | 包含（LIKE）、横断 | 一致 `[["ProblemList","2型糖尿病"],["jp_referral","2型糖尿病"]]` | 一致 |
+| a007 | 診断確度が「疑い」または「確定」の傷病名 | 値集合のコード 2 つ | 一致 `[["高血圧症"],["2型糖尿病"]]` | 一致 |
+| a008 | 拡張期血圧が 90 mmHg 未満の記録の、収縮期と拡張期 | 数値（<）、2 列 | 一致 `[[120.0, 80.0]]` | 一致 |
+
+- いまの採点（`RESET=1 bundle exec rake evaluation:run`）: card 4 問 Top-1 4/4、aql 5 問 一致 5/5、draft 3 問（a006〜a008）、保留問 2 問。
+  S2 の経路の母数は 0（selection を持つ active の問いがまだ無い）
+- 確定済みの a001〜a005 と同じ選択を組むと、5 問とも期待行に一致する（`spec/lib/query_builder/runner_spec.rb` が固定。R11）
+
+### 人間に問うこと（案の notes にも書いた）
+
+1. a006: 「糖尿病を含む」は臨床の問いとして自然か
+2. a007: demo_initial に「確定」の記録が無い。期待行が a002 と同じになる問いを置く意味があるか
+3. 日付の範囲の問いを置けない: demo_initial の problem_diagnosis 3 件は、発症日時（at0077）がすべて空（実測）。
+   日付の条件を測るには、初期データに発症日時のある記録が要る（初期データは書く側。足すなら別に裁定が要る）
+4. a001〜a005 に足す `selection`（下）
+
+```yaml
+# a001
+selection:
+  columns: [ { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 } ]
+  conditions:
+    - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }, operator: ">", value: 110 }
+# a002
+selection:
+  columns: [ { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 } ]
+  conditions:
+    - { card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }, operator: MATCHES, value: [at0074] }
+# a003
+selection:
+  columns: [ { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 } ]
+  conditions:
+    - { card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }, operator: MATCHES, value: ["2型糖尿病", "高血圧症"] }
+  composition_name: true
+# a004
+selection:
+  columns: [ { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0001 } ]
+  conditions:
+    - { card: { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0024 }, operator: "=", value: "空腹時血糖" }
+# a005
+selection:
+  columns: [ { archetype_id: openEHR-EHR-OBSERVATION.height.v2, at_code: at0004 } ]
+  conditions:
+    - { card: { archetype_id: openEHR-EHR-OBSERVATION.height.v2, at_code: at0004 }, operator: ">=", value: 170 }
+```
+
+### 残した制約
+
+- カードを `{archetype_id, at_code}` で指すので、同じアーキタイプ・同じ at-code が 1 つのテンプレートに複数ある場合（jp_referral の organisation at0001 が 3 か所）は、最初の 1 枚に当たる。いまの問いには無い
+
