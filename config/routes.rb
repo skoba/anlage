@@ -11,7 +11,11 @@ Rails.application.routes.draw do
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   # 患者（EHR）の一覧・作成・詳細（skoba/anlage#130、docs/design/m3-plan.md 7 節）。:id は ehr_id
-  resources :patients, only: %i[index create show]
+  # いまの患者の選択と解除（skoba/anlage#134）。選んだ患者はセッションに持つ
+  delete "patients/selection", to: "patients#deselect", as: :patient_selection
+  resources :patients, only: %i[index create show] do
+    post :select, on: :member
+  end
 
   get  "templates",         to: "templates#index"
   post "templates/preview", to: "templates#preview"

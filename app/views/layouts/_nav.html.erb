@@ -8,4 +8,16 @@
   <%= link_to "パスカード検索", main_app.pathcards_search_path, aria: { current: (current == :pathcards ? "page" : nil) } %>
   <%= link_to "クエリビルダー", main_app.new_query_path, aria: { current: (current == :queries ? "page" : nil) } %>
   <%= link_to "AQL 照会", openehr_rails.query_console_path, aria: { current: (current == :aql ? "page" : nil) } %>
+  <%# skoba/anlage#134: いまの患者（session[:ehr_id]）。engine の画面からも使うので、ヘルパーではなくここで引く。
+      ナビのリンクを増やさないよう、選択の解除は button_to（form）にする %>
+  <% current_patient = session[:ehr_id] && OpenehrRails::Rm::Ehr.find_by(ehr_id: session[:ehr_id]) %>
+  <div id="current_patient">
+    いまの患者:
+    <% if current_patient %>
+      <strong><%= current_patient.subject_id %></strong>
+      <%= button_to "選択を外す", main_app.patient_selection_path, method: :delete %>
+    <% else %>
+      患者を選んでいません
+    <% end %>
+  </div>
 </nav>

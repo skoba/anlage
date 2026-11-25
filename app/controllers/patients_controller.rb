@@ -26,6 +26,18 @@ class PatientsController < ApplicationController
     @patient = OpenehrRails::Rm::Ehr.find_by!(ehr_id: params[:id])
   end
 
+  # いまの患者を選ぶ（skoba/anlage#134）。無い EHR は 404
+  def select
+    ehr = OpenehrRails::Rm::Ehr.find_by!(ehr_id: params[:id])
+    session[:ehr_id] = ehr.ehr_id
+    redirect_to patient_path(ehr.ehr_id)
+  end
+
+  def deselect
+    session.delete(:ehr_id)
+    redirect_to patients_path
+  end
+
   private
 
   def patients

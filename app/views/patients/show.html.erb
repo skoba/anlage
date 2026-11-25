@@ -7,4 +7,6 @@
   <dt>EHR ID</dt><dd><%= @patient.ehr_id %></dd>
 </dl>
 
+<%= button_to "この患者を選ぶ", select_patient_path(@patient.ehr_id) %>
+
 <p><%= link_to "患者の一覧", patients_path %></p>
