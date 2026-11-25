@@ -10,7 +10,10 @@ module Evaluation
       attr_reader :card_results, :negative_results, :aql_results, :drafts, :pendings
 
       # negative_results: 負例だけの問い（docs/design/s1-eval-v2-plan.md 9 節）。card_results（期待を持つ問い）とは別に持つ
-      def initialize(card_results:, aql_results:, drafts:, pendings:, corpus_archetype_ids:, negative_results: [])
+      # aliases: 検索が使った別名表。問いの語が表にあるかどうかで、集計を分けるのに使う（docs/design/s3-search-plan.md 3.1）
+      def initialize(card_results:, aql_results:, drafts:, pendings:, corpus_archetype_ids:, negative_results: [],
+                     aliases: Opt::SearchAliases.none)
+        @aliases = aliases
         @card_results = card_results
         @negative_results = negative_results
         @aql_results = aql_results
@@ -30,6 +33,12 @@ module Evaluation
         statuses = aql_results.filter_map { |result| result.builder_score&.status }
         { questions: statuses.size, match: statuses.count(:match), mismatch: statuses.count(:mismatch),
           unexecutable: statuses.count(:unexecutable), unbuildable: statuses.count(:unbuildable) }
+      end
+
+      # 問いの語が別名表にある問いと、無い問いの内訳。表の行は評価の注記から作ったので、表にある語の問いは効果の数字に入れない
+      def alias_split
+        in_table, out_of_table = card_results.partition { |result| @aliases.include?(result.question.query) }
+        { in_table: split_counts(in_table), out_of_table: split_counts(out_of_table) }
       end
 
       # 負例だけの問いの数と、負例が上位（top-3）に出た問いの数。Top-1 などの集計（card_summary）には入れない
@@ -70,6 +79,11 @@ module Evaluation
 
       private
 
+      def split_counts(results)
+        { questions: results.size, hit_at_1: results.count { |result| result.score.hit_at_1 },
+          hit_at_3: results.count { |result| result.score.hit_at_3 }, ids: results.map { |result| result.question.id } }
+      end
+
       # intent_tag 別の hit（top-3 以内）の数／問題数。v1 と同じ軸（docs/reports/wp4-log.md R3）
       def by_intent
         card_results.group_by { |result| result.question.intent_tag }.transform_values do |group|
@@ -78,12 +92,14 @@ module Evaluation
       end
     end
 
-    def self.run(questions)
-      new(questions).run
+    # aliases: 検索に使う別名表。Opt::SearchAliases.none を渡すと字面だけで採点する（別名表を入れる前の数字）
+    def self.run(questions, aliases: Opt::SearchAliases.default)
+      new(questions, aliases).run
     end
 
-    def initialize(questions)
+    def initialize(questions, aliases = Opt::SearchAliases.default)
       @questions = questions
+      @aliases = aliases
     end
 
     def run
@@ -95,14 +111,15 @@ module Evaluation
         aql_results: score_aql_by_dataset(active.select(&:aql?)),
         drafts: @questions.select(&:draft?),
         pendings: @questions.select(&:pending?),
-        corpus_archetype_ids: corpus_archetype_ids
+        corpus_archetype_ids: corpus_archetype_ids,
+        aliases: @aliases
       )
     end
 
     private
 
     def score_card(question)
-      results = Opt::PathcardSearch.call(question.query)
+      results = Opt::PathcardSearch.call(question.query, aliases: @aliases)
       CardResult.new(question: question, results: results, score: CardScorer.score(question, results))
     end
 
