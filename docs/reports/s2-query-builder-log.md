@@ -281,13 +281,13 @@ selection:
   | X4 | 選ばれたカードに対応の無いものが 1 つでもあれば、組まない | 対応のある項目だけをまたぎ、残りは選んだ版だけで引く（列ごとに版の範囲が違う表になる） |
   | X5 | 索引に片方の版のカードしか無ければ、その版だけを引く | 誤りにする（テンプレートが未登録なだけで落ちる） |
   | X6 | 行をつなぐ順は版の順（v1 → v2）。並べ替えはしない | 日付で並べる（ビルダーに並べ替えが無い。足すなら別に計画する） |
-  | X7 | 埋め込み CLUSTER の中の項目の版の対応は扱わない（カードのアーキタイプが ENTRY のものだけ、事実上またげる） | 途中の述語も版で置き換える（候補が無く、確かめられない） |
+  | X7 | 埋め込み CLUSTER の中の項目の版の対応は、範囲に入れない（確かめたのは、カードのアーキタイプが ENTRY そのものの項目だけ。CLUSTER の項目に行を足したときの挙動は確かめていない） | 途中の述語も版で置き換える（候補が無く、確かめられない） |
 
 ## R25 サイクル（版をまたいで引く）
 
 - 候補と表: Red は `uninitialized constant QueryBuilder::VersionCandidates`。Green で `version_mappings_spec` 7 examples, 0 failures
-- またいで引く: Red は 8 例とも `ArgumentError: unknown keywords: :across_versions, :mappings`（`cross_version_spec`、9 examples, 8 failures。残りの 1 例は、
-  `across_versions` を付けない呼び出しで、これも同じ理由で落ちる想定だったが、数え漏らした）。
+- またいで引く: Red は `ArgumentError: unknown keywords: :across_versions, :mappings`（`cross_version_spec`。出力を途中で切って見たので、
+  確かめたのは 9 例のうち 8 例めまで）。
   - **順序の誤り**: はじめの Red は、spec の準備の書き間違い（ハッシュを括らずに渡して `wrong number of arguments`）で落ちていて、意図した理由ではなかった。
     それに気づかないまま実装を書いた。あとで実装をいったん外し、直した spec で意図した Red（上の `unknown keywords`）を取り直した
   - Green: `QueryBuilder::CrossVersion`、`Runner`（`across_versions:`・`mappings:`、`Run#queries`・`version_column?`）。
