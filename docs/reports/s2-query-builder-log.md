@@ -261,3 +261,43 @@ selection:
   画面の状態は URL だけなので、読み直しの前に次のボタンを押すと、古い画面の状態で送られて前の操作が消える。R20 で足した spec の書き方の誤り
 - 直し: ボタンを押すたびに、項目・条件の数が増えたことを待つ（`have_css(…, count:)`）。同じ形のほかの 3 例にも待ちを足した。実装は変えていない
 - 確認: `bundle exec rspec spec/system/demo_query_builder_spec.rb` を 3 回続けて、3 回とも 5 examples, 0 failures
+
+## R24 版をまたいで引く（2026-11-25、R-20261125-10、`skoba/anlage#154`）: 探索と、自己承認した判断
+
+- 計画: `docs/design/s2-cross-version-plan.md`。基準点: anlage main `60a35ae`
+- 実測（リポジトリの外の一時の spec。demo_initial に blood_pressure.v1 の記録を 1 件足した上で）
+  - v1 と v2 の収縮期・拡張期のカードは、at-code、パス、型、単位（mm[Hg]）、値の範囲（0 以上 1000 未満）が同じ
+  - `CONTAINS (OBSERVATION o[…v1] OR OBSERVATION o2[…v2])` は `OpenEHR::AQL::SemanticError: unbound variable: "o"`。
+    述語なしの `OBSERVATION o` と `o/archetype_node_id` は `UnsupportedFeature`。版ごとの別々の AQL は、どちらも実行できる
+  - v1 のテンプレート（patient_blood_pressure.v1）の帳票の項目名は `blood_pressure_systolic`・`blood_pressure_diastolic`
+    （`Template#fields`）。はじめ at-code から推測した名前で保存して、中身が空の記録になった。項目名を読んで直した
+- **自己承認した判断**
+
+  | # | 判断 | 捨てた案 |
+  |---|---|---|
+  | X1 | 版ごとに別の AQL を組み、行をアプリの側でつなぐ | CONTAINS の OR（上の実測のとおり、いまのエンジンでは実行できない） |
+  | X2 | 対応の単位は「項目」（版を除いたアーキタイプの ID と at-code）。表は `config/version_mappings.yml` | アーキタイプ単位の対応（ほかの項目まで、確かめずに広がる） |
+  | X3 | 最初の候補 2 行は pending で置く。active の行はレビューのあと | セッションが active にする（「使うのは人間がレビューした行だけ」に反する） |
+  | X4 | 選ばれたカードに対応の無いものが 1 つでもあれば、組まない | 対応のある項目だけをまたぎ、残りは選んだ版だけで引く（列ごとに版の範囲が違う表になる） |
+  | X5 | 索引に片方の版のカードしか無ければ、その版だけを引く | 誤りにする（テンプレートが未登録なだけで落ちる） |
+  | X6 | 行をつなぐ順は版の順（v1 → v2）。並べ替えはしない | 日付で並べる（ビルダーに並べ替えが無い。足すなら別に計画する） |
+  | X7 | 埋め込み CLUSTER の中の項目の版の対応は、範囲に入れない（確かめたのは、カードのアーキタイプが ENTRY そのものの項目だけ。CLUSTER の項目に行を足したときの挙動は確かめていない） | 途中の述語も版で置き換える（候補が無く、確かめられない） |
+
+## R25 サイクル（版をまたいで引く）
+
+- 候補と表: Red は `uninitialized constant QueryBuilder::VersionCandidates`。Green で `version_mappings_spec` 7 examples, 0 failures
+- またいで引く: Red は `ArgumentError: unknown keywords: :across_versions, :mappings`（`cross_version_spec`。出力を途中で切って見たので、
+  確かめたのは 9 例のうち 8 例めまで）。
+  - **順序の誤り**: はじめの Red は、spec の準備の書き間違い（ハッシュを括らずに渡して `wrong number of arguments`）で落ちていて、意図した理由ではなかった。
+    それに気づかないまま実装を書いた。あとで実装をいったん外し、直した spec で意図した Red（上の `unknown keywords`）を取り直した
+  - Green: `QueryBuilder::CrossVersion`、`Runner`（`across_versions:`・`mappings:`、`Run#queries`・`version_column?`）。
+    もう 1 つ spec の誤り（`Finding` の定数の場所）を直して、関連の spec 148 examples, 0 failures
+- 画面: Red は `queries_spec` 21 examples, 3 failures（チェックが無い、版ごとの見出しが無い、理由が出ない）。Green でコントローラ・ビュー・語彙表
+- rake: Red は `Don't know how to build task 'query_builder:version_candidates'`。Green で 1 example, 0 failures
+- 実ブラウザの spec に 1 例。全 suite: 547 examples, 0 failures, 2 pending
+- リンタは変えていない（版ごとの AQL は、これまでと同じ形）
+
+## R26 ゲート報告: 版の対応の行のレビュー
+
+- 候補は 2 件（血圧の収縮期 at0004、拡張期 at0005。v1 と v2）。問うことは `docs/design/s2-cross-version-plan.md` 9 節
+- 評価の問いの案（「版をまたいで、収縮期が 140 以上」など）は、サンプルデータが main に入ったあとに、R-20261125-6 の問いの案と一緒に出す

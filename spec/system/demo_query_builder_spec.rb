@@ -133,4 +133,39 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     expect(all("#query_result tbody td").map(&:text)).to eq([ "120.0", "80.0" ])
     expect(page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")).to be(false)
   end
+  # docs/design/s2-cross-version-plan.md 5 節（skoba/anlage#154、R-20261125-10）。対応の表は、この spec の中で active の行を渡す
+  # （リポジトリの表の行は、レビューが済むまで pending）。blood_pressure.v1 の記録（150／95）を 1 件足す
+  it "版をまたいで引く: 収縮期 >= 120 で実行すると、blood_pressure.v1 の 150 と v2 の 120 が、アーキタイプの版の列つきで 1 つの表に出る" do
+    bp = "openEHR-EHR-OBSERVATION.blood_pressure"
+    mappings = QueryBuilder::VersionMappings.new(%w[at0004 at0005].map do |at_code|
+      { "concept" => bp, "at_code" => at_code, "versions" => %w[v1 v2], "source" => "spec",
+        "reviewed_by" => "Kobayashi, Shinji", "reviewed_at" => Date.new(2026, 11, 25) }
+    end)
+    allow(QueryBuilder::VersionMappings).to receive(:default).and_return(mappings)
+    template = Template.active.find_by!(template_id: "patient_blood_pressure.v1")
+    commit = Opt::RmCompositionCommitter.call(template, { "blood_pressure_systolic" => "150", "blood_pressure_diastolic" => "95" })
+    template.compositions.create!(rm_composition: commit.canonical_hash, uid: commit.uid)
+
+    visit new_query_path
+    fill_in "探したい項目", with: "収縮期"
+    click_button "検索"
+    candidate("収縮期", "CardiologyEncounter").click_button "表示する項目に足す"
+    expect(page).to have_css("#query_columns li", count: 1)
+    candidate("収縮期", "CardiologyEncounter").click_button "条件に足す"
+    expect(page).to have_css("#query_conditions li", count: 1)
+    select ">=", from: "condition_0_operator"
+    fill_in "condition_0_value", with: "120"
+    click_button "実行"
+    expect(page).to have_css("#query_result p", text: "1 行")
+
+    check "版をまたいで引く"
+    click_button "実行"
+
+    expect(page).to have_css("#query_aql h3", count: 2)
+    expect(all("#query_aql h3").map(&:text)).to eq([ "#{bp}.v1", "#{bp}.v2" ])
+    expect(page).to have_css("#query_result p", text: "2 行")
+    expect(all("#query_result thead th").map(&:text)).to eq(%w[アーキタイプの版 収縮期])
+    expect(all("#query_result tbody tr").map { |row| row.all("td").map(&:text) }).to eq([ [ "#{bp}.v1", "150.0" ], [ "#{bp}.v2", "120.0" ] ])
+    expect(page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")).to be(false)
+  end
 end
