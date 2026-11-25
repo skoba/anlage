@@ -26,7 +26,7 @@ class CompositionsController < ApplicationController
       return render "forms/show", status: :unprocessable_content
     end
 
-    commit = Opt::RmCompositionCommitter.call(@template, values)
+    commit = Opt::RmCompositionCommitter.call(@template, values, ehr: current_ehr)
 
     composition = @template.compositions.create!(
       rm_composition: commit.canonical_hash,

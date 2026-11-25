@@ -7,6 +7,17 @@
   <dt>EHR ID</dt><dd><%= @patient.ehr_id %></dd>
 </dl>
 
+<h2>カルテ記録</h2>
+<% if @compositions.empty? %>
+  <p>この患者のカルテ記録はまだありません。</p>
+<% else %>
+  <ul class="patient-records">
+    <% @compositions.each do |composition| %>
+      <li><%= link_to "#{composition.template.template_id} — #{composition.created_at}", composition_path(composition) %></li>
+    <% end %>
+  </ul>
+<% end %>
+
 <%= button_to "この患者を選ぶ", select_patient_path(@patient.ehr_id) %>
 
 <p><%= link_to "患者の一覧", patients_path %></p>

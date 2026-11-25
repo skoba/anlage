@@ -24,6 +24,9 @@ class PatientsController < ApplicationController
 
   def show
     @patient = OpenehrRails::Rm::Ehr.find_by!(ehr_id: params[:id])
+    # 結び付きは RM の側が権威（計画書 7.2）。原本（compositions）は uid で引く
+    uids = OpenehrRails::Rm::Composition.latest.where(ehr: @patient).pluck(:uid)
+    @compositions = Composition.includes(:template).where(uid: uids).order(created_at: :desc, id: :desc)
   end
 
   # いまの患者を選ぶ（skoba/anlage#134）。無い EHR は 404
