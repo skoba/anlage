@@ -236,6 +236,42 @@ RSpec.describe QueryBuilder::Linter do
       end
     end
 
+    # docs/design/s2-query-builder-plan.md 7.3（R-20261125-6）。クエリビルダーが組む OR・NOT EXISTS の中も、同じ検査を通す
+    describe "OR と NOT EXISTS の中" do
+      let(:pd_from) { "FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]" }
+      let(:bp_from) { "FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]" }
+      let(:systolic) { "o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude" }
+
+      it "値集合の MATCHES と NOT EXISTS を OR でつないだ条件（未記入を含む）は findings 無し" do
+        lint = lint(<<~AQL)
+          SELECT ev/data[at0001]/items[at0002]/value/value #{pd_from}
+          WHERE (ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0076"} OR NOT EXISTS ev/data[at0001]/items[at0073]/value)
+        AQL
+
+        expect(lint.findings).to be_empty
+      end
+
+      it "NOT EXISTS の中の存在しない節（items[at0099]）は error（パス）" do
+        lint = lint(<<~AQL)
+          SELECT ev/data[at0001]/items[at0002]/value/value #{pd_from}
+          WHERE NOT EXISTS ev/data[at0001]/items[at0099]/value
+        AQL
+
+        expect(lint.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :path ] ])
+      end
+
+      it "OR の右側の型の不一致（magnitude と文字列）と、値集合に無いコードは error" do
+        types = lint(%(SELECT #{systolic} #{bp_from} WHERE (#{systolic} < 90 OR #{systolic} > "高い")))
+        codes = lint(<<~AQL)
+          SELECT ev/data[at0001]/items[at0002]/value/value #{pd_from}
+          WHERE (ev/data[at0001]/items[at0077]/value/value >= "2026-01-01" OR ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0099"})
+        AQL
+
+        expect(types.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :type ] ])
+        expect(codes.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :value_set ] ])
+      end
+    end
+
     describe "name 述語と永続的な未対応" do
       it "name 述語（[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']）は warning（上流候補 24 項）。ok? は true のまま" do
         lint = lint(<<~AQL)

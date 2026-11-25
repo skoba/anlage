@@ -149,4 +149,72 @@ RSpec.describe QueryBuilder::Builder do
       end
     end
   end
+  # docs/design/s2-query-builder-plan.md 7 節（R-20261125-6）
+  describe ".build（未記入を含む、範囲の外、どちらかを満たす）" do
+    let(:diastolic) { card("CardiologyEncounter", QB_BP, "at0005") }
+    let(:certainty_path) { "ev/data[at0001]/items[at0073]/value" }
+    let(:systolic_path) { "o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude" }
+    let(:diastolic_path) { "o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude" }
+
+    it "未記入を含む: 値集合の条件に、その項目が書かれていない記録（NOT EXISTS）を OR で足し、括弧でくくる" do
+      aql = build(columns: [ diagnosis ],
+                  conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0076" ], include_missing: true } ])
+
+      expect(aql.lines.last.chomp)
+        .to eq(%|WHERE (#{certainty_path}/defining_code/code_string MATCHES {"at0076"} OR NOT EXISTS #{certainty_path})|)
+    end
+
+    it "範囲の外: 1 つの数値の項目で、下限より低い、または上限より高い" do
+      aql = build(columns: [ systolic ], conditions: [ { card: systolic, operator: "OUTSIDE", value: { low: "90", high: 140 } } ])
+
+      expect(aql.lines.last.chomp).to eq("WHERE (#{systolic_path} < 90 OR #{systolic_path} > 140)")
+    end
+
+    it "どちらかを満たす: 別々の項目の条件を OR でつなぎ、括弧でくくる。ほかの条件とは AND" do
+      aql = build(columns: [ systolic, diastolic ],
+                  conditions: [ { any: [ { card: systolic, operator: ">=", value: "140" }, { card: diastolic, operator: ">=", value: "90" } ] },
+                                { card: systolic, operator: "<", value: "200" } ])
+
+      expect(aql.lines.last.chomp).to eq("WHERE (#{systolic_path} >= 140 OR #{diastolic_path} >= 90) AND #{systolic_path} < 200")
+    end
+
+    it "どちらかを満たす: 節が 2 つの条件（日付の範囲）は、その条件を括弧でくくる。未記入を含む・範囲の外も中に置ける" do
+      onset_path = "ev/data[at0001]/items[at0077]/value/value"
+      aql = build(columns: [ diagnosis ],
+                  conditions: [ { any: [ { card: onset, operator: "BETWEEN", value: { from: "2026-01-01", to: "2027-01-01" } },
+                                         { card: certainty, operator: "MATCHES", value: [ "at0074" ], include_missing: true } ] } ])
+
+      expect(aql.lines.last.chomp).to eq(
+        %|WHERE ((#{onset_path} >= "2026-01-01" AND #{onset_path} < "2027-01-01") OR | +
+        %|(#{certainty_path}/defining_code/code_string MATCHES {"at0074"} OR NOT EXISTS #{certainty_path}))|
+      )
+    end
+
+    it "組めない選択は InvalidSelection で止める" do
+      {
+        { card: systolic, operator: ">", value: "110", include_missing: true } => /未記入を含むは、値集合の条件にだけ/,
+        { card: systolic, operator: "OUTSIDE", value: { low: "140", high: "90" } } => /下限（140）が上限（90）より大きい/,
+        { card: systolic, operator: "OUTSIDE", value: { low: "90" } } => /下限と上限の両方が要る/,
+        { card: systolic, operator: "OUTSIDE", value: { low: "低", high: "140" } } => /数値ではない/,
+        { any: [ { card: systolic, operator: ">", value: "110" } ] } => /どちらかを満たすには、条件が 2 つ以上/,
+        { any: [ { card: systolic, operator: ">", value: "1" }, { any: [ { card: systolic, operator: ">", value: "2" }, { card: systolic, operator: ">", value: "3" } ] } ] } =>
+          /入れ子/
+      }.each do |condition, message|
+        expect { build(columns: [ systolic ], conditions: [ condition ]) }.to raise_error(described_class::InvalidSelection, message)
+      end
+
+      expect { build(columns: [ systolic ], conditions: [ { any: [ { card: systolic, operator: ">", value: "1" }, { card: onset, operator: "BETWEEN", value: { from: "2026-01-01" } } ] } ]) }
+        .to raise_error(described_class::InvalidSelection, /ENTRY のアーキタイプは 1 つ/)
+    end
+
+    it "組んだ AQL はどれもリンタを通る（error なし）" do
+      [
+        build(columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0076" ], include_missing: true } ]),
+        build(columns: [ systolic ], conditions: [ { card: systolic, operator: "OUTSIDE", value: { low: 90, high: 140 } } ]),
+        build(columns: [ systolic ], conditions: [ { any: [ { card: systolic, operator: ">=", value: "140" }, { card: diastolic, operator: ">=", value: "90" } ] } ])
+      ].each do |aql|
+        expect(QueryBuilder::Linter.lint(aql).findings.select(&:error?)).to be_empty, aql
+      end
+    end
+  end
 end

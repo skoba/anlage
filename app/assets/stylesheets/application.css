@@ -134,6 +134,7 @@ fieldset.root-group select {
 #query_result th, #query_result td { border: 1px solid #ccc; padding: 0.4rem 0.75rem; text-align: left; }
 #query_result th { background: #f3f4f6; }
 .query-error, .lint-error { color: #b91c1c; }
+#query_conditions .connector { display: inline-block; margin-right: 0.5rem; font-weight: 600; }
 #query_candidates .pathcard { border: 1px solid #ccc; padding: 0.25rem 1rem 0.75rem; margin: 0.5rem 0; overflow-wrap: anywhere; }
 
 /* skoba/anlage#134: ナビの下のいまの患者 */
