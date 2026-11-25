@@ -42,6 +42,8 @@ Rails.application.routes.draw do
   # カルテ記録の修正（新しい版。skoba/anlage#138）
   get   "compositions/:id/edit",    to: "compositions#edit", as: :edit_composition
   patch "compositions/:id",         to: "compositions#update"
+  # カルテ記録の削除（論理削除。skoba/anlage#140）
+  delete "compositions/:id",        to: "compositions#destroy"
 
   get "fhir/r5/StructureDefinition/:id", to: "fhir/profiles#show",
       constraints: { id: /[^\/]+/ }, format: false

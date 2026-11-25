@@ -1,11 +1,11 @@
 class CompositionsController < ApplicationController
   def index
-    @compositions = Composition.latest_versions.includes(:template).order(created_at: :desc)
+    @compositions = Composition.listed.includes(:template).order(created_at: :desc)
   end
 
   def show
     @composition = Composition.find(params[:id])
-    @editable = @composition.latest_version? && Opt::CompositionEditability.editable?(@composition.template, @composition.rm_composition)
+    @editable = @composition.latest_version? && !@composition.deleted? && Opt::CompositionEditability.editable?(@composition.template, @composition.rm_composition)
   end
 
   # 修正の帳票（skoba/anlage#138）。前の版の値を読み戻して入れる。置き換えられた版と、読み戻せない形の記録は 422
@@ -68,10 +68,28 @@ class CompositionsController < ApplicationController
     redirect_to composition_path(composition), notice: "保存しました"
   end
 
+  # 削除（skoba/anlage#140）。gem の REST の DELETE（openehr-rails 0.9.0 openehr_api/compositions_controller.rb:57-65）と
+  # 同じ論理削除: head を同じ uid・同じ EHR で commit し直して、その版の lifecycle を 523 にする。行は消さない
+  def destroy
+    @composition = Composition.find(params[:id])
+    @template = @composition.template
+    head = @composition.rm_head
+    unless head && @composition.latest_version? && !@composition.deleted?
+      @editable = false
+      return render :show, status: :unprocessable_content
+    end
+
+    ActiveRecord::Base.transaction do
+      deleted = OpenehrRails::Rm::CompositionCommitter.commit(head.to_canonical_hash, uid: head.uid, ehr: head.ehr)
+      deleted.version.update!(lifecycle_state_code: OpenehrRails::Rm::Version::LIFECYCLE_DELETED)
+    end
+    redirect_to compositions_path, notice: "削除しました"
+  end
+
   private
 
   def editable?(composition)
-    composition.uid.present? && composition.latest_version? &&
+    composition.uid.present? && composition.latest_version? && !composition.deleted? &&
       Opt::CompositionEditability.editable?(composition.template, composition.rm_composition)
   end
 

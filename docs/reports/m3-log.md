@@ -312,3 +312,35 @@ $ bundle exec rspec spec/requests/record_versions_spec.rb   # 単位の選択（
 ### Green
 
 全 suite（開発機）: `476 examples, 0 failures, 2 pending`
+
+## R9 P5（`skoba/anlage#140`）: カルテ記録の削除（論理削除）（2026-11-25）
+
+### 実測（gem の API）
+
+- gem の REST の DELETE（openehr-rails 0.9.0 `openehr_api/compositions_controller.rb:57-65`）:
+  `CompositionCommitter.commit(head_composition.to_canonical_hash, uid: head_composition.uid, ehr: ehr)` のあと
+  `composition.version.update!(lifecycle_state_code: Version::LIFECYCLE_DELETED)`。anlage も同じ手順を、gem の公開されたモデルで行う
+- `Rm::Composition#to_canonical_hash`（`rm/composition.rb:35`）、`has_one :version`（:26）
+- AQL の既定の scope は削除を除かない → `docs/upstream-candidates.md` 28 項
+
+### 判断（自己承認、計画書の範囲内）
+
+- 削除では原本（`compositions`）の行を足さない（削除の版に新しい原本は無い）。削除済みかは RM の head の版の lifecycle で決める（`Composition#deleted?`）
+- 削除できるのは、新しい版の行で、削除済みでなく、uid のある記録だけ（ほかは 422）。修正（P4）も削除済みには 422
+- 削除のボタンには確認（`turbo_confirm`）を付ける
+- 一覧・患者の画面からは外すが、記録の画面（URL を直接開く）は「削除済み」と出して 200
+
+### Red
+
+```
+$ bundle exec rspec spec/requests/record_delete_spec.rb
+      1      Failure/Error:
+      1      Failure/Error: expect(document.at_css("form[action='/compositions/#{composition.id}'] input[name='_method'][value='delete']")).to be_present
+      1      Failure/Error: expect(response).to have_http_status(:unprocessable_content)
+      1      Failure/Error: expect(response.body).to include("このカルテ記録は削除済みです。")
+      1 4 examples, 4 failures
+```
+
+### Green
+
+全 suite（開発機）: `480 examples, 0 failures, 2 pending`
