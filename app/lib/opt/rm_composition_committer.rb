@@ -8,14 +8,16 @@ module Opt
     NON_STRUCTURAL_ENTRY_KEYS = %w[language encoding subject].freeze
 
     # ehr: いまの患者の EHR（OpenehrRails::Rm::Ehr、skoba/anlage#136）。nil なら EHR に結び付けない
-    def self.call(template, values, ehr: nil)
-      new(template, values, ehr: ehr).call
+    # uid: 修正のとき、元の記録の uid（skoba/anlage#138）。同じ uid の commit で、gem の committer が版を 1 つ足す。nil なら新しい記録
+    def self.call(template, values, ehr: nil, uid: nil)
+      new(template, values, ehr: ehr, uid: uid).call
     end
 
-    def initialize(template, values, ehr: nil)
+    def initialize(template, values, ehr: nil, uid: nil)
       @template = template
       @values = values
       @ehr = ehr
+      @uid = uid
     end
 
     def call
@@ -26,7 +28,7 @@ module Opt
       committable_hash = canonical_hash.deep_dup
       remove_non_structural_entry_keys(committable_hash)
 
-      uid = SecureRandom.uuid
+      uid = @uid || SecureRandom.uuid
       composition = OpenehrRails::Rm::CompositionCommitter.commit(committable_hash, uid: uid, ehr: @ehr, owner: nil)
 
       Result.new(uid:, composition:, canonical_hash:)
