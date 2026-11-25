@@ -15,10 +15,13 @@ class QueriesController < ApplicationController
     @columns = column_refs.filter_map { |ref| find_card(ref) }
     @conditions = condition_params.filter_map { |entry| build_condition(entry) }
     @composition_name = params[:composition_name].present?
+    # 版をまたいで引く（docs/design/s2-cross-version-plan.md 5 節）
+    @across_versions = params[:across_versions].present?
     return if @columns.empty?
 
     @run = QueryBuilder::Runner.call(columns: @columns, conditions: grouped_selections,
-                                     composition_name: @composition_name, execute: params[:run].present?)
+                                     composition_name: @composition_name, execute: params[:run].present?,
+                                     across_versions: @across_versions, corpus: @corpus)
   end
 
   private

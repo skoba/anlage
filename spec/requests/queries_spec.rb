@@ -196,4 +196,61 @@ RSpec.describe "クエリビルダー", type: :request do
       expect(doc.at_css("input[name='conditions[1][or]']")["checked"]).to be_present
     end
   end
+  # docs/design/s2-cross-version-plan.md 5 節（skoba/anlage#154、R-20261125-10）。対応の表は、この spec の中で active の行を渡す
+  # （リポジトリの表の行は、レビューが済むまで pending）。blood_pressure.v1 の記録（150／95）を 1 件足す
+  describe "版をまたいで引く" do
+    let(:bp) { "openEHR-EHR-OBSERVATION.blood_pressure" }
+    let(:active_mappings) do
+      QueryBuilder::VersionMappings.new(%w[at0004 at0005].map do |at_code|
+        { "concept" => bp, "at_code" => at_code, "versions" => %w[v1 v2], "source" => "spec",
+          "reviewed_by" => "Kobayashi, Shinji", "reviewed_at" => Date.new(2026, 11, 25) }
+      end)
+    end
+
+    before do
+      template = Template.active.find_by!(template_id: "patient_blood_pressure.v1")
+      commit = Opt::RmCompositionCommitter.call(template, { "blood_pressure_systolic" => "150", "blood_pressure_diastolic" => "95" })
+      template.compositions.create!(rm_composition: commit.canonical_hash, uid: commit.uid)
+    end
+
+    it "項目を選ぶと、チェック「版をまたいで引く」が出る" do
+      get "/queries/new", params: { columns: [ QB_SYSTOLIC ] }
+
+      expect(doc.at_css("input[type=checkbox][name=across_versions]")).to be_present
+      expect(doc.at_css("label[for=across_versions]").text.strip).to eq("版をまたいで引く")
+    end
+
+    it "実行: 版ごとの AQL を見出しつきで並べ、v1 と v2 の行を 1 つの表に出す。先頭の列は「アーキタイプの版」" do
+      allow(QueryBuilder::VersionMappings).to receive(:default).and_return(active_mappings)
+
+      get "/queries/new", params: { columns: [ QB_SYSTOLIC ], across_versions: "1", run: "実行",
+                                    conditions: { "0" => { card: QB_SYSTOLIC, operator: ">=", value: "120" } } }
+
+      expect(texts("#query_aql h3")).to eq([ "#{bp}.v1", "#{bp}.v2" ])
+      expect(doc.css("#query_aql pre").map { _1.text.lines[1] }).to eq(%w[v1 v2].map do |version|
+        "FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[#{bp}.#{version}]\n"
+      end)
+      expect(texts("#query_result thead th")).to eq(%w[アーキタイプの版 収縮期])
+      expect(doc.css("#query_result tbody tr").map { |row| row.css("td").map { _1.text.strip } })
+        .to eq([ [ "#{bp}.v1", "150.0" ], [ "#{bp}.v2", "120.0" ] ])
+      expect(doc.at_css("input[name=across_versions]")["checked"]).to be_present
+    end
+
+    it "チェックしなければ、選んだ版だけを引く（これまでどおり）" do
+      allow(QueryBuilder::VersionMappings).to receive(:default).and_return(active_mappings)
+
+      get "/queries/new", params: { columns: [ QB_SYSTOLIC ], run: "実行" }
+
+      expect(texts("#query_result thead th")).to eq(%w[収縮期])
+      expect(texts("#query_result tbody td")).to eq([ "120.0" ])
+      expect(doc.css("#query_aql h3")).to be_empty
+    end
+
+    it "対応の無い項目（リポジトリの表は、まだ pending）では実行せず、理由を出す" do
+      get "/queries/new", params: { columns: [ QB_SYSTOLIC ], across_versions: "1", run: "実行" }
+
+      expect(texts("#query_error")).to eq([ "実行しませんでした: 版の対応が無い項目がある: 収縮期（#{bp}.v2 at0004）" ])
+      expect(doc.at_css("#query_result")).to be_nil
+    end
+  end
 end

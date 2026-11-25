@@ -42,6 +42,8 @@
         <% end %>
       </ul>
       <label><%= check_box_tag "composition_name", "1", @composition_name, id: "composition_name" %> 文書名も表示する</label>
+      <%= check_box_tag "across_versions", "1", @across_versions, id: "across_versions" %>
+      <label for="across_versions">版をまたいで引く</label>
     <% end %>
   </section>
 
@@ -110,7 +112,10 @@
   <% if @run.aql %>
     <section id="query_aql">
       <h2>AQL</h2>
-      <pre><%= @run.aql %></pre>
+      <% @run.queries.each do |query| %>
+        <% if @run.version_column? %><h3><%= query.archetype_id %></h3><% end %>
+        <pre><%= query.aql %></pre>
+      <% end %>
     </section>
 
     <section id="query_lint">
@@ -137,6 +142,7 @@
         <table>
           <thead>
             <tr>
+              <% if @run.version_column? %><th>アーキタイプの版</th><% end %>
               <% if @composition_name %><th>文書名</th><% end %>
               <% @columns.each do |card| %><th><%= query_card_name(card) %></th><% end %>
             </tr>
