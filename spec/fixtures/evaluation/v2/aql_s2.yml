@@ -9,6 +9,8 @@
 #
 # 人間レビューの範囲: 問いの文言が臨床的に自然か、参照 AQL と selection が問いの意図を表しているか、期待行がその意図の正解か。
 # アーキタイプ ID と at-code は実物（spec/fixtures/pathcards/*.golden.json）。期待行は demo_initial での実測（docs/reports/s2-query-builder-log.md R15）。
+# 2026-11-25: サンプルデータを 65 件に増やしたのに合わせ、書く側が期待行だけを実測に追随させた（R-20261125-9 の問い 3。
+#   docs/reports/sample-data-log.md R2）。notes の demo_initial の記述は旧データのまま。問いの決め直しは引く側（R-20261125-6）
 
 - id: a006
   kind: aql
@@ -20,7 +22,7 @@
            ev/data[at0001]/items[at0002]/value/value AS diagnosis
     FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
     WHERE ev/data[at0001]/items[at0002]/value/value LIKE "*糖尿病*"
-  expected_rows: [["ProblemList", "2型糖尿病"], ["jp_referral", "2型糖尿病"]]
+  expected_rows: [["ProblemList", "2型糖尿病"], ["ProblemList", "2型糖尿病"], ["ProblemList", "糖尿病性腎症"], ["jp_referral", "2型糖尿病"]]
   cards:
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
   selection:
@@ -44,7 +46,8 @@
     SELECT ev/data[at0001]/items[at0002]/value/value AS diagnosis
     FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
     WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0074", "at0076"}
-  expected_rows: [["高血圧症"], ["2型糖尿病"]]
+  expected_rows: [["2型糖尿病"], ["糖尿病性腎症"], ["高血圧症"], ["高血圧症"], ["高血圧症"], ["起立性低血圧"], ["鉄欠乏性貧血"],
+                  ["脂質異常症"], ["慢性腎臓病"], ["狭心症"], ["2型糖尿病"], ["花粉症"]]
   cards:
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
@@ -69,7 +72,7 @@
            o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude AS diastolic
     FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
     WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude < 90
-  expected_rows: [[120.0, 80.0]]
+  expected_rows: [[148.0, 86.0], [138.0, 84.0], [134.0, 82.0], [88.0, 54.0], [96.0, 60.0], [104.0, 66.0], [126.0, 88.0], [118.0, 76.0]]
   cards:
     - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
     - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }

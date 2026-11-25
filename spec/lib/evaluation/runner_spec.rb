@@ -95,12 +95,12 @@ RSpec.describe Evaluation::Runner do
     SYSTOLIC = <<~AQL
       SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic
       FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[#{BP_ID}]
-      WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > 110
+      WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude >= 140
     AQL
 
     let(:aql_question) do
-      Evaluation::Question.new(id: "a001", kind: :aql, query: "収縮期血圧が 110 を超える記録", dataset: "demo_initial",
-                               reference_aql: SYSTOLIC, expected_rows: [ [ 120.0 ] ])
+      Evaluation::Question.new(id: "a001", kind: :aql, query: "収縮期血圧が 140 以上の記録", dataset: "demo_initial",
+                               reference_aql: SYSTOLIC, expected_rows: [ [ 148.0 ], [ 152.0 ] ])
     end
     let(:specimen_pending) do
       Evaluation::Question.new(id: "c019", kind: :card, status: :pending, query: "検体",
@@ -123,12 +123,12 @@ RSpec.describe Evaluation::Runner do
     # S2 の経路（R-20261124-21 の作業列 3）: selection を持つ aql の問いは、ビルダーが組んだ AQL でも採点する
     it "selection を持つ aql の問いは S2 の経路でも採点し、builder_summary に数が出る。selection の無い問いは母数に入らない" do
       bp = { archetype_id: BP_ID, at_code: "at0004" }
-      with_selection = Evaluation::Question.new(id: "a901", kind: :aql, query: "収縮期血圧が 110 を超える記録", dataset: "demo_initial",
-                                                reference_aql: SYSTOLIC, expected_rows: [ [ 120.0 ] ],
-                                                selection: { columns: [ bp ], conditions: [ { card: bp, operator: ">", value: 110 } ] })
-      wrong = Evaluation::Question.new(id: "a902", kind: :aql, query: "収縮期血圧が 110 を超える記録", dataset: "demo_initial",
-                                       reference_aql: SYSTOLIC, expected_rows: [ [ 120.0 ] ],
-                                       selection: { columns: [ bp ], conditions: [ { card: bp, operator: "<", value: 110 } ] })
+      with_selection = Evaluation::Question.new(id: "a901", kind: :aql, query: "収縮期血圧が 140 以上の記録", dataset: "demo_initial",
+                                                reference_aql: SYSTOLIC, expected_rows: [ [ 148.0 ], [ 152.0 ] ],
+                                                selection: { columns: [ bp ], conditions: [ { card: bp, operator: ">=", value: 140 } ] })
+      wrong = Evaluation::Question.new(id: "a902", kind: :aql, query: "収縮期血圧が 140 以上の記録", dataset: "demo_initial",
+                                       reference_aql: SYSTOLIC, expected_rows: [ [ 148.0 ], [ 152.0 ] ],
+                                       selection: { columns: [ bp ], conditions: [ { card: bp, operator: "<", value: 140 } ] })
       run = described_class.run([ aql_question, with_selection, wrong ])
 
       expect(run.aql_summary).to eq(questions: 3, match: 3, mismatch: 0, unexecutable: 0)
