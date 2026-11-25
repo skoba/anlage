@@ -173,3 +173,64 @@ selection:
 
 - カードを `{archetype_id, at_code}` で指すので、同じアーキタイプ・同じ at-code が 1 つのテンプレートに複数ある場合（jp_referral の organisation at0001 が 3 か所）は、最初の 1 枚に当たる。いまの問いには無い
 
+
+## R16 条件を足す（R-20261125-6）: OR と NOT EXISTS が実行の経路で通るかの確認（2026-11-25）
+
+- 基準点: anlage main `79ebcc4`。`Gemfile.lock` は openehr 2.5.0、openehr-rails 0.9.0
+- やり方: リポジトリの外の一時の spec で、demo_initial（`Evaluation::Datasets.build`）の上の AQL を
+  `QueryBuilder::Linter.lint` と `OpenehrRails::Aql::Executor.execute` に通した
+- 実測（設計書 7.1 の表）: `NOT EXISTS <確度>`、`MATCHES … OR NOT EXISTS …`、`(… OR …) AND …`、数値の `< … OR > …` は、どれもリンタの指摘なしで実行でき、
+  行は手で数えたとおりだった（傷病 3 件のうち確度の記載が無いのは 1 件。血圧は 120／80 の 1 件）
+- 結論: いまの版のまま通る。止まる条件（通らなければ報告）には当たらない。上流の候補に足すものは無い
+- 読んだソース: `openehr-2.5.0/lib/openehr/aql/engine/predicate_evaluator.rb`（`Model::OrExpr`・`NotExpr`・`ExistsExpr` の分岐）
+
+## R17 自己承認した判断（設計書 7 節。R-20261125-6 の範囲内）
+
+| # | 判断 | 捨てた案 |
+|---|---|---|
+| H1 | 「未記入」は `NOT EXISTS <項目の value のパス>` で書く | 要素（`items[at…]`）に対する NOT EXISTS（実測ではどちらも同じ行。カードのパスをそのまま使えるほうにした） |
+| H2 | 「未記入を含む」は値集合の条件だけ | 数値・日付・文字列にも付ける（裁定の対象は値集合。広げるなら別に計画する） |
+| H3 | 「範囲の外」は下限と上限の両方を求め、下限 > 上限は組まない | 片方だけを許す（ふつうの比較と同じになる）。下限 > 上限を許す（すべての記録に当たる） |
+| H4 | OR を含む条件は、1 つだけのときも括弧でくくる | AND と並ぶときだけくくる（組む AQL の形が条件の数で変わる） |
+| H5 | 画面の「どちらかを満たす」は、条件ごとのチェック「前の条件と「または」でつなぐ」で作る | 組を作る別の操作（JavaScript か、画面の遷移が増える。G4 のまま、状態は URL だけにした） |
+| H6 | 「範囲の外」を選んで組み直すと、入力が「下限」「上限」に替わる。替わる前の 1 回は「下限と上限の両方が要る」と出る | 値・下限・上限を常に並べる（どの入力が効くかが分かりにくい） |
+
+## R18 サイクル: ビルダー（`37a6e49`）
+
+- Red（`bundle exec rspec spec/lib/query_builder/builder_spec.rb`。17 examples, 6 failures）:
+
+  ```
+  1) 未記入を含む: …
+       expected: "WHERE (ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {\"at0076\"} OR NOT EXISTS ev/data[at0001]/items[at0073]/value)"
+            got: "WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {\"at0076\"}"
+  2) 範囲の外: …                       QueryBuilder::Builder::InvalidSelection
+  3) どちらかを満たす: 別々の項目 …     KeyError
+  4) どちらかを満たす: 節が 2 つの条件 … KeyError
+  5) 組めない選択は InvalidSelection で止める
+       expected QueryBuilder::Builder::InvalidSelection with message matching /未記入を含むは、値集合の条件にだけ/ but nothing was raised
+  6) 組んだ AQL はどれもリンタを通る    QueryBuilder::Builder::InvalidSelection
+  ```
+
+  （その前に 2 回、spec の文字列リテラルの区切りの誤りで SyntaxError になった。実装に入る前に直した）
+- Green: `Builder` に `include_missing`、`OUTSIDE`、`{ any: […] }`。`spec/lib/query_builder` 43 examples, 0 failures
+
+## R19 実行とリンタの pin（`85d743f`。実装の変更なし）
+
+- `runner_spec` に 3 例（demo_initial の上で: 確定 0 行 → 未記入を含めて 1 行、疑い＋未記入で 3 行。範囲の外 1 行／0 行。どちらかを満たす 1 行／0 行）
+- `linter_spec` に 3 例（MATCHES と NOT EXISTS の OR は指摘なし。NOT EXISTS の中の存在しない節は error〔パス〕。OR の中の型の不一致と値集合に無いコードは error）
+- どれも書いた時点で通った（Red にならない）。リンタは OR・NOT・EXISTS の中をもとから辿っていたため。仕様の固定として残す。49 examples, 0 failures
+
+## R20 サイクル: 画面（`ab87545`）
+
+- Red（`bundle exec rspec spec/requests/queries_spec.rb`。17 examples, 6 failures）: 新しい 5 例（入力が無い、AQL に OR が無い、`conditions[0][low]` が無い など）と、
+  数値の演算子の一覧を固定していた既存の 1 例（ビルダーの `OPERATORS` に OUTSIDE が入ったため `got: [">", ">=", "<", "<=", "=", "OUTSIDE"]`）
+- Green: `QueriesController`（`include_missing`・`low`・`high`・`or`、続く「または」を 1 つの組にまとめる）、ビュー、語彙表（同じコミット）。
+  既存の 2 つの pin（演算子の一覧、値集合の条件のラベルの一覧）は、足した入力に合わせて更新した
+- 実ブラウザの spec に 2 例。1 例は、期待する AQL の文字列を書き間違えて落ちた（「範囲の外」は自分の括弧を持つので `> 110) OR …`）。spec を直した
+- 全 suite: 509 examples, 0 failures, 2 pending
+
+## R21 残っていること
+
+- 評価の問いの `selection` の形に、この 3 つの条件はまだ無い（`Evaluation::Questions.selection`）。問いの案を出すときに足す（設計書 7.6）
+- 評価の問いの案は、サンプルデータ（R-20261125-5、書く側）が main に入ってから
+- いまの初期データでは、「どちらかを満たす」の両側が別々の記録で当たる例を作れない（血圧が 1 件）。データが増えたら spec に足す
