@@ -268,3 +268,31 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
 - regression pin: 負例だけの問い 3 問（BMI判定・診断・脈拍）を v1 の 17 問に混ぜても、`card_summary` と問いごとの `Score` が 17 問だけのときと同じ（`runner_spec`）。
   v1 とゴールド v2 の数字の pin は触っていない
 - ゴールド（`spec/fixtures/evaluation/v2/`）は、この PR では変えていない
+
+## R18 card の問いを足す（2026-11-25、R-20261125-7。ゴールドの確定は人間のマージ）
+
+- 反映: `spec/fixtures/evaluation/v2/cards.yml` に、採用の 9 問（c022・c023・c024・c026・c027・c029・c030・c031・c032、active）と、
+  保留の c033（pending）を足した。`reviewed_by: Kobayashi, Shinji`、`reviewed_at: 2026-11-25`。見送りの c025・c028 は足していない
+- 案: 負例だけの問い c034「肥満度」（draft。負例は body_mass_index.v2 のどのカードも）。形式は R17
+- 採点（`RESET=1 bundle exec rake evaluation:run`、demo_initial の 5 テンプレート、検索は main `5eceeca`）
+
+  | 問い | 足す前 | 足したあと |
+  |---|---|---|
+  | v1 の 17 問 | Top-1 15/17、Top-3 15/17、MRR 0.8824 | 同じ |
+  | ゴールド v2 の card | 4 問: Top-1 4/4、Top-3 4/4、MRR 1.0000、recall@3 0.8750、負例違反 0/4、順位遵守 1/1 | 13 問: Top-1 8/13、Top-3 10/13、完全失敗 2/13、MRR 0.6987、recall@3 0.7308、負例違反 0/13、順位遵守 1/1、許容の出現 1/13 |
+  | ゴールド v2 の aql 5 問 | 一致 5/5 | 同じ |
+  | 負例だけの問い | — | 母数 0（c034 は draft） |
+
+  - 足す前からの 4 問（c008・c010・c014・c015）の結果は変わらない（4 問とも 1 位。spec で固定した）
+  - 1 位でない問い: c022「病名」・c023「疾患名」（0 件）、c027「診断日」（4 位）、c029「検査値」（3 位）、c030「検査項目」（2 位）
+  - spec の 4 テンプレートの索引でも同じ数字（`evaluation_run_spec`）
+  - これが段 D・E の before になる
+- 追随した spec の pin（実測に合わせた。4 例）: `questions_spec`（問いの数と id）、`runner_spec`（card 13 問の数字、保留問と draft）、`evaluation_run_spec`（報告の文字列）
+- **裁定の補足との食い違い（実測）**: 裁定は「カードの文に『最高』『最低』は無い」としているが、CardiologyEncounter のカードの説明に
+  「全身の動脈血圧での最高値 …」（at0004）、「…最低値 …」（at0005）がある（`spec/fixtures/pathcards/CardiologyEncounter.golden.json`）。
+  c031・c032 が 1 位に出るのは、説明の bigram（重み 1）と祖先の名前「血圧」（重み 3）による（score 5 対 4）。
+  種類は裁定のとおり「同義語ギャップ」のままにし、notes に実測を書いた。種類を変えるかは統括・人間に回す
+- **c033 に「保留解除候補」の印が付く**: 印は「期待先のアーキタイプがすべて索引にある」で付く。c033 の保留の理由は「日本語訳が済んでいない」で、
+  heart_rate-pulse.v1 は demo_initial の索引にもうあるので、印が付いてしまう。裁定は「c019・c021 と同じ形」なので、そのとおりに足した。
+  直すなら、保留の理由の種類（索引に無い／訳が無い）を形式に足す。裁定に無いので、手を付けていない
+- c034 の `intent_tag`「負例のみ」は、セッションが付けた仮の名前
