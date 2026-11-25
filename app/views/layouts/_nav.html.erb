@@ -1,9 +1,10 @@
 <%# skoba/anlage#47・#95: 文言は docs/demo/ui-vocabulary.md（正典）。engine の layout からも使うので、
     anlage の URL は main_app.、engine の URL は openehr_rails. を付けて呼ぶ。
-    current: いまの画面の項目（:templates／:compositions／:pathcards／:aql） %>
+    current: いまの画面の項目（:templates／:compositions／:pathcards／:queries／:aql） %>
 <nav id="app_nav">
   <%= link_to "テンプレート", main_app.templates_path, aria: { current: (current == :templates ? "page" : nil) } %>
   <%= link_to "カルテ記録一覧", main_app.compositions_path, aria: { current: (current == :compositions ? "page" : nil) } %>
   <%= link_to "パスカード検索", main_app.pathcards_search_path, aria: { current: (current == :pathcards ? "page" : nil) } %>
+  <%= link_to "クエリビルダー", main_app.new_query_path, aria: { current: (current == :queries ? "page" : nil) } %>
   <%= link_to "AQL 照会", openehr_rails.query_console_path, aria: { current: (current == :aql ? "page" : nil) } %>
 </nav>

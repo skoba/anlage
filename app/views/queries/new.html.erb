@@ -1,0 +1,139 @@
+<%# 文言は docs/demo/ui-vocabulary.md（正典）。状態は 1 つの GET フォームに持つ（docs/design/s2-query-builder-plan.md 6.4） %>
+<h1>クエリビルダー</h1>
+
+<%= form_with url: new_query_path, method: :get, id: "query_builder" do |form| %>
+  <section id="query_search">
+    <%= form.label :q, "探したい項目" %>
+    <%= form.search_field :q, value: @query %>
+    <%= form.submit "検索", name: "search" %>
+  </section>
+
+  <% if @candidates.any? %>
+    <section id="query_candidates">
+      <% @candidates.each do |card| %>
+        <% ref = QueryBuilder::Corpus.ref(card) %>
+        <article class="pathcard">
+          <h2><%= query_card_name(card) %></h2>
+          <p><%= card.dig("identity", "template_id") %>／<%= card.dig("identity", "archetype_id") %>／<%= card.dig("identity", "at_code") %>（<%= card.dig("semantics", "rm_type") %>）</p>
+          <button type="submit" name="add_column" value="<%= ref %>">表示する項目に足す</button>
+          <button type="submit" name="add_condition" value="<%= ref %>">条件に足す</button>
+        </article>
+      <% end %>
+    </section>
+  <% end %>
+
+  <% if @dropped.positive? %>
+    <p id="query_dropped">いまのテンプレートに無い項目を <%= @dropped %> 件外しました。</p>
+  <% end %>
+
+  <section id="query_columns">
+    <h2>表示する項目</h2>
+    <% if @columns.empty? %>
+      <p>表示する項目を選ぶと、AQL が組まれます。</p>
+    <% else %>
+      <ul>
+        <% @columns.each do |card| %>
+          <% ref = QueryBuilder::Corpus.ref(card) %>
+          <li>
+            <%= hidden_field_tag "columns[]", ref, id: nil %>
+            <span class="card-label"><%= query_card_label(card) %></span>
+            <button type="submit" name="remove_column" value="<%= ref %>">外す</button>
+          </li>
+        <% end %>
+      </ul>
+      <label><%= check_box_tag "composition_name", "1", @composition_name, id: "composition_name" %> 文書名も表示する</label>
+    <% end %>
+  </section>
+
+  <section id="query_conditions">
+    <h2>条件</h2>
+    <% if @conditions.empty? %>
+      <p>条件はありません。</p>
+    <% else %>
+      <ul>
+        <% @conditions.each_with_index do |condition, index| %>
+          <% name = "conditions[#{index}]" %>
+          <li>
+            <%= hidden_field_tag "#{name}[card]", condition.ref, id: nil %>
+            <span class="card-label"><%= query_card_label(condition.card) %></span>
+            <% case condition.kind %>
+            <% when :number %>
+              <%= select_tag "#{name}[operator]", options_for_select(QueryBuilder::Builder::OPERATORS.fetch(:number), condition.operator), id: "condition_#{index}_operator", "aria-label": "演算子" %>
+              <%= text_field_tag "#{name}[value]", condition.value, id: "condition_#{index}_value", inputmode: "decimal", "aria-label": "値" %>
+            <% when :code %>
+              <% QueryBuilder::Builder.code_list(condition.card).each do |entry| %>
+                <% id = "condition_#{index}_#{entry['code']}" %>
+                <%= check_box_tag "#{name}[values][]", entry["code"], condition.values.include?(entry["code"]), id: id %>
+                <label for="<%= id %>"><%= entry["label"] %></label>
+              <% end %>
+            <% when :date %>
+              <%= text_field_tag "#{name}[from]", condition.from, id: "condition_#{index}_from", placeholder: "2026-01-01", "aria-label": "から" %> から
+              <%= text_field_tag "#{name}[to]", condition.to, id: "condition_#{index}_to", placeholder: "2027-01-01", "aria-label": "まで" %> まで（この日時を含まない）
+            <% else %>
+              <%= select_tag "#{name}[operator]", options_for_select([ [ "一致", "=" ], [ "含む", "CONTAINS" ] ], condition.operator), id: "condition_#{index}_operator", "aria-label": "演算子" %>
+              <%= text_field_tag "#{name}[value]", condition.value, id: "condition_#{index}_value", "aria-label": "値" %>
+            <% end %>
+            <button type="submit" name="remove_condition" value="<%= index %>">外す</button>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+
+  <% if @columns.any? %>
+    <p>
+      <%= form.submit "AQL を組む", name: "build" %>
+      <%= form.submit "実行", name: "run" %>
+    </p>
+  <% end %>
+<% end %>
+
+<% if @run %>
+  <% if @run.error %>
+    <p id="query_error" class="query-error">実行しませんでした: <%= @run.error %></p>
+  <% end %>
+
+  <% if @run.aql %>
+    <section id="query_aql">
+      <h2>AQL</h2>
+      <pre><%= @run.aql %></pre>
+    </section>
+
+    <section id="query_lint">
+      <h2>AQL の検査</h2>
+      <% if @run.lint.findings.empty? %>
+        <p>指摘はありません。</p>
+      <% else %>
+        <ul>
+          <% @run.lint.findings.each do |finding| %>
+            <li class="lint-<%= finding.severity %>"><%= { error: "エラー", warning: "注意", info: "情報" }.fetch(finding.severity) %>: <%= finding.message %></li>
+          <% end %>
+        </ul>
+      <% end %>
+    </section>
+  <% end %>
+
+  <% if @run.executed? %>
+    <section id="query_result">
+      <h2>結果</h2>
+      <% if @run.rows.empty? %>
+        <p>該当する記録はありません。</p>
+      <% else %>
+        <p><%= @run.rows.size %> 行</p>
+        <table>
+          <thead>
+            <tr>
+              <% if @composition_name %><th>文書名</th><% end %>
+              <% @columns.each do |card| %><th><%= query_card_name(card) %></th><% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% @run.rows.each do |row| %>
+              <tr><% row.each do |value| %><td><%= value %></td><% end %></tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+    </section>
+  <% end %>
+<% end %>

@@ -16,8 +16,8 @@ RSpec.describe "統合レイアウト（実ブラウザ）", type: :system, js: 
     page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")
   end
 
-  it "ナビが左、作業面が右に並び、横スクロールが出ない（テンプレート・カルテ記録一覧・パスカード検索・AQL 照会）" do
-    [ templates_path, compositions_path, pathcards_search_path, "/openehr/query" ].each do |path|
+  it "ナビが左、作業面が右に並び、横スクロールが出ない（テンプレート・カルテ記録一覧・パスカード検索・クエリビルダー・AQL 照会）" do
+    [ templates_path, compositions_path, pathcards_search_path, new_query_path, "/openehr/query" ].each do |path|
       visit path
 
       _nav_left, nav_right, nav_top = rect("nav#app_nav")
