@@ -172,20 +172,36 @@ RSpec.describe Evaluation::Runner do
       described_class.run(Evaluation::Questions.from_v2)
     end
 
-    it "card 4 問: Top-1 4/4、recall@3 0.875（c008 の第 2 候補 at0002 が出ない）、負例違反なし、順位遵守 1/1" do
-      expect(run.card_summary).to include(questions: 4, hit_at_1: 4, hit_at_3: 4, complete_failures: 0, violations: 0,
-                                          ranked_questions: 1, order_kept: 1, order_pairs: 1, order_pairs_kept: 1, acceptables: 0)
-      expect(run.card_summary.fetch(:recall_at_3)).to eq(0.875)
+    # 2026-11-25 に 9 問を足した（R-20261125-7）。段 D・E の before になる数字（docs/reports/s1-eval-v2-log.md R18）
+    it "card 13 問: Top-1 8/13、Top-3 10/13、完全失敗 2/13（c022「病名」・c023「疾患名」）、負例違反なし、順位遵守 1/1、許容の出現 1/13（c026）" do
+      expect(run.card_summary).to include(questions: 13, hit_at_1: 8, hit_at_3: 10, complete_failures: 2, violations: 0,
+                                          ranked_questions: 1, order_kept: 1, order_pairs: 1, order_pairs_kept: 1, acceptables: 1)
+      expect(run.card_summary.fetch(:mrr)).to be_within(0.00005).of(0.6987)
+      expect(run.card_summary.fetch(:recall_at_3)).to be_within(0.00005).of(0.7308)
+      expect(run.card_results.select { |result| result.score.complete_failure }.map { |result| result.question.id }).to eq(%w[c022 c023])
+      expect(run.card_results.reject { |result| result.score.hit_at_1 }.map { |result| result.question.id })
+        .to eq(%w[c022 c023 c027 c029 c030])
+    end
+
+    it "足す前からの card 4 問（c008・c010・c014・c015）の結果は変わらない: 4 問とも 1 位、負例違反なし" do
+      original = run.card_results.select { |result| %w[c008 c010 c014 c015].include?(result.question.id) }
+
+      expect(original.map { |result| result.score.rank }).to eq([ 0, 0, 0, 0 ])
+      expect(original.sum { |result| result.score.recall_at_3 } / 4).to eq(0.875)
+      expect(original.flat_map { |result| result.score.violations }).to be_empty
     end
 
     it "aql 5 問は参照 AQL が期待行に一致する（a002 はコード値 at0074 の一致）" do
       expect(run.aql_summary).to eq(questions: 5, match: 5, mismatch: 0, unexecutable: 0)
     end
 
-    it "保留問は c019・c021 の 2 問で、解除候補は無い。draft は S2 の経路の案 3 問（母数外）" do
-      expect(run.pendings.map(&:id)).to match_array(%w[c019 c021])
-      expect(run.releasable_pendings).to be_empty
-      expect(run.drafts.map(&:id)).to match_array(%w[a006 a007 a008])
+    # c033「脈拍」は、期待先のアーキタイプ（heart_rate-pulse.v1）が demo_initial の索引にあるので「保留解除候補」の印が付く。
+    # 保留の理由は「日本語訳が済んでいない」で、索引に入ったことでは解けない（印は当てにならない。ログ R18 に書いた）
+    it "保留問は c019・c021・c033 の 3 問。解除候補の印は c033 にだけ付く。draft は案 4 問（母数外）で、負例だけの問いの母数は 0" do
+      expect(run.pendings.map(&:id)).to match_array(%w[c019 c021 c033])
+      expect(run.releasable_pendings.map(&:id)).to eq(%w[c033])
+      expect(run.drafts.map(&:id)).to match_array(%w[a006 a007 a008 c034])
+      expect(run.negative_summary).to eq(questions: 0, violations: 0)
     end
 
     it "確定した aql の 5 問は selection を持たないので、S2 の経路の母数は 0（案の確定を待つ）" do

@@ -65,6 +65,109 @@
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-24
 
+# --- 2026-11-25 に足した問い（案は docs/design/s3-eval-questions-proposal.md。臨床レビュー: Kobayashi, Shinji、2026-11-25。確定は裁定 R-20261125-7）
+
+- id: c022
+  kind: card
+  query: "病名"
+  expected:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+  match: card
+  intent_tag: 同義語ギャップ
+  notes: "v1 q05 の小林コメント「プロブレム／病名／疾患名 等の語彙クラスタから本要素への着地は Phase 2 の検証対象」から起こした。レビュー（2026-11-25、小林）: 採用、案のとおり。字面では届かない語"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- id: c023
+  kind: card
+  query: "疾患名"
+  expected:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+  match: card
+  intent_tag: 同義語ギャップ
+  notes: "v1 q05 の小林コメント「プロブレム／病名／疾患名 等の語彙クラスタから本要素への着地は Phase 2 の検証対象」から起こした。レビュー（2026-11-25、小林）: 採用、案のとおり。字面では届かない語"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- id: c024
+  kind: card
+  query: "プロブレム"
+  expected:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+  match: card
+  intent_tag: bigram成立想定
+  notes: "v1 q05 の小林コメント「プロブレム／病名／疾患名 等の語彙クラスタから本要素への着地は Phase 2 の検証対象」から起こした。レビュー（2026-11-25、小林）: 採用、案のとおり。クラスタのうち字面で届く語（c022・c023 との対照）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- id: c026
+  kind: card
+  query: "確定診断"
+  expected:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073, rank: 1 }
+  match: card
+  acceptable:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+  intent_tag: 複合語
+  notes: "レビュー（2026-11-25、小林）: 採用、案のとおり。第 1 候補は診断確度（at0073。値集合に「確定」がある）。プロブレム・診断名（at0002）は許容"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- id: c027
+  kind: card
+  query: "診断日"
+  expected:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0003 }
+  match: card
+  intent_tag: 同義語ギャップ
+  notes: "レビュー（2026-11-25、小林）: 採用、案のとおり。「診断日」は「臨床的に認識された日時」（at0003）を指す。c015「臨床検査」では同じ at0003 が負例で、ここでは正解になる"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- id: c029
+  kind: card
+  query: "検査値"
+  expected:
+    - { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0001 }
+  match: card
+  intent_tag: 複合語
+  notes: "レビュー（2026-11-25、小林）: 採用、案のとおり。v1 q07 の注記「臨床語『検査結果』の指す値は at0001（分析結果）」の言い換え"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- id: c030
+  kind: card
+  query: "検査項目"
+  expected:
+    - { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0024 }
+  match: card
+  intent_tag: 複合語
+  notes: "レビュー（2026-11-25、小林）: 採用、案のとおり。分析名（at0024）を指す"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- id: c031
+  kind: card
+  query: "最高血圧"
+  expected:
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+  match: card
+  intent_tag: 同義語ギャップ
+  notes: "レビュー（2026-11-25、小林）: 採用。期待は案のとおり。訳語としては本来「収縮期血圧」が相当するが、Systolic の訳語として要素に結び付けているので、blood pressure アーキタイプの要素としては妥当。種類は「同義語ギャップ」とする（R-20261125-7）。実測（2026-11-25）: いまの検索では 1 位に出る。カードのラベルは「収縮期」で「最高」を含まないが、説明「全身の動脈血圧での最高値 …」と祖先の名前「血圧」に bigram が当たる。この 1 位を、言い換えが届いている根拠としては扱わない"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- id: c032
+  kind: card
+  query: "最低血圧"
+  expected:
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
+  match: card
+  intent_tag: 同義語ギャップ
+  notes: "レビュー（2026-11-25、小林）: 採用。期待は案のとおり。訳語としては本来「拡張期血圧」が相当するが、Diastolic の訳語として要素に結び付けているので、blood pressure アーキタイプの要素としては妥当。種類は「同義語ギャップ」とする（R-20261125-7）。実測（2026-11-25）: いまの検索では 1 位に出る。カードのラベルは「拡張期」で「最低」を含まないが、説明「全身の動脈血圧での最低値 …」と祖先の名前「血圧」に bigram が当たる。この 1 位を、言い換えが届いている根拠としては扱わない"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
 # --- 保留問（正解がコーパスに無い。期待先のアーキタイプが active のカードに現れると報告で「保留解除候補」になる）
 
 - id: c021
@@ -95,3 +198,30 @@
   notes: "v1 の旧 q19（廃止）の注記「検体の正しい対応は CLUSTER.specimen。laboratory_test_result への着地は入力側実体→出力側記録の隣接概念誤対応」。LabResultReport.opt には specimen が注釈文にしか無く（スロット未充足）、カードは無い。laboratory_test_result を forbidden にして、字面の重なり（検体／検体検査）による誤着地を測る"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-24
+
+# 保留の理由が「正解がコーパスに無い」ではない問い。期待先のアーキタイプは索引にあるが、ラベルが未翻訳（英語のまま）
+- id: c033
+  kind: card
+  status: pending
+  query: "脈拍"
+  expected:
+    - { archetype_id: openEHR-EHR-OBSERVATION.heart_rate-pulse.v1, at_code: at0004 }
+  match: card
+  intent_tag: 同義語ギャップ
+  pending_until: "heart_rate-pulse.v1 の日本語訳が済む（patient_blood_pressure.v1 のカードのラベルが、いまは英語の「Rate」のまま）"
+  notes: "レビュー（2026-11-25、小林）: 保留。アーキタイプの日本語訳が済むまで出題しない（R-20261125-7）。v1 q16「BMI」と同じ型（未翻訳の英語ラベルとの字面のずれ）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+# --- 負例だけの問い（期待が空。docs/design/s1-eval-v2-plan.md 9 節）。案（draft）。確定は人間
+
+- id: c034
+  kind: card
+  status: draft
+  query: "肥満度"
+  expected: []
+  forbidden:
+    - { archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2 }
+  match: card
+  intent_tag: 負例のみ
+  notes: "臨床の判断（2026-11-25、小林。v1 q09 のコメントと同じ）: 「肥満度」が BMI のカードに着地するのは誤り（肥満度は BMI と別の指標）。負例は body_mass_index.v2 のどのカードも（at_code を書かない。いまの索引では at0004「Body mass index」と at0013「判定」）。案: 負例の範囲（アーキタイプ全体）と、active にしてよいかを見てほしい"
