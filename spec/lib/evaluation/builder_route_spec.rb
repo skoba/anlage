@@ -35,6 +35,33 @@ RSpec.describe Evaluation::BuilderRoute do
     expect(invalid.error).to include("CONTAINS")
   end
 
+  # docs/design/s1-eval-v2-plan.md 8.4（R-20261125-6）。demo_initial の血圧は 120／80 の 1 件、傷病 3 件のうち確度の記載が無いのは 2型糖尿病 の 1 件
+  it "どちらかを満たす（any）と範囲の外（OUTSIDE）の selection: 中のカードも索引から引いて組む" do
+    diastolic = ROUTE_BP.merge(at_code: "at0005")
+    either = { any: [ { card: ROUTE_BP, operator: "OUTSIDE", value: { low: 130, high: 140 } }, { card: diastolic, operator: ">=", value: 90 } ] }
+    score = described_class.score(question({ columns: [ ROUTE_BP ], conditions: [ either ] }))
+
+    expect(score).to have_attributes(status: :match)
+    expect(score.aql.lines.last).to match(%r{\AWHERE \(\(o/.+at0004\]/value/magnitude < 130 OR o/.+at0004\]/value/magnitude > 140\) OR o/.+at0005\]/value/magnitude >= 90\)\z})
+  end
+
+  it "未記入を含む（include_missing）の selection: 確定または未記入で、確度の記載が無い 1 行" do
+    pd = "openEHR-EHR-EVALUATION.problem_diagnosis.v1"
+    selection = { columns: [ { archetype_id: pd, at_code: "at0002" } ],
+                  conditions: [ { card: { archetype_id: pd, at_code: "at0073" }, operator: "MATCHES", value: [ "at0076" ], include_missing: true } ] }
+
+    expect(described_class.score(question(selection, expected_rows: [ [ "2型糖尿病" ] ]))).to have_attributes(status: :match)
+  end
+
+  it "any の中の、索引に無いカードは unbuildable" do
+    missing = { archetype_id: "openEHR-EHR-CLUSTER.specimen.v1", at_code: "at0029" }
+    score = described_class.score(question({ columns: [ ROUTE_BP ],
+                                             conditions: [ { any: [ { card: ROUTE_BP, operator: ">", value: 1 }, { card: missing, operator: "=", value: "x" } ] } ] }))
+
+    expect(score).to have_attributes(status: :unbuildable)
+    expect(score.error).to include("openEHR-EHR-CLUSTER.specimen.v1")
+  end
+
   it "selection の無い問いは採点しない（nil）" do
     expect(described_class.score(question(nil))).to be_nil
   end

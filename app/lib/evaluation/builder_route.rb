@@ -22,7 +22,7 @@ module Evaluation
       selection = @question.selection
       aql = QueryBuilder::Builder.build(
         columns: Array(selection[:columns]).map { |ref| card(ref) },
-        conditions: Array(selection[:conditions]).map { |condition| condition.merge(card: card(condition.fetch(:card))) },
+        conditions: Array(selection[:conditions]).map { |condition| resolve(condition) },
         composition_name: selection[:composition_name] ? true : false
       )
       lint = QueryBuilder::Linter.lint(aql, corpus: @corpus)
@@ -35,6 +35,13 @@ module Evaluation
     end
 
     private
+
+    # 条件のカードの参照を、索引のカードに置き換える。どちらかを満たす（any）は中の条件も置き換える
+    def resolve(condition)
+      return { any: Array(condition[:any]).map { |member| resolve(member) } } if condition.key?(:any)
+
+      condition.merge(card: card(condition.fetch(:card)))
+    end
 
     # {archetype_id, at_code} に当たる最初のカード。同じアーキタイプが複数のテンプレートにあっても、ビルダーが組む AQL は同じ形になる
     def card(ref)
