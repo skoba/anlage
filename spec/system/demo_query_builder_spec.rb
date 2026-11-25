@@ -44,6 +44,7 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     fill_in "探したい項目", with: "診断名"
     click_button "検索"
     candidate("プロブレム・診断名", "ProblemList").click_button "表示する項目に足す"
+    expect(page).to have_css("#query_columns li", count: 1)
 
     fill_in "探したい項目", with: "診断確度"
     click_button "検索"
@@ -63,7 +64,9 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     fill_in "探したい項目", with: "収縮期"
     click_button "検索"
     candidate("収縮期", "CardiologyEncounter").click_button "表示する項目に足す"
+    expect(page).to have_css("#query_columns li", count: 1)
     candidate("収縮期", "CardiologyEncounter").click_button "条件に足す"
+    expect(page).to have_css("#query_conditions li", count: 1)
     fill_in "condition_0_value", with: "高い"
     click_button "実行"
 
@@ -81,6 +84,7 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     fill_in "探したい項目", with: "診断名"
     click_button "検索"
     candidate("プロブレム・診断名", "ProblemList").click_button "表示する項目に足す"
+    expect(page).to have_css("#query_columns li", count: 1)
     fill_in "探したい項目", with: "診断確度"
     click_button "検索"
     candidate("診断確度", "ProblemList").click_button "条件に足す"
@@ -102,14 +106,20 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
 
     fill_in "探したい項目", with: "血圧"
     click_button "検索"
+    # ボタンを押すたびに画面が読み直される。次のボタンは、読み直しを待ってから押す（待たないと、古い画面のボタンを押して前の操作が消える）
     candidate("収縮期", "CardiologyEncounter").click_button "表示する項目に足す"
+    expect(page).to have_css("#query_columns li", count: 1)
     candidate("拡張期", "CardiologyEncounter").click_button "表示する項目に足す"
+    expect(page).to have_css("#query_columns li", count: 2)
     candidate("収縮期", "CardiologyEncounter").click_button "条件に足す"
+    expect(page).to have_css("#query_conditions li", count: 1)
     candidate("拡張期", "CardiologyEncounter").click_button "条件に足す"
+    expect(page).to have_css("#query_conditions li", count: 2)
 
     select "範囲の外", from: "condition_0_operator"
     click_button "AQL を組む"
     expect(page).to have_css("#query_error", text: "下限と上限の両方が要る")
+    expect(page).to have_field("condition_0_low")
     fill_in "condition_0_low", with: "100"
     fill_in "condition_0_high", with: "110"
     select ">=", from: "condition_1_operator"
