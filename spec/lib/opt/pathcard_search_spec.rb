@@ -112,3 +112,48 @@ RSpec.describe Opt::PathcardSearch, "ELEMENT 改名がラベルとして検索�
     end
   end
 end
+
+# skoba/anlage#122（S3 の段 A。docs/design/s3-search-plan.md 3 節、R-20261125-2）: 同点のカードの順序を、
+# テンプレートの登録順ではなくtemplate_id と、テンプレートの中でのカードの並びで決める。
+# 「臨床検査」は 4 枚が score 1 で並ぶ（bigram「臨床」1 枚、「検査」3 枚）。
+RSpec.describe Opt::PathcardSearch, "同点の順序は登録順によらない（#122）" do
+  def register(fixture_names)
+    fixture_names.each do |fixture_name|
+      template = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture_name}.opt").read)
+      template.pathcards = Opt::PathcardExtractor.call(template).cards
+      template.save!
+    end
+  end
+
+  def hits(query)
+    described_class.call(query).map { |card| [ card.fetch("score"), *card.fetch("identity").values_at("template_id", "at_code") ] }
+  end
+
+  it "同じ 4 テンプレートを別の順で登録しても、同じ並びを返す" do
+    register(%w[bmi_calculation ProblemList CardiologyEncounter LabResultReport])
+    first_order = hits("臨床検査")
+    Template.delete_all
+    register(%w[LabResultReport bmi_calculation CardiologyEncounter ProblemList])
+
+    expect(hits("臨床検査")).to eq(first_order)
+  end
+
+  it "同点は template_id、テンプレートの中でのカードの並び（帳票の順）で並べる" do
+    register(%w[bmi_calculation ProblemList CardiologyEncounter LabResultReport])
+
+    expect(hits("臨床検査")).to eq([
+      [ 1, "LabResultReport", "at0005" ],
+      [ 1, "LabResultReport", "at0024" ],
+      [ 1, "LabResultReport", "at0001" ],
+      [ 1, "ProblemList", "at0003" ]
+    ])
+  end
+
+  it "score の高いカードは、template_id が後ろでも先に出る" do
+    register(%w[CardiologyEncounter ProblemList])
+    results = hits("発症日時")
+
+    expect(results.map(&:first)).to eq(results.map(&:first).sort.reverse)
+    expect(results.first).to eq([ 3, "ProblemList", "at0077" ])
+  end
+end

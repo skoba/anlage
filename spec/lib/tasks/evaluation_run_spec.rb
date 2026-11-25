@@ -32,12 +32,13 @@ RSpec.describe "evaluation:run" do
   end
 
   # v1 の 17 問の表を保つため、ゴールド v2 は別の報告にする（R-20261124-15。v1 の採点結果が変わらないことの pin は上の例）。
-  # この spec の索引は 4 テンプレートで、c015「臨床検査」は負例（ProblemList at0003）が 1 位に出る（bigram「臨床」の偽陽性の実物）。
-  # demo_initial の 5 テンプレートでは 1 位が laboratory_test_result で負例違反は無い（spec/lib/evaluation/runner_spec.rb）
+  # この spec の索引は 4 テンプレート（ProblemList を LabResultReport より先に登録する）。c015「臨床検査」は 4 枚が同点で、
+  # 同点の順序を登録順で決めていたあいだは負例（ProblemList at0003）が 1 位に出た。skoba/anlage#122 で順序を決定的にしたので、
+  # demo_initial の 5 テンプレート（spec/lib/evaluation/runner_spec.rb）と同じ結果になる
   it "ゴールド v2 の card 4 問は別の報告に出し、保留問 2 問を並べる（aql は RESET 無しでは読まない）" do
     expect { run_task }.to output(
-      a_string_including("# 評価 v2（phase1-bigram、ゴールド v2）", "## card（4 問）", "| Top-1 | 3/4 (75.00%) |", "| Top-3 | 4/4 (100.00%) |",
-                         "| 負例違反 | 1/4 |", "- c015: 臨床検査 → openEHR-EHR-EVALUATION.problem_diagnosis.v1 at0003",
+      a_string_including("# 評価 v2（phase1-bigram、ゴールド v2）", "## card（4 問）", "| Top-1 | 4/4 (100.00%) |", "| Top-3 | 4/4 (100.00%) |",
+                         "| 負例違反 | 0/4 |",
                          "| 順位遵守 | 1/1 (100.00%)（組 1/1） |", "## 保留問（2 問、母数外）", "- c019: 検体", "- c021: 既往歴")
     ).to_stdout
   end

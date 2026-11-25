@@ -13,12 +13,14 @@ module Opt
 
       # 索引は active 版のみ（skoba/anlage#32）。superseded 版のカードは系譜・diff 用に
       # 保持するが、同一カードが版ごとに並ぶのを避けるため索引から外す。
+      # 同点の順序は、template_id、テンプレートの中でのカードの並び（帳票の順）で決める。
+      # テンプレートの登録順に左右させない（skoba/anlage#122）。
       Template.active.where.not(pathcards: nil).flat_map do |template|
-        Array(template.pathcards).filter_map do |card|
+        Array(template.pathcards).each_with_index.filter_map do |card, position|
           score = (@query_bigrams & card_bigrams(card)).size
-          card.merge("score" => score) if score.positive?
+          [ card.merge("score" => score), position ] if score.positive?
         end
-      end.sort_by { |card| -card.fetch("score") }
+      end.sort_by { |card, position| [ -card.fetch("score"), card.dig("identity", "template_id").to_s, position ] }.map(&:first)
     end
 
     private
