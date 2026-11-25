@@ -152,6 +152,52 @@ RSpec.describe Evaluation::Questions do
       expect(a002.selection).to be_nil
     end
 
+    # docs/design/s1-eval-v2-plan.md 8.4（R-20261125-6）: クエリビルダーに足した 3 つの条件を、selection でも書ける
+    it "selection の条件に、未記入を含む（include_missing）、範囲の外（OUTSIDE と low・high）、どちらかを満たす（any）を書ける" do
+      write("aql.yml", <<~YAML)
+        - id: a101
+          kind: aql
+          query: "確定の病名（確度の記載が無いものを含む）"
+          dataset: demo_initial
+          reference_aql: "SELECT 1"
+          expected_rows: []
+          selection:
+            columns:
+              - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+            conditions:
+              - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
+                operator: MATCHES
+                value: [at0076]
+                include_missing: true
+              - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+                operator: OUTSIDE
+                value: { low: 90, high: 140 }
+              - any:
+                  - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }, operator: ">=", value: 140 }
+                  - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }, operator: ">=", value: 90 }
+      YAML
+
+      certainty = { archetype_id: "openEHR-EHR-EVALUATION.problem_diagnosis.v1", at_code: "at0073" }
+      systolic = { archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2", at_code: "at0004" }
+      diastolic = systolic.merge(at_code: "at0005")
+
+      expect(described_class.from_v2(dir).first.selection.fetch(:conditions)).to eq([
+        { card: certainty, operator: "MATCHES", value: [ "at0076" ], include_missing: true },
+        { card: systolic, operator: "OUTSIDE", value: { low: 90, high: 140 } },
+        { any: [ { card: systolic, operator: ">=", value: 140 }, { card: diastolic, operator: ">=", value: 90 } ] }
+      ])
+    end
+
+    it "any が配列でない、any の中の条件に card・operator が無い問いは読み込みで止まる" do
+      base = "id: s2, kind: aql, query: q, dataset: demo_initial, reference_aql: SELECT, expected_rows: []"
+      columns = "columns: [ { archetype_id: a, at_code: at0001 } ]"
+      write("bad.yml", "- { #{base}, selection: { #{columns}, conditions: [ { any: 1 } ] } }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /s2.*any/)
+
+      write("bad.yml", "- { #{base}, selection: { #{columns}, conditions: [ { any: [ { value: 1 } ] } ] } }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /s2.*card/)
+    end
+
     it "selection に columns が無い、条件に card・operator が無い問いは読み込みで止まる" do
       base = "id: s1, kind: aql, query: q, dataset: demo_initial, reference_aql: SELECT, expected_rows: []"
       write("bad.yml", "- { #{base}, selection: { conditions: [] } }\n")

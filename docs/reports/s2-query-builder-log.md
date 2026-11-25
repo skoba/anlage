@@ -234,3 +234,21 @@ selection:
 - 評価の問いの `selection` の形に、この 3 つの条件はまだ無い（`Evaluation::Questions.selection`）。問いの案を出すときに足す（設計書 7.6）
 - 評価の問いの案は、サンプルデータ（R-20261125-5、書く側）が main に入ってから
 - いまの初期データでは、「どちらかを満たす」の両側が別々の記録で当たる例を作れない（血圧が 1 件）。データが増えたら spec に足す
+
+## R22 評価の selection に 3 つの条件を足す（2026-11-25、R-20261125-6。R21 の 1 つめ）
+
+- サンプルデータの実装が main にまだ無く、問いの案は出せない。待たない項目として、`selection` の形だけ先に足した（計画: `docs/design/s1-eval-v2-plan.md` 8.4）
+- Red（`bundle exec rspec spec/lib/evaluation/questions_spec.rb spec/lib/evaluation/builder_route_spec.rb`。23 examples, 3 failures）:
+
+  ```
+  1) Evaluation::Questions.from_v2 selection の条件に、未記入を含む…、範囲の外…、どちらかを満たす（any）を書ける
+     Evaluation::Questions::InvalidQuestion（selection の条件には card と operator が要る）
+  2) Evaluation::BuilderRoute どちらかを満たす（any）と範囲の外（OUTSIDE）の selection: 中のカードも索引から引いて組む   KeyError
+  3) Evaluation::BuilderRoute any の中の、索引に無いカードは unbuildable                                             KeyError
+  ```
+
+  同時に足した 2 例（`include_missing` の採点、`any` が配列でないときの停止）は、書いた時点で通った。
+  前者は条件のキーをそのままビルダーに渡していたため、後者はもとの誤りの文に条件の中身（`any`）が出るため。固定として残す
+- Green: `Questions.selection_condition`（`any` を再帰で読む）、`BuilderRoute#resolve`（`any` の中のカードも索引から引く）。
+  評価の spec と `evaluation_run_spec` で 62 examples, 0 failures
+- ゴールド（`spec/fixtures/evaluation/v2/`）は変えていない
