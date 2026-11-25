@@ -44,9 +44,11 @@ RSpec.describe Evaluation::AqlScorer do
     expect(score).to have_attributes(status: :mismatch, missing: [ [ 130.0 ] ], extra: [ [ 120.0 ] ])
   end
 
-  # openehr 2.5.0 で defining_code/code_string には届くようになった（上流候補 10 項は解消）。届かない例は archetype_details（同 25 項）
-  it "エンジンが実行できない AQL（archetype_details への到達、上流候補 25 項）は unexecutable として理由を持つ" do
-    unsupported = "SELECT c/archetype_details/template_id/value AS template_id FROM EHR e CONTAINS COMPOSITION c"
+  # openehr 2.5.0 で defining_code/code_string には届くようになった（上流候補 10 項は解消）。
+  # openehr 2.6.0 で archetype_details も例外にならなくなった（値は nil。上流候補 25 項の追記）。届かない例は COMPOSITION の uid
+  # （openehr-rails 0.10.0 CHANGELOG の Known limitations、rails #46）
+  it "エンジンが実行できない AQL（COMPOSITION の uid への到達）は unexecutable として理由を持つ" do
+    unsupported = "SELECT c/uid/value AS uid FROM EHR e CONTAINS COMPOSITION c"
     score = described_class.score(question(unsupported, [ [ "ProblemList" ] ]))
 
     expect(score.status).to eq(:unexecutable)
