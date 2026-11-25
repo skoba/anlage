@@ -93,3 +93,93 @@ D までの記録は `docs/reports/rails-0.9.0-adoption-log.md`（R1〜R3）。
 
 - 開発機の全 suite: 390 例 0 失敗、2 pending。rubocop 違反なし、brakeman の警告 0
 - 実ブラウザ（1280×720）で、jp_referral の帳票（入れ子 5 段）に横スクロールが出ない
+
+## R3 I（M2 の出口の system spec）: ゲート報告（2026-11-24）
+
+ブランチ `wip/i-referral-exit`（draft PR）。基準点は main `7011c22`（E まで入っている）。
+
+### 何が起きたか
+
+`spec/system/demo_referral_spec.rb`（新規）で、計画書の I のとおり「サービス名・紹介元・紹介先・傷病名」を入力して保存すると、
+**422 で保存できない**。必須の検証に、次の 3 項目で止まる（実測、POST で同じ値を送って確かめた）:
+
+| 項目 | 入れ物 | 要素の下限 | 入れ物の occurrences |
+|---|---|---|---|
+| 電子的な連絡先／値（`electronic_communication_at0002`） | 埋め込み CLUSTER（紹介元医療機関の中） | 1 | 0..1 |
+| 症状経過及び検査結果（`clinical_synopsis`） | EVALUATION | 1 | 0..1 |
+| 治療経過（`clinical_synopsis_2`） | EVALUATION | 1 | 0..1 |
+
+原因は `#34` の規則「要素自身の occurrences の下限が 1 以上なら必須」（`app/models/template.rb` の `serialize_entry`、
+`app/lib/opt/form_validator.rb:34`）。openEHR の意味は「**入れ物を書くなら**その要素は必須」で、入れ物が 0..1 なら、
+入れ物ごと書かないことは許される。いまの規則は、入れ物を書かない場合も必須にしている。
+（openehr-rails 0.9.0 の CHANGELOG も「mandatory if the entry is written at all」と書き、条件つきの必須は rails の #65 で扱うとしている）
+
+### 実測: 入れ物の occurrences
+
+- jp_referral: COMPOSITION 1..1 のほかは、SECTION・ENTRY 5 つ・CLUSTER 7 つがすべて 0..1（診療科の organisation だけ 0..*）
+- ProblemList: COMPOSITION 1..1、problem_diagnosis（ENTRY）0..1
+
+### 裁定を求める点
+
+規則を「入れ物を書くなら必須」に改めるかどうか。利用者に見える結果が変わる:
+
+| 案 | 何が変わるか |
+|---|---|
+| **A. 入れ物（ENTRY・埋め込み CLUSTER）に 1 つでも値があるときだけ、その中の下限 ≥1 の要素を必須にする（推奨）** | jp_referral は、書いた部分だけの入力で保存できる。**ProblemList は傷病名が空でも保存できる**（ENTRY が 0..1 なので、何も書かなければ ENTRY ごと書かない）。そのとき Composition の content は空になる。`#34` の pin「必須の傷病名が空なら 422」を変える |
+| B. A に加えて、帳票全体で値が 1 つも無ければ保存させない | ProblemList の空の保存は止まる（「何か入力してください」）。傷病名だけ空で発症日だけ書いたときは、A と同じく傷病名で止まる |
+| C. いまの規則のまま。I の spec は 3 項目も入力する | コードは変わらない。紹介状を書くたびに、連絡先の値と 2 つの経過を必ず書かせることになる |
+
+推奨は B（A の正しさと、空の記録を作らない安全さの両方）。
+
+### 待っているあいだ
+
+- I の spec はこのブランチに置いたまま（いまは赤）。答えが出たら、A／B なら Red から規則を直し、C なら spec に 3 項目を足して緑にする
+- 作業列の次（3: 版の公開待ち、4: M3 の残り）には進める
+
+## R4（2026-11-25）I: 必須の規則を案 B で実装（R-20261125-1）
+
+裁定 R-20261125-1 で案 B。規則は `docs/design/required-rule.md` に書いた。
+
+### 実測: C_ARCHETYPE_ROOT の occurrences（テンプレートのルートを除く）
+
+`Opt::SafeParser` で 6 つの fixture を読んで、`CArchetypeRoot#occurrences` を出した（rails runner）。
+OPT から ENTRY・CLUSTER の両方の下限が取れる（取れない種類は無かった。`docs/upstream-candidates.md` への追記は無し）。
+
+- CardiologyEncounter: blood_pressure 0..1
+- LabResultReport: laboratory_test_result 0..1、laboratory_test_analyte（CLUSTER）0..1
+- ProblemList: problem_diagnosis 0..1
+- bmi_calculation: height・body_weight・body_mass_index 0..1
+- jp_referral: SECTION 0..1、ENTRY 5 つ 0..1、CLUSTER 7 つ 0..1（診療科の外側の organisation だけ 0..*）
+- patient_blood_pressure: heart_rate-pulse・blood_pressure 0..*
+
+下限 ≥1 の入れ物は無い。規則 3-2 は合成の field の単体 spec で確かめる。
+
+### 判断（自己承認、裁定の範囲内）
+
+- 入れ物の下限は gem の entry の occurrences ではなく、OPT の C_ARCHETYPE_ROOT から一律に取る（ENTRY と CLUSTER を同じ経路で）。`Opt::ElementRoots` の各ルートに 4 つめの要素として足した
+- 入れ物のインスタンスの key は「OPT 上の path#出現順」（`Opt::RootTerms` と同じ数え方）。紹介元と紹介先の organisation を区別する
+- `containers` の無い field（古い登録）は従来の規則のまま（黙って任意にしない）
+- 印: 常に書かれる枠の中の必須は「*」、任意の枠の中の必須は「※」（title「この枠に書くなら必須」）、帳票の先頭に凡例。捨てた案: fieldset の legend に「任意の枠」と書く（印が項目から離れ、どの項目が条件つきか分からない）
+- 「値」に単位（`__units`）は数えない。単位が 1 つの数量は hidden で常に送られるため（`app/views/templates/_field.html.erb`）、数えると帳票全体が空でも「書かれた」になる
+
+### Red
+
+```
+$ bundle exec rspec spec/lib/opt/required_rule_spec.rb spec/models/template_spec.rb -e "R-20261125-1" -e "入れ物を書くなら必須"
+14 examples, 12 failures
+（KeyError: key not found: "containers"／required_rule の 9 例が失敗）
+
+$ bundle exec rspec spec/requests/compositions_blank_fields_spec.rb spec/requests/form_roots_spec.rb
+9 examples, 2 failures
+  expected ... to include "値が 1 つも入力されていません"
+  expected "プロブレム・診断名 *" to include "※"
+```
+
+I の実ブラウザ spec（`spec/system/demo_referral_spec.rb`）は R3 から赤のまま。
+
+### Green
+
+全 suite（開発機）: `441 examples, 0 failures, 2 pending`（pending は人間供給待ちの既存 2 件）。
+`spec/system/demo_referral_spec.rb`・`spec/system/demo_problem_list_spec.rb` も green。
+
+`#34` の pin は書き換えた（`spec/requests/compositions_blank_fields_spec.rb`）: 発症日だけ書いて傷病名が空なら 422（項目のエラー）、全部が空なら 422（帳票のメッセージ、項目のエラーは出さない）。

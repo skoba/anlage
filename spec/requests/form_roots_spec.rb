@@ -66,3 +66,18 @@ RSpec.describe "帳票のルートごとのまとまり（#119）", type: :reque
     expect(tree(document.at_css("form"))).to eq([ [ "プロブレム・診断", [] ] ])
   end
 end
+
+# R-20261125-1: 帳票の必須の印は「この枠に書くなら必須」と分かる出し方にする（docs/demo/ui-vocabulary.md）。
+# 任意の入れ物の中の必須の要素は「※」、常に書かれる入れ物の中の必須の要素は「*」。帳票の先頭に凡例を出す
+RSpec.describe "帳票の必須の印（R-20261125-1）", type: :request do
+  it "ProblemList の傷病名（0..1 の ENTRY の中の 1..1）は「この枠に書くなら必須」の印を持ち、凡例が出る" do
+    template = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!)
+
+    get "/forms/#{template.template_id}"
+
+    label = Nokogiri::HTML(response.body).at_css("label[for='field_problem_diagnosis_at0002']")
+    expect(label.text).to include("※")
+    expect(label.text).not_to include("*")
+    expect(response.body).to include("※ この枠に書くなら必須")
+  end
+end

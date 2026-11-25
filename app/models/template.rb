@@ -120,13 +120,26 @@ class Template < ApplicationRecord
     return unless element && element["path"] == field["path"]
 
     roots = element["roots"]
-    entry_index = roots.index { |archetype_id, _path, _occurrence| archetype_id == entry[:archetype_id] }
+    entry_index = roots.index { |archetype_id, *| archetype_id == entry[:archetype_id] }
     return unless entry_index
 
-    roots.drop(entry_index + 1).map do |archetype_id, path, occurrence|
+    roots.drop(entry_index + 1).map do |archetype_id, path, occurrence, _min|
       { "archetype_id" => archetype_id, "index" => occurrence,
         "label" => terms.fetch(path, [])[occurrence]&.dig("at0000", "text") || archetype_id.split(".")[1] }
     end
+  end
+
+  # field を含む入れ物（ENTRY と埋め込み CLUSTER）を外側から並べる（R-20261125-1。必須の規則は「入れ物を書くなら必須」、
+  # Opt::FormValidator）。key は OPT 上の path と出現順（インスタンスを区別する）、min は occurrences の下限（無ければ nil）。
+  # ELEMENT が引けない field（path の書式が合わない）には付けない（validator はこれまでどおり下限 ≥1 を必須とする）
+  def self.containers(field, entry, element)
+    return unless element && element["path"] == field["path"]
+
+    roots = element["roots"]
+    entry_index = roots.index { |archetype_id, *| archetype_id == entry[:archetype_id] }
+    return unless entry_index
+
+    roots.drop(entry_index).map { |_archetype_id, path, occurrence, min| { "key" => "#{path}##{occurrence}", "min" => min } }
   end
 
   # 同じ名前の field（同じアーキタイプの複数ルート）は、文書順で 2 つめ以降に _2・_3 を付ける（skoba/anlage#117。
@@ -170,7 +183,7 @@ class Template < ApplicationRecord
   #     （gem のラベルは後勝ち）。entries の並び＝文書順で出現順に結ぶ
   #   root_label: 埋め込みルート配下の field の、ルートのテンプレート上の名前（#38）
   #   input_kind: フォーム入力の方針属性（Opt::InputKind、登録時に一度だけ導出、#33）
-  #   required: 要素自身の下限 ≥1 も required とする（#34。gem の required は「entry が必須 かつ
+  #   required: 要素自身の下限 ≥1 も required とする。意味は「要素を含む入れ物を書くなら必須」（R-20261125-1、containers）（#34。gem の required は「entry が必須 かつ
   #     要素が必須」の意味のままで、0..1 の entry 配下では 1..1 の要素も false）
   #   units_list: 数量でない field は空（gem は nil）
   def self.serialize_entry(entry, instance_terms = {}, terms = {}, element_roots = nil)
@@ -181,6 +194,8 @@ class Template < ApplicationRecord
       field["label"] = instance_label if instance_label.present?
       chain = root_chain(field, entry, terms, element)
       field = field.merge("root_chain" => chain, "root_label" => chain.last["label"]) if chain.present?
+      containers = containers(field, entry, element)
+      field = field.merge("containers" => containers) if containers
       field.merge(
         "input_kind" => Opt::InputKind.for(field, field["rm_type_alternatives"]),
         "required" => field["required"] || field["min_occurrences"].to_i >= 1,
@@ -206,7 +221,7 @@ class Template < ApplicationRecord
 
     { "lower" => interval.lower, "upper" => interval.upper }
   end
-  private_class_method :build_web_template, :serialize_entry, :root_chain, :uniquify_field_names, :interval_to_h, :section_labels, :category_code, :entry_labels
+  private_class_method :build_web_template, :serialize_entry, :root_chain, :containers, :uniquify_field_names, :interval_to_h, :section_labels, :category_code, :entry_labels
 
   def entries
     (web_template || {})["entries"] || []

@@ -4,7 +4,7 @@ value ||= nil
 error ||= nil
 %>
 <div class="field <%= "field-error" if error %>">
-  <label for="field_<%= field["name"] %>"><%= field["label"] %><%= " *" if field["required"] %></label>
+  <label for="field_<%= field["name"] %>"><%= field["label"] %><% case Opt::FormValidator.required_mark(field) %><% when :always %> *<% when :if_written %> <span class="required-if-written" title="この枠に書くなら必須">※</span><% end %></label>
 
   <%# 描画は input_kind（登録時に導出された方針属性、Opt::InputKind）だけで決める（#33） %>
   <% case field["input_kind"] %>
