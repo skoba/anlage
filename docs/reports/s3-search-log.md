@@ -188,4 +188,4 @@
 - 画面（パスカード検索、クエリビルダー）も別名表を使う。字面が 1 つも重ならないカードが、理由の表示なしに出る（例: 「既往」でプロブレム・診断の 6 枚）。
   カードは `alias` を持っているので、表示は足せる。語彙表の追加が要るので、手を付けていない
 - 「判定」を exclude にしたので、「判定」だけで探すと 0 件になる（これまでは BMI の「判定」1 件）。裁定のとおり
-- 「傷病名」は、jp_referral を登録していなくても ProblemList の 6 枚に届く。jp_referral を登録していると、ProblemList と jp_referral の両方の problem_diagnosis のカードが、template_id の順に並ぶ
+- 「傷病名」は、jp_referral を登録していなくても ProblemList の problem_diagnosis のカードに届く見込み。jp_referral を登録していると、両方のテンプレートのカードが template_id の順に並ぶ見込み（どちらも、行の対応先と並べ替えの規則からの推論。「傷病名」での実行は確かめていない）
