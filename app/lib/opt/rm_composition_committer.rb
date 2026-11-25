@@ -7,13 +7,15 @@ module Opt
     # 撤去条件: openehr-rails側 RESERVED_KEYS 拡張（docs/upstream-candidates.md 9項のIssue化・解消）後
     NON_STRUCTURAL_ENTRY_KEYS = %w[language encoding subject].freeze
 
-    def self.call(template, values)
-      new(template, values).call
+    # ehr: いまの患者の EHR（OpenehrRails::Rm::Ehr、skoba/anlage#136）。nil なら EHR に結び付けない
+    def self.call(template, values, ehr: nil)
+      new(template, values, ehr: ehr).call
     end
 
-    def initialize(template, values)
+    def initialize(template, values, ehr: nil)
       @template = template
       @values = values
+      @ehr = ehr
     end
 
     def call
@@ -25,7 +27,7 @@ module Opt
       remove_non_structural_entry_keys(committable_hash)
 
       uid = SecureRandom.uuid
-      composition = OpenehrRails::Rm::CompositionCommitter.commit(committable_hash, uid: uid, owner: nil)
+      composition = OpenehrRails::Rm::CompositionCommitter.commit(committable_hash, uid: uid, ehr: @ehr, owner: nil)
 
       Result.new(uid:, composition:, canonical_hash:)
     end

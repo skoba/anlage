@@ -233,3 +233,34 @@ $ bundle exec rspec spec/requests/patient_selection_spec.rb
 ### Green
 
 全 suite（開発機）: `459 examples, 0 failures, 2 pending`
+
+## R7 P3（`skoba/anlage#136`）: 記録を EHR に結び付ける（2026-11-25）
+
+### 実測（gem の API）
+
+- `OpenehrRails::Rm::CompositionCommitter.commit(canonical_hash, uid:, ehr: nil, owner: nil, context_start_time: nil)`
+  （openehr-rails 0.9.0 `lib/openehr_rails/rm/composition_committer.rb:12`）。`ehr:` を渡すだけで RM の composition の ehr が入る
+- AQL の EHR の述語（`FROM EHR e[ehr_id/value='…']`）は openehr 2.5.0 で評価される（spec で確認）
+
+### 判断（自己承認、計画書の範囲内）
+
+- いまの患者は `ApplicationController#current_ehr`（private）。P2 の partial の引き方と同じく、EHR が無くなっていれば nil
+- 患者の画面の記録は、RM の `Composition.latest.where(ehr:)` の uid から原本（`compositions`）を引く（RM が権威）
+- 見本の記録（`Demo::SampleCompositions`、`rake demo:reset`）は変えない（EHR に結び付けない）
+
+### Red
+
+```
+$ bundle exec rspec spec/requests/records_to_ehr_spec.rb
+      1      Failure/Error: expect(document.at_css("h2").text).to eq("カルテ記録")
+      1      Failure/Error: expect(response.body).to include("この患者のカルテ記録はまだありません。")
+      1      Failure/Error: expect(result.rows).to eq([ [ patient.ehr_id, "高血圧症" ] ])
+      1      Failure/Error: expect(rm_ehr_of(save_problem("高血圧症"))).to eq(patient)
+      1 5 examples, 4 failures
+```
+
+（「選んでいなければ結び付けない」は、従来の挙動の pin として初めから通る）
+
+### Green
+
+全 suite（開発機）: `464 examples, 0 failures, 2 pending`
