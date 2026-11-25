@@ -54,24 +54,38 @@
         <% @conditions.each_with_index do |condition, index| %>
           <% name = "conditions[#{index}]" %>
           <li>
+            <% if index.positive? %>
+              <span class="connector"><%= condition.or ? "または" : "かつ" %></span>
+            <% end %>
             <%= hidden_field_tag "#{name}[card]", condition.ref, id: nil %>
             <span class="card-label"><%= query_card_label(condition.card) %></span>
             <% case condition.kind %>
             <% when :number %>
-              <%= select_tag "#{name}[operator]", options_for_select(QueryBuilder::Builder::OPERATORS.fetch(:number), condition.operator), id: "condition_#{index}_operator", "aria-label": "演算子" %>
-              <%= text_field_tag "#{name}[value]", condition.value, id: "condition_#{index}_value", inputmode: "decimal", "aria-label": "値" %>
+              <%= select_tag "#{name}[operator]", options_for_select(QueryBuilder::Builder::OPERATORS.fetch(:number).map { |operator| [ operator == "OUTSIDE" ? "範囲の外" : operator, operator ] }, condition.operator), id: "condition_#{index}_operator", "aria-label": "演算子" %>
+              <% if condition.outside? %>
+                <%= text_field_tag "#{name}[low]", condition.low, id: "condition_#{index}_low", inputmode: "decimal", "aria-label": "下限" %> より低い、または
+                <%= text_field_tag "#{name}[high]", condition.high, id: "condition_#{index}_high", inputmode: "decimal", "aria-label": "上限" %> より高い
+              <% else %>
+                <%= text_field_tag "#{name}[value]", condition.value, id: "condition_#{index}_value", inputmode: "decimal", "aria-label": "値" %>
+              <% end %>
             <% when :code %>
               <% QueryBuilder::Builder.code_list(condition.card).each do |entry| %>
                 <% id = "condition_#{index}_#{entry['code']}" %>
                 <%= check_box_tag "#{name}[values][]", entry["code"], condition.values.include?(entry["code"]), id: id %>
                 <label for="<%= id %>"><%= entry["label"] %></label>
               <% end %>
+              <%= check_box_tag "#{name}[include_missing]", "1", condition.include_missing, id: "condition_#{index}_include_missing" %>
+              <label for="condition_<%= index %>_include_missing">未記入を含む</label>
             <% when :date %>
               <%= text_field_tag "#{name}[from]", condition.from, id: "condition_#{index}_from", placeholder: "2026-01-01", "aria-label": "から" %> から
               <%= text_field_tag "#{name}[to]", condition.to, id: "condition_#{index}_to", placeholder: "2027-01-01", "aria-label": "まで" %> まで（この日時を含まない）
             <% else %>
               <%= select_tag "#{name}[operator]", options_for_select([ [ "一致", "=" ], [ "含む", "CONTAINS" ] ], condition.operator), id: "condition_#{index}_operator", "aria-label": "演算子" %>
               <%= text_field_tag "#{name}[value]", condition.value, id: "condition_#{index}_value", "aria-label": "値" %>
+            <% end %>
+            <% if index.positive? %>
+              <%= check_box_tag "#{name}[or]", "1", condition.or, id: "condition_#{index}_or" %>
+              <label for="condition_<%= index %>_or">前の条件と「または」でつなぐ</label>
             <% end %>
             <button type="submit" name="remove_condition" value="<%= index %>">外す</button>
           </li>

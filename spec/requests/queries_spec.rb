@@ -55,10 +55,10 @@ RSpec.describe "クエリビルダー", type: :request do
                                                                        "2" => { card: QB_ONSET }, "3" => { card: QB_DIAGNOSIS } } }
 
     number, code, date, text = doc.css("#query_conditions li")
-    expect(number.css("select[name='conditions[0][operator]'] option").map { _1["value"] }).to eq(%w[> >= < <= =])
+    expect(number.css("select[name='conditions[0][operator]'] option").map { _1["value"] }).to eq(%w[> >= < <= = OUTSIDE])
     expect(number.at_css("input[name='conditions[0][value]']")).to be_present
     expect(code.css("input[type=checkbox][name='conditions[1][values][]']").map { _1["value"] }).to eq(%w[at0074 at0075 at0076])
-    expect(code.css("label").map { _1.text.strip }).to eq(%w[疑い 推定 確定])
+    expect(code.css("label").map { _1.text.strip }).to eq([ "疑い", "推定", "確定", "未記入を含む", "前の条件と「または」でつなぐ" ])
     expect(date.css("input").map { _1["name"] }).to include("conditions[2][from]", "conditions[2][to]")
     expect(text.css("select[name='conditions[3][operator]'] option").map { [ _1["value"], _1.text.strip ] }).to eq([ [ "=", "一致" ], [ "CONTAINS", "含む" ] ])
     expect(text.at_css("input[name='conditions[3][value]']")).to be_present
@@ -132,5 +132,68 @@ RSpec.describe "クエリビルダー", type: :request do
     nav = doc.css("nav#app_nav a").map { [ _1.text.strip, _1["href"], _1["aria-current"] ] }
     expect(nav).to include([ "クエリビルダー", "/queries/new", "page" ])
     expect(nav.map(&:first)).to eq(%w[患者 テンプレート カルテ記録一覧 パスカード検索 クエリビルダー] + [ "AQL 照会" ])
+  end
+  # docs/design/s2-query-builder-plan.md 7.4（R-20261125-6）
+  describe "未記入を含む、範囲の外、どちらかを満たす" do
+    let(:diastolic) { QB_SYSTOLIC.sub("items[at0004]", "items[at0005]") }
+    let(:systolic_path) { "o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude" }
+    let(:diastolic_path) { "o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude" }
+
+    it "入力: 値集合に「未記入を含む」、数値の演算子に「範囲の外」、2 つめ以降の条件に「前の条件と『または』でつなぐ」" do
+      get "/queries/new", params: { columns: [ QB_DIAGNOSIS ], conditions: { "0" => { card: QB_CERTAINTY }, "1" => { card: QB_SYSTOLIC } } }
+
+      first, second = doc.css("#query_conditions li")
+      expect(first.at_css("input[type=checkbox][name='conditions[0][include_missing]']")).to be_present
+      expect(first.at_css("label[for=condition_0_include_missing]").text.strip).to eq("未記入を含む")
+      expect(first.at_css("input[name='conditions[0][or]']")).to be_nil
+      expect(second.css("select[name='conditions[1][operator]'] option").map { [ _1.text, _1["value"] ] })
+        .to eq([ [ ">", ">" ], [ ">=", ">=" ], [ "<", "<" ], [ "<=", "<=" ], [ "=", "=" ], [ "範囲の外", "OUTSIDE" ] ])
+      expect(second.at_css("input[type=checkbox][name='conditions[1][or]']")).to be_present
+      expect(second.at_css("label[for=condition_1_or]").text.strip).to eq("前の条件と「または」でつなぐ")
+      expect(second.at_css("input[name='conditions[1][include_missing]']")).to be_nil
+    end
+
+    it "実行: 診断確度「確定」に未記入を含めると、確度の記載が無い 1 行" do
+      get "/queries/new", params: { columns: [ QB_DIAGNOSIS ], run: "実行",
+                                    conditions: { "0" => { card: QB_CERTAINTY, values: [ "at0076" ], include_missing: "1" } } }
+
+      certainty = "ev/data[at0001]/items[at0073]/value"
+      expect(doc.at_css("#query_aql pre").text.lines.last)
+        .to eq(%|WHERE (#{certainty}/defining_code/code_string MATCHES {"at0076"} OR NOT EXISTS #{certainty})|)
+      expect(texts("#query_result tbody td")).to eq([ "2型糖尿病" ])
+      expect(doc.at_css("input[name='conditions[0][include_missing]']")["checked"]).to be_present
+    end
+
+    it "実行: 収縮期が 100〜110 の外で 1 行。「範囲の外」のときは入力が「下限」「上限」に替わる" do
+      get "/queries/new", params: { columns: [ QB_SYSTOLIC ], run: "実行",
+                                    conditions: { "0" => { card: QB_SYSTOLIC, operator: "OUTSIDE", low: "100", high: "110" } } }
+
+      expect(doc.at_css("#query_aql pre").text.lines.last).to eq("WHERE (#{systolic_path} < 100 OR #{systolic_path} > 110)")
+      expect(texts("#query_result tbody td")).to eq([ "120.0" ])
+      item = doc.at_css("#query_conditions li")
+      expect(item.css("input[type=text]").map { [ _1["name"], _1["value"], _1["aria-label"] ] })
+        .to eq([ [ "conditions[0][low]", "100", "下限" ], [ "conditions[0][high]", "110", "上限" ] ])
+      expect(item.text.squish).to include("より低い、または", "より高い")
+    end
+
+    it "「範囲の外」を選んだだけ（下限・上限が空）では実行せず、理由を出す" do
+      get "/queries/new", params: { columns: [ QB_SYSTOLIC ], run: "実行", conditions: { "0" => { card: QB_SYSTOLIC, operator: "OUTSIDE", value: "110" } } }
+
+      expect(texts("#query_error")).to eq([ "実行しませんでした: 収縮期 の範囲の外には、下限と上限の両方が要る" ])
+      expect(doc.at_css("input[name='conditions[0][low]']")).to be_present
+    end
+
+    it "実行: 収縮期 >= 140 または拡張期 >= 80 で 1 行。条件のあいだに、つなぎ方（かつ／または）が出る" do
+      get "/queries/new", params: { columns: [ QB_SYSTOLIC, diastolic ], run: "実行",
+                                    conditions: { "0" => { card: QB_SYSTOLIC, operator: ">=", value: "140" },
+                                                  "1" => { card: diastolic, operator: ">=", value: "80", or: "1" },
+                                                  "2" => { card: QB_SYSTOLIC, operator: "<", value: "200" } } }
+
+      expect(doc.at_css("#query_aql pre").text.lines.last)
+        .to eq("WHERE (#{systolic_path} >= 140 OR #{diastolic_path} >= 80) AND #{systolic_path} < 200")
+      expect(texts("#query_result tbody td")).to eq([ "120.0", "80.0" ])
+      expect(texts("#query_conditions li .connector")).to eq(%w[または かつ])
+      expect(doc.at_css("input[name='conditions[1][or]']")["checked"]).to be_present
+    end
   end
 end
