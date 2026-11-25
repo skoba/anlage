@@ -12,7 +12,7 @@
 | Ruby | 4.0.7（rbenv。`.ruby-version`、`Dockerfile` `ARG RUBY_VERSION`） | `893aa7f` |
 | Node／sushi | Node 18 ＋ fsh-sushi 3.16.0（`rake fsh:verify` 用、任意） | 統括、`lib/tasks/fsh.rake:50` |
 | Chromium | system spec（`js: true`）用。壇上の表示は Windows 側 Chrome。snap 版（`chromium-browser`）は snap 同梱の chromedriver（`/snap/bin/chromium.chromedriver`）を `rails_helper` が自動で使う（selenium-manager の chromedriver とは組めない） | 統括、`spec/rails_helper.rb` |
-| DB | SQLite（development、`storage/development.sqlite3`）。`rake demo:reset` で既知状態へ。所要 **3.1 秒／2.8 秒**（サンプル投入込み、本開発機で 2 回実測、2026-10-20。デモ機では再計測して上書き） | 実測 |
+| DB | SQLite（development、`storage/development.sqlite3`）。`rake demo:reset` で既知状態へ。所要 **3.1 秒／2.8 秒**（サンプル投入込み、本開発機で 2 回実測、2026-10-20。デモ機では再計測して上書き）。サンプルを 65 件にしたあとは、test 環境で 2.9 秒／2.3 秒（2026-11-25。開発機の DB では測っていない） | 実測 |
 | ネットワーク | **オフライン前提、外部呼び出し無し**。importmap は gem 同梱の turbo／stimulus、CDN 無し。CKM URL 取り込みと `fsh:verify` は台本に乗せない | `config/importmap.rb`、`templates_controller.rb:162-185` |
 | 表示 | 会場は 16:9・HDMI-A・解像度不明 → **設計値 1280×720**。ブラウザは 1280×720 相当（表示スケーリングで調整）、ミラーリング（複製）モード。system spec のビューポートを 1280×720 で pin（ナビ折返し・表幅・横スクロール無し） | 統括、plan 6 節 |
 | 荷物 | 予備機・HDMI ケーブル・USB-C→HDMI 変換・電源 | 統括 |
@@ -31,8 +31,12 @@ bin/rails server
 
 - `Template.active` = CardiologyEncounter／LabResultReport／ProblemList／bmi_calculation／**patient_blood_pressure.v1**（template_id はファイル名と一致しない）、全て v1.0.0・saveable・pathcards 生成済み
 - superseded 無し、jp_referral 無し（第 1 幕で壇上登録する）
-- サンプルのカルテ記録（`Demo::SampleCompositions`、裁定 D 2026-10-12・裁定 2026-10-20）: `compositions`＝5（ProblemList 2〔「2型糖尿病」ICD-11 5A11 付き・「高血圧症」自由記述〕・CardiologyEncounter 1〔120/80〕・LabResultReport 1〔空腹時血糖 98 mg/dL〕・bmi_calculation 1〔170 cm／65 kg〕）、RM グラフの Composition＝6（上の 5＋jp_referral 1〔「2型糖尿病」5A11 付き、テンプレート未登録のまま RM グラフにだけ入る〕）
-- デモクエリ 5（`docs/demo/aql-queries.md` 5 節）は初期状態で 3 件、壇上で 1 件足すと 4 件
+- サンプルのカルテ記録（`Demo::SampleCompositions`。定義は `app/lib/demo/sample_records.yml`、表は `docs/design/sample-data-plan.md` 3 節、R-20261125-9）:
+  - 架空の患者 6 人（`DEMO-01`〜`DEMO-06`）の EHR。
+  - 記録は 65 件で、どれも患者に結び付く。`compositions` は 63 件。
+  - RM グラフの Composition は 65 件。紹介状 2 件は、テンプレート未登録のまま RM グラフにだけ入る。
+  - 記録日は 2026-01〜10 の 09:00（日本時間）
+- デモクエリ 5（`docs/demo/aql-queries.md` 5 節）は初期状態で 7 件、壇上で 1 件足すと 8 件
 - 何度実行しても同じ（リハの合間に打ち直してよい）。production では abort
 
 ## 3. 壇上で使うファイル
