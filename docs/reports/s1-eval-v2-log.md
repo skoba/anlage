@@ -236,3 +236,35 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
 - 詳細と表は `docs/design/s3-search-plan.md` 2.1。Issue は `skoba/anlage#122`
 - c008「発症」の第 2 候補 at0002 が出ない原因も同 2.2（カードの文に「発症」が無い。字面では届かない）
 
+
+## R17 負例だけの問いの形式（2026-11-25、R-20261125-7。計画書 9 節）
+
+- 基準点: anlage main `db588b8`。計画書に 9 節を足して push し（`b5d3f0e` の次のコミットで実装）、そのまま実装した
+- **自己承認した判断**（R-20261125-7 の範囲内）
+
+  | # | 判断 | 捨てた案 |
+  |---|---|---|
+  | N1 | 新しいキーを足さず、「expected が空で forbidden がある card の問い」を負例だけの問いと読む | `kind: negative` や `negative_only: true`（書くところが 2 つになり、食い違える） |
+  | N2 | 負例だけの問いは card の集計（Top-1 など）の母数に入れず、`negative_results` に分ける | 母数に入れて「負例が出なければ hit」と数える（Top-1 の意味が変わり、既存の数字と比べられなくなる） |
+  | N3 | 問いが無ければ報告の節を出さない | いつも「0 問」の節を出す（既存の報告と spec の文字列が変わる） |
+  | N4 | expected も forbidden も空の card の問いは読み込みで止める | 黙って完全失敗に数える（いまの挙動。母数が気づかずに変わる） |
+
+- Red（`bundle exec rspec spec/lib/evaluation`。66 examples, 7 failures）:
+
+  ```
+  1) Questions.from_v2 expected が空で forbidden を持つ card の問いは、負例だけの問いとして読む …   （negative_only? に応えない）
+  2) Questions.from_v2 expected も forbidden も空の card の問いは読み込みで止まる
+       expected Evaluation::Questions::InvalidQuestion with message matching /n2.*expected.*forbidden/ but nothing was raised
+  3) Report 負例だけの問いの節 …                                   ArgumentError（negative_results:）
+  4) Runner 負例だけの問い regression pin: 負例だけの問いを混ぜても、card の集計と問いごとの結果は、もとの 17 問だけのときと同じ
+       expected: {… questions: 17, … recall_at_3: 0.8823529411764706, violations: 0}
+            got: {… questions: 20, … recall_at_3: 0.75, violations: 1}
+  5)〜7) Runner 負例だけの問い …                                   NoMethodError（negative_results、negative_summary）
+  ```
+
+  4) が、いまの形式の弱点の実物（負例だけの問いを足すと、既存の集計が変わる）
+- Green: `Question#negative_only?`、`Questions.build_v2` の検査、`Runner`（分けて採点）、`Run#negative_summary`、`Report.negative_section`。
+  `spec/lib/evaluation` と `spec/lib/tasks` で 76 examples, 0 failures
+- regression pin: 負例だけの問い 3 問（BMI判定・診断・脈拍）を v1 の 17 問に混ぜても、`card_summary` と問いごとの `Score` が 17 問だけのときと同じ（`runner_spec`）。
+  v1 とゴールド v2 の数字の pin は触っていない
+- ゴールド（`spec/fixtures/evaluation/v2/`）は、この PR では変えていない
