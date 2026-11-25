@@ -45,9 +45,15 @@ module Evaluation
       missing = REQUIRED_KEYS.fetch(kind).reject { |key| entry.key?(key) }
       raise InvalidQuestion, "#{id}: #{kind} の問いに必須のキー #{missing.join('・')} が無い" if missing.any?
 
+      expected = ranked_refs(id, entry["expected"])
+      forbidden = card_refs(entry["forbidden"])
+      if kind == :card && expected.empty? && forbidden.empty?
+        raise InvalidQuestion, "#{id}: card の問いに expected も forbidden も無い（負例だけの問いは forbidden が要る）"
+      end
+
       Question.new(
         id: id, kind: kind, status: status, query: entry.fetch("query"),
-        expected: ranked_refs(id, entry["expected"]), match: match, forbidden: card_refs(entry["forbidden"]),
+        expected: expected, match: match, forbidden: forbidden,
         acceptable: card_refs(entry["acceptable"]),
         intent_tag: entry["intent_tag"], notes: entry["notes"],
         dataset: entry["dataset"], reference_aql: entry["reference_aql"], expected_rows: entry["expected_rows"],

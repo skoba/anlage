@@ -116,4 +116,23 @@ RSpec.describe Evaluation::Report do
     )
     expect(described_class.render(releasable, label: "x")).to include("- c21: 既往歴 — story がコーパスに入る **保留解除候補**")
   end
+  # 負例だけの問い（docs/design/s1-eval-v2-plan.md 9 節、R-20261125-7）
+  it "負例だけの問いの節: 問いの数、負例が上位（top-3）に出た問いの数と、出た負例。card の集計表は変わらない" do
+    bmi = { archetype_id: "openEHR-EHR-OBSERVATION.body_mass_index.v2", at_code: nil }
+    clean = card_result(Evaluation::Question.new(id: "n1", kind: :card, query: "肥満度", expected: [], forbidden: [ bmi ]), rank: nil)
+    violated = card_result(Evaluation::Question.new(id: "n2", kind: :card, query: "BMI判定", expected: [], forbidden: [ bmi ]), rank: nil,
+                           violations: [ bmi ])
+    with_negatives = Evaluation::Runner::Run.new(card_results: run.card_results, aql_results: [], drafts: [], pendings: [],
+                                                 corpus_archetype_ids: [], negative_results: [ clean, violated ])
+    markdown = described_class.render(with_negatives, label: "x")
+
+    expect(markdown).to include("## card（3 問）", "| Top-1 | 1/3 (33.33%) |", "| 負例違反 | 1/3 |",
+                                "## card: 負例だけの問い（2 問）", "| 負例が上位（top-3）に出た問い | 1/2 |",
+                                "### 負例が上位に出た問い\n\n- n2: BMI判定 → openEHR-EHR-OBSERVATION.body_mass_index.v2")
+    expect(markdown.index("## card: 負例だけの問い")).to be_between(markdown.index("## card（3 問）"), markdown.index("## aql"))
+  end
+
+  it "負例だけの問いが無ければ、節を出さない" do
+    expect(markdown).not_to include("負例だけの問い")
+  end
 end
