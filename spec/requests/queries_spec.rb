@@ -64,23 +64,23 @@ RSpec.describe "クエリビルダー", type: :request do
     expect(text.at_css("input[name='conditions[3][value]']")).to be_present
   end
 
-  it "実行: 収縮期 > 110 で 1 行（120.0）。見出しはカードの名前" do
+  it "実行: 収縮期 > 110 で 8 行（血圧 v2 の 11 件のうち、88・96・104 が外れる）。見出しはカードの名前" do
     get "/queries/new", params: { columns: [ QB_SYSTOLIC ], conditions: { "0" => { card: QB_SYSTOLIC, operator: ">", value: "110" } }, run: "実行" }
 
     expect(doc.at_css("#query_aql pre").text).to end_with("/items[at0004]/value/magnitude > 110")
-    expect(texts("#query_result p")).to eq([ "1 行" ])
+    expect(texts("#query_result p")).to eq([ "8 行" ])
     expect(texts("#query_result th")).to eq([ "収縮期" ])
-    expect(texts("#query_result td")).to eq([ "120.0" ])
+    expect(texts("#query_result td")).to match_array(%w[148.0 152.0 138.0 134.0 132.0 128.0 126.0 118.0])
   end
 
-  it "実行: 診断確度のコード at0074（疑い）を選び、文書名も表示すると、ProblemList の 2 行" do
+  it "実行: 診断確度のコード at0074（疑い）を選び、文書名も表示すると、ProblemList の 3 行" do
     get "/queries/new", params: { columns: [ QB_DIAGNOSIS ], composition_name: "1",
                                   conditions: { "0" => { card: QB_CERTAINTY, values: [ "at0074" ] } }, run: "実行" }
 
     expect(doc.at_css("#query_aql pre").text).to include('value/defining_code/code_string MATCHES {"at0074"}')
     expect(texts("#query_result th")).to eq([ "文書名", "プロブレム・診断名" ])
     expect(doc.css("#query_result tbody tr").map { |row| row.css("td").map { _1.text.strip } })
-      .to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "2型糖尿病" ] ])
+      .to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "起立性低血圧" ], [ "ProblemList", "狭心症" ] ])
   end
 
   it "該当が無ければ「該当する記録はありません。」" do
@@ -153,23 +153,24 @@ RSpec.describe "クエリビルダー", type: :request do
       expect(second.at_css("input[name='conditions[1][include_missing]']")).to be_nil
     end
 
-    it "実行: 診断確度「確定」に未記入を含めると、確度の記載が無い 1 行" do
+    it "実行: 診断確度「確定」に未記入を含めると、確定の 9 行と、確度の記載が無い紹介状の 2 行" do
       get "/queries/new", params: { columns: [ QB_DIAGNOSIS ], run: "実行",
                                     conditions: { "0" => { card: QB_CERTAINTY, values: [ "at0076" ], include_missing: "1" } } }
 
       certainty = "ev/data[at0001]/items[at0073]/value"
       expect(doc.at_css("#query_aql pre").text.lines.last)
         .to eq(%|WHERE (#{certainty}/defining_code/code_string MATCHES {"at0076"} OR NOT EXISTS #{certainty})|)
-      expect(texts("#query_result tbody td")).to eq([ "2型糖尿病" ])
+      expect(texts("#query_result tbody td"))
+        .to match_array(%w[2型糖尿病 2型糖尿病 2型糖尿病 糖尿病性腎症 高血圧症 高血圧症 鉄欠乏性貧血 脂質異常症 慢性腎臓病 花粉症 狭心症])
       expect(doc.at_css("input[name='conditions[0][include_missing]']")["checked"]).to be_present
     end
 
-    it "実行: 収縮期が 100〜110 の外で 1 行。「範囲の外」のときは入力が「下限」「上限」に替わる" do
+    it "実行: 収縮期が 100〜110 の外で 10 行（104 だけが中）。「範囲の外」のときは入力が「下限」「上限」に替わる" do
       get "/queries/new", params: { columns: [ QB_SYSTOLIC ], run: "実行",
                                     conditions: { "0" => { card: QB_SYSTOLIC, operator: "OUTSIDE", low: "100", high: "110" } } }
 
       expect(doc.at_css("#query_aql pre").text.lines.last).to eq("WHERE (#{systolic_path} < 100 OR #{systolic_path} > 110)")
-      expect(texts("#query_result tbody td")).to eq([ "120.0" ])
+      expect(texts("#query_result tbody td")).to match_array(%w[148.0 152.0 138.0 134.0 88.0 96.0 132.0 128.0 126.0 118.0])
       item = doc.at_css("#query_conditions li")
       expect(item.css("input[type=text]").map { [ _1["name"], _1["value"], _1["aria-label"] ] })
         .to eq([ [ "conditions[0][low]", "100", "下限" ], [ "conditions[0][high]", "110", "上限" ] ])
@@ -183,7 +184,7 @@ RSpec.describe "クエリビルダー", type: :request do
       expect(doc.at_css("input[name='conditions[0][low]']")).to be_present
     end
 
-    it "実行: 収縮期 >= 140 または拡張期 >= 80 で 1 行。条件のあいだに、つなぎ方（かつ／または）が出る" do
+    it "実行: 収縮期 >= 140 または拡張期 >= 80 で 7 行。条件のあいだに、つなぎ方（かつ／または）が出る" do
       get "/queries/new", params: { columns: [ QB_SYSTOLIC, diastolic ], run: "実行",
                                     conditions: { "0" => { card: QB_SYSTOLIC, operator: ">=", value: "140" },
                                                   "1" => { card: diastolic, operator: ">=", value: "80", or: "1" },
@@ -191,7 +192,8 @@ RSpec.describe "クエリビルダー", type: :request do
 
       expect(doc.at_css("#query_aql pre").text.lines.last)
         .to eq("WHERE (#{systolic_path} >= 140 OR #{diastolic_path} >= 80) AND #{systolic_path} < 200")
-      expect(texts("#query_result tbody td")).to eq([ "120.0", "80.0" ])
+      expect(doc.css("#query_result tbody tr").map { |row| row.css("td").map { _1.text.strip } })
+        .to match_array([ %w[148.0 86.0], %w[152.0 92.0], %w[138.0 84.0], %w[134.0 82.0], %w[132.0 94.0], %w[128.0 92.0], %w[126.0 88.0] ])
       expect(texts("#query_conditions li .connector")).to eq(%w[または かつ])
       expect(doc.at_css("input[name='conditions[1][or]']")["checked"]).to be_present
     end
