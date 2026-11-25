@@ -254,3 +254,31 @@ RSpec.describe Template, "#111 web_template の field は 0.9.0 の FieldExtract
       .to eq([ %w[clinical_synopsis 症状経過及び検査結果], %w[clinical_synopsis_2 治療経過] ])
   end
 end
+
+# R-20261125-1: 必須の規則（入れ物を書くなら必須）のため、field は外側から並べた入れ物（ENTRY と埋め込み CLUSTER）を持つ。
+# 各入れ物は key（OPT 上の path と出現順。インスタンスを区別する）と min（C_ARCHETYPE_ROOT の occurrences の下限）。
+# 下限は 6 つの fixture ですべて 0（docs/reports/m2-exit-log.md R4 の実測）
+RSpec.describe Template, "R-20261125-1 field の入れ物" do
+  def containers_of(fixture, name)
+    Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture}").read).fields
+            .find { |f| f["name"] == name }.fetch("containers")
+  end
+
+  it "ProblemList の傷病名は、problem_diagnosis の ENTRY（0..1）だけに入る" do
+    expect(containers_of("ProblemList.opt", "problem_diagnosis_at0002"))
+      .to eq([ { "key" => "/content[openEHR-EHR-EVALUATION.problem_diagnosis.v1]#0", "min" => 0 } ])
+  end
+
+  it "jp_referral の電子的な連絡先の値は、サービス依頼 › 紹介元医療機関 › 電子的な連絡先 の 3 つに入る" do
+    containers = containers_of("jp_referral.opt", "electronic_communication_at0002")
+
+    expect(containers.map { |c| c["key"][/\[([^\]]+)\]#\d+\z/, 1] })
+      .to eq(%w[openEHR-EHR-INSTRUCTION.service_request.v1 openEHR-EHR-CLUSTER.organisation.v1 openEHR-EHR-CLUSTER.electronic_communication.v1])
+    expect(containers.map { |c| c["min"] }).to eq([ 0, 0, 0 ])
+  end
+
+  it "紹介元と紹介先の organisation は、別の入れ物（key が違う）" do
+    expect(containers_of("jp_referral.opt", "organisation_at0001").last)
+      .not_to eq(containers_of("jp_referral.opt", "organisation_at0001_2").last)
+  end
+end

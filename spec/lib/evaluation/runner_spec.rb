@@ -15,11 +15,11 @@ RSpec.describe Evaluation::Runner do
     let(:questions) { Evaluation::Questions.from_v1_seed }
     subject(:run) { described_class.run(questions) }
 
-    it "v1 の 17 問の集計を再現する: Top-1 14/17、Top-3 15/17、完全失敗 2/17、MRR 0.8529、intent_tag 別 11/11・4/4・0/2" do
+    it "v1 の 17 問の集計を再現する: Top-1 15/17、Top-3 15/17、完全失敗 2/17、MRR 0.8824（項目の重み #127 で q07 が 1 位に上がった）、intent_tag 別 11/11・4/4・0/2" do
       summary = run.card_summary
 
-      expect(summary).to include(questions: 17, hit_at_1: 14, hit_at_3: 15, complete_failures: 2)
-      expect(summary.fetch(:mrr)).to be_within(0.00005).of(0.8529)
+      expect(summary).to include(questions: 17, hit_at_1: 15, hit_at_3: 15, complete_failures: 2)
+      expect(summary.fetch(:mrr)).to be_within(0.00005).of(0.8824)
       expect(summary.fetch(:by_intent)).to eq(
         "bigram成立想定" => { hits: 11, total: 11 },
         "複合語" => { hits: 4, total: 4 },

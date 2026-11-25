@@ -112,3 +112,85 @@ RSpec.describe Opt::PathcardSearch, "ELEMENT 改名がラベルとして検索�
     end
   end
 end
+
+# skoba/anlage#122（S3 の段 A。docs/design/s3-search-plan.md 3 節、R-20261125-2）: 同点のカードの順序を、
+# テンプレートの登録順ではなく、template_id と、テンプレートの中でのカードの並びで決める。
+# 「発症」は、ProblemList と jp_referral の「発症日時」（同じアーキタイプの同じ節）がラベルに当たって同点になる。
+# （はじめは「臨床検査」の 4 枚の同点で固定していた。項目の重み〔#127〕で同点でなくなったので、問いを替えた）
+RSpec.describe Opt::PathcardSearch, "同点の順序は登録順によらない（#122）" do
+  def register(fixture_names)
+    fixture_names.each do |fixture_name|
+      template = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture_name}.opt").read)
+      template.pathcards = Opt::PathcardExtractor.call(template).cards
+      template.save!
+    end
+  end
+
+  def hits(query)
+    described_class.call(query).map { |card| [ card.fetch("score"), *card.fetch("identity").values_at("template_id", "at_code") ] }
+  end
+
+  it "同じテンプレートを別の順で登録しても、同じ並びを返す" do
+    register(%w[ProblemList jp_referral])
+    first_order = hits("発症")
+    Template.delete_all
+    register(%w[jp_referral ProblemList])
+
+    expect(hits("発症")).to eq(first_order)
+  end
+
+  it "同点は template_id の順に並べる" do
+    register(%w[jp_referral ProblemList])
+
+    expect(hits("発症")).to eq([ [ 4, "ProblemList", "at0077" ], [ 4, "jp_referral", "at0077" ] ])
+  end
+
+  it "同じテンプレートの中の同点は、カードの並び（帳票の順）で並べる" do
+    register(%w[LabResultReport])
+
+    expect(hits("分析")).to eq([ [ 7, "LabResultReport", "at0024" ], [ 7, "LabResultReport", "at0001" ] ])
+  end
+
+  it "score の高いカードは、template_id が後ろでも先に出る" do
+    register(%w[CardiologyEncounter ProblemList])
+    results = hits("発症日時")
+
+    expect(results.map(&:first)).to eq(results.map(&:first).sort.reverse)
+    expect(results.first).to eq([ 12, "ProblemList", "at0077" ])
+  end
+end
+
+# skoba/anlage#127（S3 の段 B。docs/design/s3-search-plan.md 3 節）: score に、当たった項目の重みを入れる。
+# 問いの bigram ごとに、それを含む項目の重みを足す（ラベル 4、いちばん近い祖先の名前 3、それより遠い祖先の名前 2、
+# 値集合の表示 2、説明 1）。
+RSpec.describe Opt::PathcardSearch, "項目の重み（#127）" do
+  before do
+    %w[ProblemList LabResultReport].each do |fixture_name|
+      template = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture_name}.opt").read)
+      template.pathcards = Opt::PathcardExtractor.call(template).cards
+      template.save!
+    end
+  end
+
+  def hits(query)
+    described_class.call(query).map { |card| [ card.dig("identity", "at_code"), card.fetch("score") ] }
+  end
+
+  it "ラベルに当たったカードは、祖先の名前だけに当たったカードより前に出る（診断）" do
+    # 祖先の名前「プロブレム・診断」は 6 枚すべてに当たる（3）。ラベルにも当たるのは at0002 と at0073（3 + 4）
+    expect(hits("診断").first(3)).to eq([ [ "at0002", 7 ], [ "at0073", 7 ], [ "at0077", 3 ] ])
+  end
+
+  it "ラベルと祖先の名前の両方に当たる bigram は、両方の重みを足す（検査結果）" do
+    # at0001「分析結果」: ラベル「結果」4、祖先「検体検査結果」（遠い）と「検査分析結果」（近い）の「検査」「結果」(2 + 3) × 2、「査結」は遠い祖先だけ 2
+    expect(hits("検査結果")).to eq([ [ "at0001", 16 ], [ "at0005", 13 ], [ "at0024", 12 ] ])
+  end
+
+  it "値集合の表示だけに当たるカードも出る（疑い）" do
+    expect(hits("疑い")).to eq([ [ "at0073", 2 ] ])
+  end
+
+  it "「臨床検査」は、祖先の名前 2 つに当たる 2 枚（2 + 3）が、ラベル 1 つに当たる負例（4）より前に出る" do
+    expect(hits("臨床検査")).to eq([ [ "at0005", 7 ], [ "at0024", 5 ], [ "at0001", 5 ], [ "at0003", 4 ] ])
+  end
+end
