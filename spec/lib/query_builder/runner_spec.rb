@@ -67,4 +67,43 @@ RSpec.describe QueryBuilder::Runner do
     expect(run.lint.ok?).to be(true)
     expect(run.aql).to start_with("SELECT o/data[at0001]")
   end
+  # docs/design/s2-query-builder-plan.md 7 節（R-20261125-6）。demo_initial の傷病は 3 件（高血圧症〔疑い〕、2型糖尿病〔疑い〕、
+  # 2型糖尿病〔確度の記載なし〕）、血圧は 1 件（120／80）。値集合のコードは at0074＝疑い、at0076＝確定
+  describe "未記入を含む、範囲の外、どちらかを満たす" do
+    def run(**selection)
+      described_class.call(**selection).tap do |result|
+        expect(result).to have_attributes(executed?: true, error: nil), "#{result.error}\n#{result.aql}"
+        expect(result.lint.findings.select(&:error?)).to be_empty
+      end
+    end
+
+    it "未記入を含む: 「確定」だけでは 0 行、未記入を含めると確度の記載が無い 1 行。「疑い」に未記入を含めると 3 行" do
+      diagnosis = card(QB_PD_E, "at0002")
+      certainty = card(QB_PD_E, "at0073")
+
+      expect(rows(run(columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0076" ] } ]))).to eq([])
+      expect(rows(run(columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0076" ], include_missing: true } ])))
+        .to eq([ [ "2型糖尿病" ] ])
+      expect(rows(run(columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0074" ], include_missing: true } ])))
+        .to match_array([ [ "高血圧症" ], [ "2型糖尿病" ], [ "2型糖尿病" ] ])
+    end
+
+    it "範囲の外: 収縮期 120 は、100〜110 の外（1 行）で、90〜140 の中（0 行）" do
+      systolic = card(QB_BP_O, "at0004")
+
+      expect(rows(run(columns: [ systolic ], conditions: [ { card: systolic, operator: "OUTSIDE", value: { low: 100, high: 110 } } ]))).to eq([ [ 120.0 ] ])
+      expect(rows(run(columns: [ systolic ], conditions: [ { card: systolic, operator: "OUTSIDE", value: { low: 90, high: 140 } } ]))).to eq([])
+    end
+
+    it "どちらかを満たす: 収縮期 >= 140 または拡張期 >= 80 は 1 行（拡張期で当たる）。どちらも外れると 0 行。ほかの条件とは AND" do
+      systolic = card(QB_BP_O, "at0004")
+      diastolic = card(QB_BP_O, "at0005")
+      either = ->(low) { { any: [ { card: systolic, operator: ">=", value: "140" }, { card: diastolic, operator: ">=", value: low } ] } }
+
+      expect(rows(run(columns: [ systolic, diastolic ], conditions: [ either.call("80") ]))).to eq([ [ 120.0, 80.0 ] ])
+      expect(rows(run(columns: [ systolic, diastolic ], conditions: [ either.call("90") ]))).to eq([])
+      expect(rows(run(columns: [ systolic, diastolic ], conditions: [ either.call("80"), { card: systolic, operator: ">", value: "200" } ]))).to eq([])
+    end
+  end
+
 end
