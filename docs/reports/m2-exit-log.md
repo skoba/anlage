@@ -135,3 +135,51 @@ D までの記録は `docs/reports/rails-0.9.0-adoption-log.md`（R1〜R3）。
 
 - I の spec はこのブランチに置いたまま（いまは赤）。答えが出たら、A／B なら Red から規則を直し、C なら spec に 3 項目を足して緑にする
 - 作業列の次（3: 版の公開待ち、4: M3 の残り）には進める
+
+## R4（2026-11-25）I: 必須の規則を案 B で実装（R-20261125-1）
+
+裁定 R-20261125-1 で案 B。規則は `docs/design/required-rule.md` に書いた。
+
+### 実測: C_ARCHETYPE_ROOT の occurrences（テンプレートのルートを除く）
+
+`Opt::SafeParser` で 6 つの fixture を読んで、`CArchetypeRoot#occurrences` を出した（rails runner）。
+OPT から ENTRY・CLUSTER の両方の下限が取れる（取れない種類は無かった。`docs/upstream-candidates.md` への追記は無し）。
+
+- CardiologyEncounter: blood_pressure 0..1
+- LabResultReport: laboratory_test_result 0..1、laboratory_test_analyte（CLUSTER）0..1
+- ProblemList: problem_diagnosis 0..1
+- bmi_calculation: height・body_weight・body_mass_index 0..1
+- jp_referral: SECTION 0..1、ENTRY 5 つ 0..1、CLUSTER 7 つ 0..1（診療科の外側の organisation だけ 0..*）
+- patient_blood_pressure: heart_rate-pulse・blood_pressure 0..*
+
+下限 ≥1 の入れ物は無い。規則 3-2 は合成の field の単体 spec で確かめる。
+
+### 判断（自己承認、裁定の範囲内）
+
+- 入れ物の下限は gem の entry の occurrences ではなく、OPT の C_ARCHETYPE_ROOT から一律に取る（ENTRY と CLUSTER を同じ経路で）。`Opt::ElementRoots` の各ルートに 4 つめの要素として足した
+- 入れ物のインスタンスの key は「OPT 上の path#出現順」（`Opt::RootTerms` と同じ数え方）。紹介元と紹介先の organisation を区別する
+- `containers` の無い field（古い登録）は従来の規則のまま（黙って任意にしない）
+- 印: 常に書かれる枠の中の必須は「*」、任意の枠の中の必須は「※」（title「この枠に書くなら必須」）、帳票の先頭に凡例。捨てた案: fieldset の legend に「任意の枠」と書く（印が項目から離れ、どの項目が条件つきか分からない）
+- 「値」に単位（`__units`）は数えない。単位が 1 つの数量は hidden で常に送られるため（`app/views/templates/_field.html.erb`）、数えると帳票全体が空でも「書かれた」になる
+
+### Red
+
+```
+$ bundle exec rspec spec/lib/opt/required_rule_spec.rb spec/models/template_spec.rb -e "R-20261125-1" -e "入れ物を書くなら必須"
+14 examples, 12 failures
+（KeyError: key not found: "containers"／required_rule の 9 例が失敗）
+
+$ bundle exec rspec spec/requests/compositions_blank_fields_spec.rb spec/requests/form_roots_spec.rb
+9 examples, 2 failures
+  expected ... to include "値が 1 つも入力されていません"
+  expected "プロブレム・診断名 *" to include "※"
+```
+
+I の実ブラウザ spec（`spec/system/demo_referral_spec.rb`）は R3 から赤のまま。
+
+### Green
+
+全 suite（開発機）: `441 examples, 0 failures, 2 pending`（pending は人間供給待ちの既存 2 件）。
+`spec/system/demo_referral_spec.rb`・`spec/system/demo_problem_list_spec.rb` も green。
+
+`#34` の pin は書き換えた（`spec/requests/compositions_blank_fields_spec.rb`）: 発症日だけ書いて傷病名が空なら 422（項目のエラー）、全部が空なら 422（帳票のメッセージ、項目のエラーは出さない）。
