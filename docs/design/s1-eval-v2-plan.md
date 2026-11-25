@@ -278,3 +278,24 @@ selection:
 - 確定した a001〜a005 に `selection` を足すかどうかは、ゲート報告で問う（足す YAML の案は `docs/reports/s2-query-builder-log.md` R15）
 - 案の健全性（参照 AQL と S2 の経路の両方が期待行に一致）は spec で固定する
 
+### 8.4 selection に書ける条件を足す（R-20261125-6）
+
+クエリビルダーに足した 3 つの条件（`docs/design/s2-query-builder-plan.md` 7 節）を、`selection` でも書けるようにする。
+
+```yaml
+conditions:
+  - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
+    operator: MATCHES
+    value: [at0076]
+    include_missing: true        # 未記入を含む（値集合の条件だけ）
+  - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+    operator: OUTSIDE            # 範囲の外
+    value: { low: 90, high: 140 }
+  - any:                         # どちらかを満たす
+      - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }, operator: ">=", value: 140 }
+      - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }, operator: ">=", value: 90 }
+```
+
+- 読み込みで止めるもの: `any` が配列でない、`any` の中の条件に `card`・`operator` が無い
+- 値の中身（下限 > 上限、値集合でない項目への未記入 など）は読み込みでは見ない。ビルダーが拒み、採点は「組めない」になる（8.2）
+- いまのゴールドと案（a001〜a008）は、この形を使っていない。使う問いは、サンプルデータが増えたあとの問いの案で出す
