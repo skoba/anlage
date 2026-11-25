@@ -173,3 +173,39 @@ NameError: uninitialized constant Opt::PathcardDiff
 ### M3 の先行分の残り
 
 - W1〜W6 はこれで出そろった。作業列 7（患者と EHR、カルテ記録）は M2 の出口のあと
+
+## R5 P1（`skoba/anlage#130`）: 患者（EHR）の一覧と作成（2026-11-25）
+
+計画書 `docs/design/m3-plan.md` 7 節（PR #129 → main `0cde02a`）。R-20261124-20 作業列 4。
+
+### 実測（gem の API）
+
+- `OpenehrRails::Rm::Ehr`（openehr-rails 0.9.0 `lib/openehr_rails/rm/ehr.rb:7`）: `validates :ehr_id, presence: true, uniqueness: true`、
+  `time_created`・`system_id` は before_validation で入る
+- 作り方は gem の REST と同じ: `Ehr.create!(ehr_attributes.merge(ehr_id: SecureRandom.uuid))`（`app/controllers/openehr_rails/openehr_api/ehrs_controller.rb:142`）
+- gem には患者 ID の一意の制約が無い。重複は anlage の側で（名前空間ごとに）確かめる
+
+### 判断（自己承認、計画書の範囲内）
+
+- 一覧に出すのは subject_id のある EHR だけ（gem の REST で subject なしに作られた EHR は出さない）
+- 名前空間は固定の `anlage`（入力欄を出さない）
+
+### Red
+
+```
+$ bundle exec rspec spec/requests/patients_spec.rb spec/requests/demo_navigation_spec.rb spec/requests/queries_spec.rb
+      1      Failure/Error:
+      1      Failure/Error: expect(current_items).to eq(expected), "#{path} の印"
+      2      Failure/Error: expect(links_in("nav#app_nav")).to eq(NAV_LINKS)
+      1      Failure/Error: expect(links_in("nav#app_nav")).to eq(NAV_LINKS), "#{path} のナビ"
+      1      Failure/Error: expect(nav.map(&:first)).to eq(%w[患者 テンプレート カルテ記録一覧 パスカード検索 クエリビルダー] + [ "AQL 照会" ])
+      1      Failure/Error: expect(response).to have_http_status(:ok)
+      2      Failure/Error: expect(response).to have_http_status(:unprocessable_content)
+      1 24 examples, 9 failures
+```
+
+（ナビの pin は語彙表の写しなので、語彙表と同じコミットで 6 項目に追随させた。`spec/requests/queries_spec.rb` は引く側のファイルだが、語彙の追随だけ）
+
+### Green
+
+全 suite（開発機）: `454 examples, 0 failures, 2 pending`
