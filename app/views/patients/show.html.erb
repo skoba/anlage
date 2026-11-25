@@ -1,0 +1,10 @@
+<%# skoba/anlage#130: 文言は docs/demo/ui-vocabulary.md の「患者」の行 %>
+<h1>患者: <%= @patient.subject_id %></h1>
+
+<dl>
+  <dt>患者 ID</dt><dd><%= @patient.subject_id %></dd>
+  <dt>名前空間</dt><dd><%= @patient.subject_namespace %></dd>
+  <dt>EHR ID</dt><dd><%= @patient.ehr_id %></dd>
+</dl>
+
+<p><%= link_to "患者の一覧", patients_path %></p>
