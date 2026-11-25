@@ -1,0 +1,24 @@
+# アーキタイプの版の対応（docs/design/s2-cross-version-plan.md 3.2、skoba/anlage#154）。
+# 「この版とこの版の、この項目は同じもの」と人間が確かめた行だけを、クエリビルダーの「版をまたいで引く」が使う。
+# 行を足す・active にするときは、候補（rake query_builder:version_candidates）を出して人間のレビューを経る。
+#
+# concept:  版（末尾の .v<数字>）を除いたアーキタイプの ID
+# at_code:  項目
+# versions: 同じものと確かめた版
+# status:   active（レビュー済み。reviewed_by・reviewed_at が要る）／pending（候補のまま。問い合わせには使わない）
+
+# --- 候補（レビュー待ち。R-20261125-10）。at-code、パス、型、単位（mm[Hg]）、値の範囲（0 以上 1000 未満）が v1 と v2 で同じ
+
+- concept: openEHR-EHR-OBSERVATION.blood_pressure
+  at_code: at0004
+  versions: [v1, v2]
+  status: pending
+  note: "収縮期（v1 のラベルは Systolic、v2 は 収縮期）"
+  source: "登録済みテンプレートのカードからの自動の候補（patient_blood_pressure.v1 と CardiologyEncounter）"
+
+- concept: openEHR-EHR-OBSERVATION.blood_pressure
+  at_code: at0005
+  versions: [v1, v2]
+  status: pending
+  note: "拡張期（v1 のラベルは Diastolic、v2 は 拡張期）"
+  source: "登録済みテンプレートのカードからの自動の候補（patient_blood_pressure.v1 と CardiologyEncounter）"
