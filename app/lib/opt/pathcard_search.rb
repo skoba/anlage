@@ -1,5 +1,8 @@
 module Opt
   class PathcardSearch
+    # 項目の重み（docs/design/s3-search-plan.md 3 節の段 B。値の根拠と感度は docs/reports/s3-search-log.md R5）
+    FIELD_WEIGHTS = { label: 4, nearest_container: 3, outer_containers: 2, code_label: 2, description: 1 }.freeze
+
     def self.call(query)
       new(query).call
     end
@@ -17,7 +20,7 @@ module Opt
       # テンプレートの登録順に左右させない（skoba/anlage#122）。
       Template.active.where.not(pathcards: nil).flat_map do |template|
         Array(template.pathcards).each_with_index.filter_map do |card, position|
-          score = (@query_bigrams & card_bigrams(card)).size
+          score = score_for(card)
           [ card.merge("score" => score), position ] if score.positive?
         end
       end.sort_by { |card, position| [ -card.fetch("score"), card.dig("identity", "template_id").to_s, position ] }.map(&:first)
@@ -25,23 +28,32 @@ module Opt
 
     private
 
-    def card_bigrams(card)
-      searchable_texts(card).flat_map { |text| bigrams(text) }.uniq
+    # 問いの bigram ごとに、それを含む項目の重みを足す（skoba/anlage#127）。
+    # 同じ bigram がラベルと祖先の名前の両方にあれば、両方の重みが入る。
+    def score_for(card)
+      fields = field_bigrams(card)
+      @query_bigrams.sum do |bigram|
+        FIELD_WEIGHTS.sum { |field, weight| fields.fetch(field).include?(bigram) ? weight : 0 }
+      end
     end
 
-    def searchable_texts(card)
+    def field_bigrams(card)
       semantics = card.fetch("semantics", {})
-      labels = Array(semantics["labels"]).filter_map { |entry| entry["text"] }
-      descriptions = Array(semantics["descriptions"]).filter_map { |entry| entry["text"] }
-      code_labels = Array(card.dig("constraints", "value", "code_list")).filter_map do |entry|
-        entry["label"]
-      end
-
       # スキーマ v1.2: 祖先ルート名（様式11 の欄名 = AD がルートに与えた名前）も
-      # 索引する（skoba/anlage#31）。v1.1 カードはキーが無いので空。
-      container_labels = Array(semantics["container_labels"]).filter_map { |entry| entry["text"] }
+      # 索引する（skoba/anlage#31）。v1.1 カードはキーが無いので空。並びは外側から内側
+      containers = texts(semantics["container_labels"], "text")
 
-      labels + descriptions + code_labels + container_labels
+      {
+        label: texts(semantics["labels"], "text"),
+        nearest_container: containers.last(1),
+        outer_containers: containers[0...-1].to_a,
+        code_label: texts(card.dig("constraints", "value", "code_list"), "label"),
+        description: texts(semantics["descriptions"], "text")
+      }.transform_values { |field_texts| field_texts.flat_map { |text| bigrams(text) }.uniq }
+    end
+
+    def texts(entries, key)
+      Array(entries).filter_map { |entry| entry[key] }
     end
 
     def bigrams(text)

@@ -23,8 +23,8 @@ RSpec.describe "evaluation:run" do
     reports_before = Rails.root.join("docs/reports").children.map { |path| [ path.basename.to_s, path.mtime ] }.sort
 
     expect { run_task }.to output(
-      a_string_including("# 評価 v2（phase1-bigram）", "## card（17 問）", "| Top-1 | 14/17 (82.35%) |", "| Top-3 | 15/17 (88.24%) |",
-                         "| 完全失敗 | 2/17 (11.76%) |", "| MRR | 0.8529 |", "- q16: BMI", "- q18: 既往",
+      a_string_including("# 評価 v2（phase1-bigram）", "## card（17 問）", "| Top-1 | 15/17 (88.24%) |", "| Top-3 | 15/17 (88.24%) |",
+                         "| 完全失敗 | 2/17 (11.76%) |", "| MRR | 0.8824 |", "- q16: BMI", "- q18: 既往",
                          "## draft（0 問、母数外）")
     ).to_stdout
 
