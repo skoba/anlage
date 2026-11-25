@@ -194,3 +194,79 @@ RSpec.describe Opt::PathcardSearch, "項目の重み（#127）" do
     expect(hits("臨床検査")).to eq([ [ "at0005", 7 ], [ "at0024", 5 ], [ "at0001", 5 ], [ "at0003", 4 ] ])
   end
 end
+
+# skoba/anlage#152（S3 の段 D。docs/design/s3-search-plan.md 3.1、R-20261125-8）: 別名表。
+# 問いの語の全体が表の語に一致したときだけ、対応先のカードを字面の結果より前に出す。対応させない行は、対応先を結果から外す。
+RSpec.describe Opt::PathcardSearch, "別名表（#152）" do
+  PS_PD = "openEHR-EHR-EVALUATION.problem_diagnosis.v1".freeze
+  PS_BMI = "openEHR-EHR-OBSERVATION.body_mass_index.v2".freeze
+  PS_LAB = "openEHR-EHR-OBSERVATION.laboratory_test_result.v1".freeze
+
+  before do
+    %w[ProblemList LabResultReport bmi_calculation].each do |fixture_name|
+      template = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture_name}.opt").read)
+      template.pathcards = Opt::PathcardExtractor.call(template).cards
+      template.save!
+    end
+  end
+
+  def aliases(*rows)
+    Opt::SearchAliases.new(rows.map do |row|
+      { "relation" => "alias", "source" => "spec", "reviewed_by" => "Kobayashi, Shinji", "reviewed_at" => Date.new(2026, 11, 25) }.merge(row.transform_keys(&:to_s))
+    end)
+  end
+
+  def hits(query, table)
+    described_class.call(query, aliases: table).map { |card| [ *card.fetch("identity").values_at("archetype_id", "at_code"), card.fetch("score"), card["alias"] ] }
+  end
+
+  it "字面で 1 つも当たらない語（病名）でも、対応先のカードが出る。カードは alias に語を持ち、score は字面の値（0）" do
+    table = aliases({ term: "病名", targets: [ { "archetype_id" => PS_PD, "at_code" => "at0002" } ] })
+
+    expect(hits("病名", Opt::SearchAliases.none)).to eq([])
+    expect(hits("病名", table)).to eq([ [ PS_PD, "at0002", 0, "病名" ] ])
+  end
+
+  it "対応先の順に出す。同じ対応先の中は、字面の score、同点の規則の順（既往: at0002 が先、残りは帳票の順）" do
+    table = aliases({ term: "既往", targets: [ { "archetype_id" => PS_PD, "at_code" => "at0002" }, { "archetype_id" => PS_PD } ] })
+
+    expect(hits("既往", table).map { |hit| hit[1] }).to eq(%w[at0002 at0077 at0003 at0030 at0073 at0070])
+  end
+
+  it "別名で当たったカードは、字面で当たったカードより前に出る。字面の結果は、そのあとに残る（臨床検査）" do
+    table = aliases({ term: "臨床検査", targets: [ { "archetype_id" => PS_LAB } ] })
+
+    expect(hits("臨床検査", table)).to eq([
+      [ PS_LAB, "at0005", 7, "臨床検査" ],
+      [ "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1", "at0024", 5, nil ],
+      [ "openEHR-EHR-CLUSTER.laboratory_test_analyte.v1", "at0001", 5, nil ],
+      [ PS_PD, "at0003", 4, nil ]
+    ])
+  end
+
+  it "語の全体が一致したときだけ引く（「既往歴」は「既往」の行に当たらない）。全角と半角、英字の大小は区別しない（ｂｍｉ）" do
+    table = aliases({ term: "既往", targets: [ { "archetype_id" => PS_PD } ] }, { term: "BMI", targets: [ { "archetype_id" => PS_BMI } ] })
+
+    expect(hits("既往歴", table)).to eq([])
+    expect(hits("ｂｍｉ", table).map { |hit| hit[1] }).to eq(%w[at0004 at0013])
+  end
+
+  it "対応させない行（exclude）: その語では、対応先のカードを結果から外す。ほかの語（BMI判定）には効かない" do
+    table = aliases({ term: "判定", relation: "exclude", targets: [ { "archetype_id" => PS_BMI, "at_code" => "at0013" } ] })
+
+    expect(hits("判定", Opt::SearchAliases.none).map { |hit| hit[1] }).to eq([ "at0013" ])
+    expect(hits("判定", table)).to eq([])
+    expect(hits("BMI判定", table).map { |hit| hit[1] }).to include("at0013")
+  end
+
+  it "索引に無い対応先は、黙って読み飛ばす" do
+    table = aliases({ term: "病名", targets: [ { "archetype_id" => "openEHR-EHR-OBSERVATION.story.v1", "at_code" => "at0004" }, { "archetype_id" => PS_PD, "at_code" => "at0002" } ] })
+
+    expect(hits("病名", table).map { |hit| hit[1] }).to eq([ "at0002" ])
+  end
+
+  it "aliases を渡さなければ、リポジトリの表（config/search_aliases.yml）を使う" do
+    expect(described_class.call("BMI").map { |card| card.dig("identity", "at_code") }).to eq(%w[at0004 at0013])
+    expect(described_class.call("体格指数")).to eq([])
+  end
+end

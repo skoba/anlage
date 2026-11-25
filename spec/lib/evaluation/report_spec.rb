@@ -135,4 +135,20 @@ RSpec.describe Evaluation::Report do
   it "負例だけの問いが無ければ、節を出さない" do
     expect(markdown).not_to include("負例だけの問い")
   end
+  # 別名表（docs/design/s3-search-plan.md 3.1、R-20261125-8）: 問いの語が表にある問いと、無い問いを分けて数える。
+  # 表の行は評価の注記から作ったので、表にある語の問いが当たるのは当然で、効果の数字に入れない
+  it "別名表にある語の問いと、無い語の問いの内訳（問いの数、Top-1、Top-3）を出す。表にある語の問いが無ければ節を出さない" do
+    table = Opt::SearchAliases.new([ { "term" => "BMI", "relation" => "alias", "targets" => [ { "archetype_id" => BP_V2 } ],
+                                       "source" => "spec", "reviewed_by" => "x", "reviewed_at" => Date.new(2026, 11, 25) } ])
+    split_run = Evaluation::Runner::Run.new(card_results: run.card_results, aql_results: [], drafts: [], pendings: [],
+                                            corpus_archetype_ids: [], aliases: table)
+
+    expect(described_class.render(split_run, label: "x")).to include(
+      "## card: 別名表にある語の問いと、無い語の問い",
+      "| 別名表にある語（効果の数字に入れない） | 1 | 0/1 (0.00%) | 0/1 (0.00%) |",
+      "| 別名表に無い語 | 2 | 1/2 (50.00%) | 2/2 (100.00%) |",
+      "別名表にある語の問い: c03（BMI）"
+    )
+    expect(markdown).not_to include("別名表にある語")
+  end
 end

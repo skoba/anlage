@@ -1,0 +1,107 @@
+# パスカード検索の別名表（S3 の段 D。docs/design/s3-search-plan.md 3.1、案は docs/design/s3-alias-table-proposal.md）。
+# 人間がレビューした行だけを入れる。行を足す・変えるときは、案を出して人間のレビューを経る（reviewed_by・reviewed_at を書く）。
+# 用語マスターなど、ライセンスのある内容は入れない。
+#
+# term:      問いの語。問いの全体がこの語と同じときだけ引く（部分一致では引かない。空白・全角半角・英字の大小は区別しない）
+# relation:  alias（対応させる。対応先のカードを先に出す）／exclude（対応させない。対応先のカードを結果から外す）
+# status:    active（既定）／pending（保留。検索には使わない。pending_until に条件を書く）
+# targets:   対応先。上から順に出す。at_code を省くと、そのアーキタイプのカードすべて
+# source:    出どころ
+
+# --- 対応させる
+
+- term: BMI
+  relation: alias
+  targets:
+    - { archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2 }
+  source: "評価 v1 q16 の注記（BMI は Body Mass Index の略として臨床定着。カードのラベルは未翻訳の「Body mass index」）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- term: 病名
+  relation: alias
+  targets:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+  source: "評価 v1 q05 の注記（プロブレム／病名／疾患名 の語彙クラスタ）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- term: 疾患名
+  relation: alias
+  targets:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+  source: "評価 v1 q05 の注記（プロブレム／病名／疾患名 の語彙クラスタ）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- term: 既往
+  relation: alias
+  targets:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1 }
+  source: "評価 v1 q18 の注記（problem_diagnosis への着地は臨床的に正当）。最初に出すのはプロブレム・診断名（R-20261125-8）。「既往」だけだと既往疾患と既往歴の 2 通りに読める。評価の結果を見て見直す"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- term: 臨床検査
+  relation: alias
+  targets:
+    - { archetype_id: openEHR-EHR-OBSERVATION.laboratory_test_result.v1 }
+  source: "評価 v2 c015 のレビュー（広い語。laboratory_test_result が優先）。検査の結果を表すほかのアーキタイプが入ったら、対応先を足す"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- term: 傷病名
+  relation: alias
+  targets:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1 }
+  source: "jp_referral が problem_diagnosis のルートに付けた名前（アーキタイプの言い換え。R-20261125-8）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+# --- 対応させない
+
+- term: 体格指数
+  relation: exclude
+  targets:
+    - { archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2 }
+  source: "評価 v1 q17 の廃止コメント（患者説明・文書翻訳の語。検索では非対応として扱う）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- term: 肥満判定
+  relation: exclude
+  targets:
+    - { archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2, at_code: at0013 }
+  source: "評価 v1 q09 のコメント（肥満は診断概念）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- term: 肥満度判定
+  relation: exclude
+  targets:
+    - { archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2, at_code: at0013 }
+  source: "評価 v1 q09 のコメント（肥満度は BMI と別の指標）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+- term: 判定
+  relation: exclude
+  targets:
+    - { archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2, at_code: at0013 }
+  source: "評価 v1 q09 のコメント（「判定」単独では BMI の判定に結びつかない）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
+
+# --- 保留
+
+- term: 既往歴
+  relation: alias
+  status: pending
+  targets:
+    - { archetype_id: openEHR-EHR-OBSERVATION.story.v1, at_code: at0004 }
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1 }
+  pending_until: "story を持つテンプレートが索引に入る（それまでに入れると、プロブレム・診断だけに寄る）。評価 v2 の保留問 c021 と同じ判断"
+  source: "評価 v1 q18 の注記、v2 c021（story とプロブレム・診断の両方）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25

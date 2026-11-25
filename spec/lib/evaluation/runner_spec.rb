@@ -13,9 +13,10 @@ RSpec.describe Evaluation::Runner do
     end
 
     let(:questions) { Evaluation::Questions.from_v1_seed }
-    subject(:run) { described_class.run(questions) }
+    # 字面だけの検索（別名表を使わない）。別名表を入れる前の数字の pin を、そのまま保つ
+    subject(:run) { described_class.run(questions, aliases: Opt::SearchAliases.none) }
 
-    it "v1 の 17 問の集計を再現する: Top-1 15/17、Top-3 15/17、完全失敗 2/17、MRR 0.8824（項目の重み #127 で q07 が 1 位に上がった）、intent_tag 別 11/11・4/4・0/2" do
+    it "字面だけ（別名表なし）で v1 の 17 問の集計を再現する: Top-1 15/17、Top-3 15/17、完全失敗 2/17、MRR 0.8824（項目の重み #127 で q07 が 1 位に上がった）、intent_tag 別 11/11・4/4・0/2" do
       summary = run.card_summary
 
       expect(summary).to include(questions: 17, hit_at_1: 15, hit_at_3: 15, complete_failures: 2)
@@ -26,6 +27,19 @@ RSpec.describe Evaluation::Runner do
         "同義語ギャップ" => { hits: 0, total: 2 }
       )
       expect(run.card_results.reject { |result| result.score.hit_at_3 }.map { |result| result.question.id }).to eq([ "q16", "q18" ])
+    end
+
+    # 別名表（skoba/anlage#152、R-20261125-8）を使うと、字面で届かなかった q16「BMI」と q18「既往」が当たる。
+    # この 2 問は表にある語の問いで、効果の数字には入れない。表に無い語の 15 問は、字面だけのときと同じ
+    it "別名表を使うと Top-1 17/17。内訳は、表にある語の 2 問（q16・q18）が 2/2、表に無い語の 15 問が 15/15（字面だけのときと同じ問いが当たる）" do
+      with_table = described_class.run(questions)
+
+      expect(with_table.card_summary).to include(questions: 17, hit_at_1: 17, hit_at_3: 17, complete_failures: 0, violations: 0)
+      expect(with_table.alias_split).to eq(in_table: { questions: 2, hit_at_1: 2, hit_at_3: 2, ids: %w[q16 q18] },
+                                           out_of_table: { questions: 15, hit_at_1: 15, hit_at_3: 15, ids: questions.map(&:id) - %w[q16 q18] })
+      unchanged = ->(result) { [ result.question.id, result.score.rank ] }
+      expect(with_table.card_results.reject { |result| %w[q16 q18].include?(result.question.id) }.map(&unchanged))
+        .to eq(run.card_results.reject { |result| %w[q16 q18].include?(result.question.id) }.map(&unchanged))
     end
 
     # regression pin（R-20261124-15）: rank を持たない問いは全要素が同じ順位として読む。上の集計は rank の導入の前後で同じで、
@@ -60,7 +74,7 @@ RSpec.describe Evaluation::Runner do
       end
 
       it "regression pin: 負例だけの問いを混ぜても、card の集計と問いごとの結果は、もとの 17 問だけのときと同じ" do
-        mixed = described_class.run(questions + negatives)
+        mixed = described_class.run(questions + negatives, aliases: Opt::SearchAliases.none)
 
         expect(mixed.card_summary).to eq(run.card_summary)
         expect(mixed.card_results.map { |result| [ result.question.id, result.score.to_h ] })
@@ -173,14 +187,27 @@ RSpec.describe Evaluation::Runner do
     end
 
     # 2026-11-25 に 9 問を足した（R-20261125-7）。段 D・E の before になる数字（docs/reports/s1-eval-v2-log.md R18）
-    it "card 13 問: Top-1 8/13、Top-3 10/13、完全失敗 2/13（c022「病名」・c023「疾患名」）、負例違反なし、順位遵守 1/1、許容の出現 1/13（c026）" do
-      expect(run.card_summary).to include(questions: 13, hit_at_1: 8, hit_at_3: 10, complete_failures: 2, violations: 0,
-                                          ranked_questions: 1, order_kept: 1, order_pairs: 1, order_pairs_kept: 1, acceptables: 1)
-      expect(run.card_summary.fetch(:mrr)).to be_within(0.00005).of(0.6987)
-      expect(run.card_summary.fetch(:recall_at_3)).to be_within(0.00005).of(0.7308)
-      expect(run.card_results.select { |result| result.score.complete_failure }.map { |result| result.question.id }).to eq(%w[c022 c023])
-      expect(run.card_results.reject { |result| result.score.hit_at_1 }.map { |result| result.question.id })
+    it "字面だけ（別名表なし）の card 13 問: Top-1 8/13、Top-3 10/13、完全失敗 2/13（c022「病名」・c023「疾患名」）、負例違反なし、順位遵守 1/1、許容の出現 1/13（c026）" do
+      Evaluation::Datasets.build("demo_initial")
+      lexical = described_class.run(Evaluation::Questions.from_v2.reject(&:aql?), aliases: Opt::SearchAliases.none)
+
+      expect(lexical.card_summary).to include(questions: 13, hit_at_1: 8, hit_at_3: 10, complete_failures: 2, violations: 0,
+                                              ranked_questions: 1, order_kept: 1, order_pairs: 1, order_pairs_kept: 1, acceptables: 1)
+      expect(lexical.card_summary.fetch(:mrr)).to be_within(0.00005).of(0.6987)
+      expect(lexical.card_summary.fetch(:recall_at_3)).to be_within(0.00005).of(0.7308)
+      expect(lexical.card_results.select { |result| result.score.complete_failure }.map { |result| result.question.id }).to eq(%w[c022 c023])
+      expect(lexical.card_results.reject { |result| result.score.hit_at_1 }.map { |result| result.question.id })
         .to eq(%w[c022 c023 c027 c029 c030])
+    end
+
+    # 別名表（skoba/anlage#152）。表にある語の問いは c015・c022・c023。表に無い語の 10 問は、字面だけのときと同じ（7/10、9/10）
+    it "別名表を使うと card 13 問は Top-1 10/13、Top-3 12/13、完全失敗 0/13。表に無い語の 10 問は Top-1 7/10、Top-3 9/10 のまま" do
+      expect(run.card_summary).to include(questions: 13, hit_at_1: 10, hit_at_3: 12, complete_failures: 0, violations: 0,
+                                          ranked_questions: 1, order_kept: 1, acceptables: 1)
+      expect(run.card_summary.fetch(:mrr)).to be_within(0.00005).of(0.8526)
+      expect(run.alias_split).to include(in_table: { questions: 3, hit_at_1: 3, hit_at_3: 3, ids: %w[c015 c022 c023] })
+      expect(run.alias_split.fetch(:out_of_table)).to include(questions: 10, hit_at_1: 7, hit_at_3: 9)
+      expect(run.card_results.reject { |result| result.score.hit_at_1 }.map { |result| result.question.id }).to eq(%w[c027 c029 c030])
     end
 
     it "足す前からの card 4 問（c008・c010・c014・c015）の結果は変わらない: 4 問とも 1 位、負例違反なし" do

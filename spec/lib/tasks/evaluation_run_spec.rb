@@ -19,12 +19,15 @@ RSpec.describe "evaluation:run" do
     Rake::Task["evaluation:run"].invoke
   end
 
+  # 別名表（skoba/anlage#152）を使う。q16「BMI」と q18「既往」は表にある語の問いで、当たるのは当然（効果の数字に入れない）
   it "v1 の 17 問の集計を Markdown で標準出力に出し、docs/reports/ のファイルは変えない" do
     reports_before = Rails.root.join("docs/reports").children.map { |path| [ path.basename.to_s, path.mtime ] }.sort
 
     expect { run_task }.to output(
-      a_string_including("# 評価 v2（phase1-bigram）", "## card（17 問）", "| Top-1 | 15/17 (88.24%) |", "| Top-3 | 15/17 (88.24%) |",
-                         "| 完全失敗 | 2/17 (11.76%) |", "| MRR | 0.8824 |", "- q16: BMI", "- q18: 既往",
+      a_string_including("# 評価 v2（phase1-bigram）", "## card（17 問）", "| Top-1 | 17/17 (100.00%) |", "| Top-3 | 17/17 (100.00%) |",
+                         "| 完全失敗 | 0/17 (0.00%) |", "| MRR | 1.0000 |",
+                         "| 別名表にある語（効果の数字に入れない） | 2 | 2/2 (100.00%) | 2/2 (100.00%) |",
+                         "| 別名表に無い語 | 15 | 15/15 (100.00%) | 15/15 (100.00%) |", "別名表にある語の問い: q16（BMI）、q18（既往）",
                          "## draft（0 問、母数外）")
     ).to_stdout
 
@@ -37,10 +40,22 @@ RSpec.describe "evaluation:run" do
   # demo_initial の 5 テンプレート（spec/lib/evaluation/runner_spec.rb）と同じ結果になる
   it "ゴールド v2 の card 13 問は別の報告に出し、保留問 3 問を並べる（aql は RESET 無しでは読まない）" do
     expect { run_task }.to output(
-      a_string_including("# 評価 v2（phase1-bigram、ゴールド v2）", "## card（13 問）", "| Top-1 | 8/13 (61.54%) |", "| Top-3 | 10/13 (76.92%) |",
-                         "| 完全失敗 | 2/13 (15.38%) |", "| MRR | 0.6987 |", "| 負例違反 | 0/13 |",
+      a_string_including("# 評価 v2（phase1-bigram、ゴールド v2）", "## card（13 問）", "| Top-1 | 10/13 (76.92%) |", "| Top-3 | 12/13 (92.31%) |",
+                         "| 完全失敗 | 0/13 (0.00%) |", "| MRR | 0.8526 |", "| 負例違反 | 0/13 |",
+                         "| 別名表に無い語 | 10 | 7/10 (70.00%) | 9/10 (90.00%) |", "別名表にある語の問い: c015（臨床検査）、c022（病名）、c023（疾患名）",
                          "| 順位遵守 | 1/1 (100.00%)（組 1/1） |", "## 保留問（3 問、母数外）", "- c019: 検体", "- c021: 既往歴", "- c033: 脈拍")
     ).to_stdout
+  end
+
+  it "ALIASES=0 なら別名表を使わずに採点する（字面だけ。別名表を入れる前の数字）" do
+    ENV["ALIASES"] = "0"
+
+    expect { run_task }.to output(
+      a_string_including("（別名表を使わない）", "## card（17 問）", "| Top-1 | 15/17 (88.24%) |", "| MRR | 0.8824 |", "- q16: BMI", "- q18: 既往",
+                         "## card（13 問）", "| Top-1 | 8/13 (61.54%) |", "| MRR | 0.6987 |")
+    ).to_stdout
+  ensure
+    ENV.delete("ALIASES")
   end
 
   it "RESET が無ければ aql の問いは採点せず、その旨を出す" do

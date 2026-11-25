@@ -5,7 +5,7 @@ module Evaluation
     module_function
 
     def render(run, label:)
-      [ "# 評価 v2（#{label}）", card_section(run), negative_section(run), aql_section(run), builder_section(run), draft_section(run), pending_section(run) ]
+      [ "# 評価 v2（#{label}）", card_section(run), alias_section(run), negative_section(run), aql_section(run), builder_section(run), draft_section(run), pending_section(run) ]
         .compact.join("\n\n") + "\n"
     end
 
@@ -39,6 +39,23 @@ module Evaluation
       lines.concat(list(run.card_results.select { |result| result.score.acceptables.any? }) do |result|
         "#{result.question.id}: #{result.question.query} → #{refs(result.score.acceptables)}"
       end)
+      lines.join("\n")
+    end
+
+    # 別名表にある語の問いと、無い語の問い（docs/design/s3-search-plan.md 3.1）。表にある語の問いが無ければ節を出さない
+    def alias_section(run)
+      split = run.alias_split
+      in_table = split.fetch(:in_table)
+      return nil if in_table.fetch(:questions).zero?
+
+      lines = [ "## card: 別名表にある語の問いと、無い語の問い", "", "| 問い | 問いの数 | Top-1 | Top-3 |", "|---|---|---|---|" ]
+      { in_table: "別名表にある語（効果の数字に入れない）", out_of_table: "別名表に無い語" }.each do |key, name|
+        counts = split.fetch(key)
+        total = counts.fetch(:questions)
+        lines << "| #{name} | #{total} | #{ratio(counts.fetch(:hit_at_1), total)} | #{ratio(counts.fetch(:hit_at_3), total)} |"
+      end
+      queries = run.card_results.index_by { |result| result.question.id }
+      lines << "" << "別名表にある語の問い: #{in_table.fetch(:ids).map { |id| "#{id}（#{queries.fetch(id).question.query}）" }.join('、')}"
       lines.join("\n")
     end
 

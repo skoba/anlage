@@ -75,19 +75,18 @@ RSpec.describe "pathcards:eval" do
       Rake::Task["pathcards:eval"].invoke
     end
 
-    it "17問の実測集計値と完全失敗問題を表示する（q21 を v2 に移したあとも同じ値）" do
+    # 別名表（skoba/anlage#152）を入れたあとの値。q16「BMI」と q18「既往」は表の語で当たる（字面だけの値 15/17 は evaluation_run_spec の ALIASES=0）
+    it "17問の実測集計値を表示する（別名表を入れたあとは完全失敗なし）" do
       expect { run_task }.to output(
         a_string_including(
           "Questions: 17",
-          "Top-1 accuracy: 15/17 (88.24%)",
-          "Top-3 accuracy: 15/17 (88.24%)",
-          "Complete failure rate: 2/17 (11.76%)",
-          "MRR: 0.8824",
+          "Top-1 accuracy: 17/17 (100.00%)",
+          "Top-3 accuracy: 17/17 (100.00%)",
+          "Complete failure rate: 0/17 (0.00%)",
+          "MRR: 1.0000",
           "bigram成立想定: 11/11",
           "複合語: 4/4",
-          "同義語ギャップ: 0/2",
-          "q16: BMI",
-          "q18: 既往"
+          "同義語ギャップ: 2/2"
         )
       ).to_stdout
     end
@@ -99,13 +98,13 @@ RSpec.describe "pathcards:eval" do
       expect(report).to include(
         "# WP4 パスカード検索評価ログ",
         "検索実装: `phase1-bigram`",
-        "Top-1精度: 15/17 (88.24%)",
-        "Top-3精度: 15/17 (88.24%)",
-        "完全失敗率: 2/17 (11.76%)",
-        "MRR: 0.8824",
+        "Top-1精度: 17/17 (100.00%)",
+        "Top-3精度: 17/17 (100.00%)",
+        "完全失敗率: 0/17 (0.00%)",
+        "MRR: 1.0000",
         "bigram成立想定: 11/11",
         "複合語: 4/4",
-        "同義語ギャップ: 0/2"
+        "同義語ギャップ: 2/2"
       )
     end
   end
