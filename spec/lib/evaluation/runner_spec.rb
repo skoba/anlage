@@ -45,6 +45,49 @@ RSpec.describe Evaluation::Runner do
       expect(run.card_results.map { |result| result.question.id }).not_to include("d01")
       expect(run.card_summary.fetch(:questions)).to eq(17)
     end
+    # 負例だけの問い（docs/design/s1-eval-v2-plan.md 9 節、R-20261125-7）。この索引の「診断」は problem_diagnosis の 6 枚に当たり、
+    # 1 位が at0002、2 位が at0073、4 位が at0003。「BMI判定」は body_mass_index at0013 が 1 位。「脈拍」は 1 枚も当たらない
+    describe "負例だけの問い" do
+      def negative(id, query, forbidden)
+        Evaluation::Question.new(id: id, kind: :card, query: query, expected: [], forbidden: forbidden)
+      end
+
+      let(:pd) { "openEHR-EHR-EVALUATION.problem_diagnosis.v1" }
+      let(:negatives) do
+        [ negative("n1", "BMI判定", [ { archetype_id: "openEHR-EHR-OBSERVATION.body_mass_index.v2", at_code: nil } ]),
+          negative("n2", "診断", [ { archetype_id: pd, at_code: "at0003" } ]),
+          negative("n3", "脈拍", [ { archetype_id: pd, at_code: nil } ]) ]
+      end
+
+      it "regression pin: 負例だけの問いを混ぜても、card の集計と問いごとの結果は、もとの 17 問だけのときと同じ" do
+        mixed = described_class.run(questions + negatives)
+
+        expect(mixed.card_summary).to eq(run.card_summary)
+        expect(mixed.card_results.map { |result| [ result.question.id, result.score.to_h ] })
+          .to eq(run.card_results.map { |result| [ result.question.id, result.score.to_h ] })
+      end
+
+      it "負例だけの問いは card_results に入らず negative_results に入る。負例が top-3 に出た問いだけを違反に数える" do
+        mixed = described_class.run(questions + negatives)
+
+        expect(mixed.negative_results.map { |result| result.question.id }).to eq(%w[n1 n2 n3])
+        expect(mixed.negative_summary).to eq(questions: 3, violations: 1)
+        expect(mixed.negative_results.map { |result| result.score.violations.size }).to eq([ 1, 0, 0 ])
+      end
+
+      it "負例だけの問いが無ければ、negative_summary は 0 問" do
+        expect(run.negative_summary).to eq(questions: 0, violations: 0)
+      end
+
+      it "draft の負例だけの問いは採点せず、draft の一覧に残す" do
+        draft = Evaluation::Question.new(id: "n9", kind: :card, status: :draft, query: "肥満度", expected: [],
+                                         forbidden: [ { archetype_id: "openEHR-EHR-OBSERVATION.body_mass_index.v2", at_code: nil } ])
+        mixed = described_class.run(questions + [ draft ])
+
+        expect(mixed.negative_results).to be_empty
+        expect(mixed.drafts.map(&:id)).to eq([ "n9" ])
+      end
+    end
   end
 
   context "aql の問いと保留問" do
@@ -75,6 +118,23 @@ RSpec.describe Evaluation::Runner do
 
       expect(run.aql_results.map { |result| [ result.question.id, result.score.status ] }).to eq([ [ "a001", :match ] ])
       expect(run.aql_summary).to eq(questions: 1, match: 1, mismatch: 0, unexecutable: 0)
+    end
+
+    # S2 の経路（R-20261124-21 の作業列 3）: selection を持つ aql の問いは、ビルダーが組んだ AQL でも採点する
+    it "selection を持つ aql の問いは S2 の経路でも採点し、builder_summary に数が出る。selection の無い問いは母数に入らない" do
+      bp = { archetype_id: BP_ID, at_code: "at0004" }
+      with_selection = Evaluation::Question.new(id: "a901", kind: :aql, query: "収縮期血圧が 110 を超える記録", dataset: "demo_initial",
+                                                reference_aql: SYSTOLIC, expected_rows: [ [ 120.0 ] ],
+                                                selection: { columns: [ bp ], conditions: [ { card: bp, operator: ">", value: 110 } ] })
+      wrong = Evaluation::Question.new(id: "a902", kind: :aql, query: "収縮期血圧が 110 を超える記録", dataset: "demo_initial",
+                                       reference_aql: SYSTOLIC, expected_rows: [ [ 120.0 ] ],
+                                       selection: { columns: [ bp ], conditions: [ { card: bp, operator: "<", value: 110 } ] })
+      run = described_class.run([ aql_question, with_selection, wrong ])
+
+      expect(run.aql_summary).to eq(questions: 3, match: 3, mismatch: 0, unexecutable: 0)
+      expect(run.aql_results.map { |result| [ result.question.id, result.builder_score&.status ] })
+        .to eq([ [ "a001", nil ], [ "a901", :match ], [ "a902", :mismatch ] ])
+      expect(run.builder_summary).to eq(questions: 2, match: 1, mismatch: 1, unexecutable: 0, unbuildable: 0)
     end
 
     it "保留問は母数に入らず、期待先のアーキタイプがコーパス（active のカード）に現れたものだけ保留解除候補になる" do
@@ -122,10 +182,14 @@ RSpec.describe Evaluation::Runner do
       expect(run.aql_summary).to eq(questions: 5, match: 5, mismatch: 0, unexecutable: 0)
     end
 
-    it "保留問は c019・c021 の 2 問で、解除候補は無い。draft は無い" do
+    it "保留問は c019・c021 の 2 問で、解除候補は無い。draft は S2 の経路の案 3 問（母数外）" do
       expect(run.pendings.map(&:id)).to match_array(%w[c019 c021])
       expect(run.releasable_pendings).to be_empty
-      expect(run.drafts).to be_empty
+      expect(run.drafts.map(&:id)).to match_array(%w[a006 a007 a008])
+    end
+
+    it "確定した aql の 5 問は selection を持たないので、S2 の経路の母数は 0（案の確定を待つ）" do
+      expect(run.builder_summary).to eq(questions: 0, match: 0, mismatch: 0, unexecutable: 0, unbuildable: 0)
     end
   end
 end

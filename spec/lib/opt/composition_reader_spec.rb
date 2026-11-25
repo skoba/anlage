@@ -37,8 +37,16 @@ RSpec.describe Opt::CompositionReader do
     expect(read_back).to eq(
       "laboratory_test_result_at0005" => "血液検査",
       "laboratory_test_analyte_at0024" => "空腹時血糖",
-      "laboratory_test_analyte_at0001" => "98.0"
+      "laboratory_test_analyte_at0001" => "98.0",
+      "laboratory_test_analyte_at0001__units" => "mg/dL"
     )
+  end
+
+  # skoba/anlage#138（M3 の P4）: 修正の帳票に前の版の値を入れるため、数量の単位も読み戻す（__units。builder の入力と同じ形）
+  it "数量の単位を <name>__units に読み戻す" do
+    json = build_composition_json(template, { "blood_pressure_systolic" => "120", "blood_pressure_systolic__units" => "mm[Hg]" })
+
+    expect(described_class.call(template, json)).to include("blood_pressure_systolic" => "120.0", "blood_pressure_systolic__units" => "mm[Hg]")
   end
 end
 

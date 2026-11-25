@@ -1,0 +1,23 @@
+<%# skoba/anlage#130: 文言は docs/demo/ui-vocabulary.md の「患者」の行 %>
+<h1>患者: <%= @patient.subject_id %></h1>
+
+<dl>
+  <dt>患者 ID</dt><dd><%= @patient.subject_id %></dd>
+  <dt>名前空間</dt><dd><%= @patient.subject_namespace %></dd>
+  <dt>EHR ID</dt><dd><%= @patient.ehr_id %></dd>
+</dl>
+
+<h2>カルテ記録</h2>
+<% if @compositions.empty? %>
+  <p>この患者のカルテ記録はまだありません。</p>
+<% else %>
+  <ul class="patient-records">
+    <% @compositions.each do |composition| %>
+      <li><%= link_to "#{composition.template.template_id} — #{composition.created_at}", composition_path(composition) %></li>
+    <% end %>
+  </ul>
+<% end %>
+
+<%= button_to "この患者を選ぶ", select_patient_path(@patient.ehr_id) %>
+
+<p><%= link_to "患者の一覧", patients_path %></p>

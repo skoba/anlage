@@ -597,3 +597,38 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 ## 23 項の追記（2026-11-24）: openehr-rails 0.9.0 でも残る
 
 - 実測（0.9.0）: ProblemList と jp_referral の `fhir_profile_ids` は、どちらも `openehr-evaluation-problem-diagnosis-v1` を含む
+
+## 28. 論理削除した composition が、AQL の既定の scope と engine の EHR の画面から外れない（openehr-rails 0.9.0）
+
+- 観察（2026-11-25、`skoba/anlage#140`）: gem の REST の DELETE（`app/controllers/openehr_rails/openehr_api/compositions_controller.rb:57-65`）は、
+  head を同じ uid で commit し直して、その版の `lifecycle_state_code` を 523 にする。新しい行は `latest_version: true` のまま
+- `Aql::Executor` の既定の `composition_scope` は `Composition.latest`（`lib/openehr_rails/aql/executor.rb:10-11`）で、lifecycle を見ない。
+  そのため削除した記録が AQL の結果に残る。engine の EHR のタイムライン（`ehrs/show`）も同じく除かない
+- 加えて、削除の commit の Contribution の change_type は `amendment` のまま（`composition_committer.rb:195` 付近。`deleted` が使われない）
+- anlage の扱い: 画面（カルテ記録一覧・患者の画面）からは、anlage の側で削除済みを外す（`Composition.deleted_uids`）。AQL からは外れない（既知の制限）
+- 根拠を揃えるもの: 削除の版を除く scope を既定にするか、`Executor.execute(aql, composition_scope:)` の推奨の scope を gem が持つか。
+  再現の spec は anlage の `spec/requests/record_delete_spec.rb`（削除の版の lifecycle 523 を確認）に AQL の 1 例を足せば作れる
+
+## 16・23・25 項の追記（2026-11-25）: openehr 2.6.0・openehr-rails 0.10.0 で見たこと（`skoba/anlage#146`）
+
+- **16 項（context）**: 解消を確かめた。
+  - `CompositionCommitter.commit(…, context_start_time:)` の値は `context_start_time` 列に入る。
+  - `RmObjectBuilder#build_event_context`（0.10.0 `lib/openehr_rails/rm/rm_object_builder.rb:97-106`）が EVENT_CONTEXT を組む。
+  - `WHERE c/context/start_time/value` は期間で絞れる。
+  - anlage は保存した時刻を渡す（`app/lib/opt/rm_composition_committer.rb`、spec は `spec/requests/referral_date_query_spec.rb`）。
+  - `setting` は gem が固定の `other`（コード `other`）で組む。openEHR 用語の setting にこのコードは無い（推論。用語集は読んでいない）。
+    anlage では決めない。OPT に制約が無いため。
+- **23 項（FHIR の profile id）**: 0.10.0 で解消。id はテンプレートで修飾される（例 `openehr-problemlist-evaluation-problem-diagnosis-v1`）。
+  - anlage の pin を追随した。
+  - `/fhir/r5/StructureDefinition/<id>` の URL も変わる。
+- **25 項（`archetype_details/template_id`）**: 層が移った。
+  - openehr 2.6.0 では `SELECT c/archetype_details/template_id/value` が例外にならない。
+  - ただし値は全行 nil（実測: `rake demo:reset` の 6 件。jp_referral の骨格は canonical に `archetype_details.template_id` を持つ）。
+  - `template_id` 列には値が入っている（実測: 6 件とも `ProblemList` などの template_id）。
+  - 原因（ソースを読んだ）: openehr-rails 0.10.0 `lib/openehr_rails/rm/rm_object_builder.rb:74-95` の `build_composition` が
+    `archetype_details` を渡していない。AQL の dataset は `Rm::Composition#to_rm` を使う（`aql/dataset_adapter.rb:9`・`:51`）。
+  - 還流先: openehr-rails（`build_composition` が `template_id` 列と `rm_version` 列から ARCHETYPED を組む）。
+  - anlage の扱い: 出所の表示は `c/name/value` のまま。切り替えは openehr-rails の修正の版のあと（R-20261124-20 作業列 3 の残り）。
+  - 再現: anlage の `spec/lib/evaluation/aql_scorer_spec.rb` の例を `c/archetype_details/template_id/value` にして、
+    demo_initial の行が nil で返ることを見る。
+  - 起票の文面の案は `docs/reports/openehr-bump-log.md` R1。

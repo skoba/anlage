@@ -120,6 +120,122 @@ RSpec.describe Evaluation::Questions do
       expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /r3.*rank/)
     end
 
+    # 負例だけの問い（docs/design/s1-eval-v2-plan.md 9 節、R-20261125-7）
+    it "expected が空で forbidden を持つ card の問いは、負例だけの問いとして読む。at_code の無い負例はアーキタイプを指す" do
+      write("cards.yml", <<~YAML)
+        - id: n1
+          kind: card
+          query: "肥満度"
+          expected: []
+          forbidden:
+            - { archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2 }
+        - id: p1
+          kind: card
+          query: "収縮期"
+          expected:
+            - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+      YAML
+
+      negative, positive = described_class.from_v2(dir)
+
+      expect(negative).to have_attributes(negative_only?: true, expected: [], status: :active,
+                                          forbidden: [ { archetype_id: "openEHR-EHR-OBSERVATION.body_mass_index.v2", at_code: nil } ])
+      expect(positive.negative_only?).to be(false)
+    end
+
+    it "expected も forbidden も空の card の問いは読み込みで止まる" do
+      write("bad.yml", "- { id: n2, kind: card, query: q, expected: [] }\n")
+
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /n2.*expected.*forbidden/)
+    end
+
+    # S2 の経路（R-20261124-21 の作業列 3、docs/design/s1-eval-v2-plan.md 8 節）: aql の問いは、クエリビルダーへの入力（selection）を持てる
+    it "aql の問いの selection（表示する項目、条件、文書名）を読む。カードは archetype_id と at_code で指す" do
+      write("aql.yml", <<~YAML)
+        - id: a001
+          kind: aql
+          query: "収縮期血圧が 110 mmHg を超える記録"
+          dataset: demo_initial
+          reference_aql: "SELECT 1"
+          expected_rows: [[120.0]]
+          selection:
+            columns:
+              - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+            conditions:
+              - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+                operator: ">"
+                value: 110
+            composition_name: true
+        - id: a002
+          kind: aql
+          query: "身長"
+          dataset: demo_initial
+          reference_aql: "SELECT 2"
+          expected_rows: []
+      YAML
+
+      a001, a002 = described_class.from_v2(dir)
+      bp = { archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2", at_code: "at0004" }
+
+      expect(a001.selection).to eq(columns: [ bp ], conditions: [ { card: bp, operator: ">", value: 110 } ], composition_name: true)
+      expect(a002.selection).to be_nil
+    end
+
+    # docs/design/s1-eval-v2-plan.md 8.4（R-20261125-6）: クエリビルダーに足した 3 つの条件を、selection でも書ける
+    it "selection の条件に、未記入を含む（include_missing）、範囲の外（OUTSIDE と low・high）、どちらかを満たす（any）を書ける" do
+      write("aql.yml", <<~YAML)
+        - id: a101
+          kind: aql
+          query: "確定の病名（確度の記載が無いものを含む）"
+          dataset: demo_initial
+          reference_aql: "SELECT 1"
+          expected_rows: []
+          selection:
+            columns:
+              - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+            conditions:
+              - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
+                operator: MATCHES
+                value: [at0076]
+                include_missing: true
+              - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+                operator: OUTSIDE
+                value: { low: 90, high: 140 }
+              - any:
+                  - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }, operator: ">=", value: 140 }
+                  - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }, operator: ">=", value: 90 }
+      YAML
+
+      certainty = { archetype_id: "openEHR-EHR-EVALUATION.problem_diagnosis.v1", at_code: "at0073" }
+      systolic = { archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2", at_code: "at0004" }
+      diastolic = systolic.merge(at_code: "at0005")
+
+      expect(described_class.from_v2(dir).first.selection.fetch(:conditions)).to eq([
+        { card: certainty, operator: "MATCHES", value: [ "at0076" ], include_missing: true },
+        { card: systolic, operator: "OUTSIDE", value: { low: 90, high: 140 } },
+        { any: [ { card: systolic, operator: ">=", value: 140 }, { card: diastolic, operator: ">=", value: 90 } ] }
+      ])
+    end
+
+    it "any が配列でない、any の中の条件に card・operator が無い問いは読み込みで止まる" do
+      base = "id: s2, kind: aql, query: q, dataset: demo_initial, reference_aql: SELECT, expected_rows: []"
+      columns = "columns: [ { archetype_id: a, at_code: at0001 } ]"
+      write("bad.yml", "- { #{base}, selection: { #{columns}, conditions: [ { any: 1 } ] } }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /s2.*any/)
+
+      write("bad.yml", "- { #{base}, selection: { #{columns}, conditions: [ { any: [ { value: 1 } ] } ] } }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /s2.*card/)
+    end
+
+    it "selection に columns が無い、条件に card・operator が無い問いは読み込みで止まる" do
+      base = "id: s1, kind: aql, query: q, dataset: demo_initial, reference_aql: SELECT, expected_rows: []"
+      write("bad.yml", "- { #{base}, selection: { conditions: [] } }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /s1.*columns/)
+
+      write("bad.yml", "- { #{base}, selection: { columns: [ { archetype_id: a, at_code: at0001 } ], conditions: [ { value: 1 } ] } }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /s1.*card/)
+    end
+
     it "kind ごとの必須キーを欠く問い、未知の kind・status・match は読み込みで止まる" do
       write("bad_card.yml", "- { id: x1, kind: card, query: 血圧 }\n")
       expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x1.*expected/)
@@ -145,11 +261,13 @@ RSpec.describe Evaluation::Questions do
 
     PD_ID = "openEHR-EHR-EVALUATION.problem_diagnosis.v1"
 
-    it "11 問: active 9 問（card 4・aql 5）、pending 2 問（c019・c021）、draft は無い" do
-      expect(questions.keys).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015 c019 c021])
+    # a006〜a008 は S2 の経路の案（draft、人間レビュー前。R-20261124-21 の作業列 3）。確定した 11 問は変えていない
+    it "確定した 11 問: active 9 問（card 4・aql 5）、pending 2 問（c019・c021）。ほかに S2 の経路の案 3 問（draft）" do
+      expect(questions.values.reject(&:draft?).map(&:id)).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015 c019 c021])
       expect(questions.values.select(&:active?).map(&:id)).to match_array(%w[a001 a002 a003 a004 a005 c008 c010 c014 c015])
       expect(questions.values.select(&:pending?).map(&:id)).to match_array(%w[c019 c021])
-      expect(questions.values.select(&:draft?)).to be_empty
+      expect(questions.values.select(&:draft?).map(&:id)).to match_array(%w[a006 a007 a008])
+      expect(questions.values.select(&:draft?)).to all(have_attributes(kind: :aql, selection: be_present))
     end
 
     it "c008「発症」: 第 1 候補は発症日時（at0077）、第 2 候補はプロブレム・診断名（at0002）" do

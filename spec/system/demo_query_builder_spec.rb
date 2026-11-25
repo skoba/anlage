@@ -44,6 +44,7 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     fill_in "探したい項目", with: "診断名"
     click_button "検索"
     candidate("プロブレム・診断名", "ProblemList").click_button "表示する項目に足す"
+    expect(page).to have_css("#query_columns li", count: 1)
 
     fill_in "探したい項目", with: "診断確度"
     click_button "検索"
@@ -63,7 +64,9 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     fill_in "探したい項目", with: "収縮期"
     click_button "検索"
     candidate("収縮期", "CardiologyEncounter").click_button "表示する項目に足す"
+    expect(page).to have_css("#query_columns li", count: 1)
     candidate("収縮期", "CardiologyEncounter").click_button "条件に足す"
+    expect(page).to have_css("#query_conditions li", count: 1)
     fill_in "condition_0_value", with: "高い"
     click_button "実行"
 
@@ -73,5 +76,61 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     fill_in "condition_0_value", with: "300"
     click_button "実行"
     expect(page).to have_css("#query_result p", text: "該当する記録はありません。")
+  end
+  # docs/design/s2-query-builder-plan.md 7.4（R-20261125-6）
+  it "未記入を含む: 診断確度「確定」だけでは該当なし。「未記入を含む」にチェックすると、確度の記載が無い 1 行が出る" do
+    visit new_query_path
+
+    fill_in "探したい項目", with: "診断名"
+    click_button "検索"
+    candidate("プロブレム・診断名", "ProblemList").click_button "表示する項目に足す"
+    expect(page).to have_css("#query_columns li", count: 1)
+    fill_in "探したい項目", with: "診断確度"
+    click_button "検索"
+    candidate("診断確度", "ProblemList").click_button "条件に足す"
+    within("#query_conditions li") { check "確定" }
+    click_button "実行"
+    expect(page).to have_css("#query_result p", text: "該当する記録はありません。")
+
+    within("#query_conditions li") { check "未記入を含む" }
+    click_button "実行"
+
+    expect(page).to have_css("#query_aql pre", text: 'MATCHES {"at0076"} OR NOT EXISTS ev/data[at0001]/items[at0073]/value)')
+    expect(page).to have_css("#query_lint p", text: "指摘はありません。")
+    expect(page).to have_css("#query_result p", text: "1 行")
+    expect(page).to have_css("#query_result td", text: "2型糖尿病")
+  end
+
+  it "範囲の外・どちらかを満たす: 収縮期が 100〜110 の外、または拡張期 >= 90 で実行すると、120／80 の 1 行が出る" do
+    visit new_query_path
+
+    fill_in "探したい項目", with: "血圧"
+    click_button "検索"
+    # ボタンを押すたびに画面が読み直される。次のボタンは、読み直しを待ってから押す（待たないと、古い画面のボタンを押して前の操作が消える）
+    candidate("収縮期", "CardiologyEncounter").click_button "表示する項目に足す"
+    expect(page).to have_css("#query_columns li", count: 1)
+    candidate("拡張期", "CardiologyEncounter").click_button "表示する項目に足す"
+    expect(page).to have_css("#query_columns li", count: 2)
+    candidate("収縮期", "CardiologyEncounter").click_button "条件に足す"
+    expect(page).to have_css("#query_conditions li", count: 1)
+    candidate("拡張期", "CardiologyEncounter").click_button "条件に足す"
+    expect(page).to have_css("#query_conditions li", count: 2)
+
+    select "範囲の外", from: "condition_0_operator"
+    click_button "AQL を組む"
+    expect(page).to have_css("#query_error", text: "下限と上限の両方が要る")
+    expect(page).to have_field("condition_0_low")
+    fill_in "condition_0_low", with: "100"
+    fill_in "condition_0_high", with: "110"
+    select ">=", from: "condition_1_operator"
+    fill_in "condition_1_value", with: "90"
+    check "前の条件と「または」でつなぐ"
+    click_button "実行"
+
+    expect(page).to have_css("#query_conditions li .connector", text: "または")
+    expect(page).to have_css("#query_aql pre", text: "/items[at0004]/value/magnitude > 110) OR o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude >= 90)")
+    expect(page).to have_css("#query_result p", text: "1 行")
+    expect(all("#query_result tbody td").map(&:text)).to eq([ "120.0", "80.0" ])
+    expect(page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")).to be(false)
   end
 end

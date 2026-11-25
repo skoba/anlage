@@ -5,7 +5,7 @@ module Evaluation
     module_function
 
     def render(run, label:)
-      [ "# 評価 v2（#{label}）", card_section(run), aql_section(run), draft_section(run), pending_section(run) ]
+      [ "# 評価 v2（#{label}）", card_section(run), negative_section(run), aql_section(run), builder_section(run), draft_section(run), pending_section(run) ]
         .compact.join("\n\n") + "\n"
     end
 
@@ -42,6 +42,21 @@ module Evaluation
       lines.join("\n")
     end
 
+    # 負例だけの問い（期待が空で、負例だけを持つ。docs/design/s1-eval-v2-plan.md 9 節）。問いが無ければ節を出さない
+    def negative_section(run)
+      summary = run.negative_summary
+      total = summary.fetch(:questions)
+      return nil if total.zero?
+
+      lines = [ "## card: 負例だけの問い（#{total} 問）", "", "| 指標 | 値 |", "|---|---|" ]
+      lines << "| 負例が上位（top-3）に出た問い | #{summary.fetch(:violations)}/#{total} |"
+      lines << "" << "### 負例が上位に出た問い" << ""
+      lines.concat(list(run.negative_results.select { |result| result.score.violations.any? }) do |result|
+        "#{result.question.id}: #{result.question.query} → #{refs(result.score.violations)}"
+      end)
+      lines.join("\n")
+    end
+
     def aql_section(run)
       summary = run.aql_summary
       total = summary.fetch(:questions)
@@ -54,6 +69,26 @@ module Evaluation
         score = result.score
         detail = score.status == :unexecutable ? score.error : "不足 #{score.missing.to_json} 余分 #{score.extra.to_json}"
         "#{result.question.id}: #{result.question.query} — #{detail}"
+      end)
+      lines.join("\n")
+    end
+
+    # S2 の経路。selection を持つ問いが無ければ節を出さない
+    def builder_section(run)
+      summary = run.builder_summary
+      total = summary.fetch(:questions)
+      return nil if total.zero?
+
+      names = { mismatch: "不一致", unexecutable: "実行不能", unbuildable: "組めない" }
+      lines = [ "## aql: S2 の経路（クエリビルダーが組んだ AQL。#{total} 問）", "", "| 結果 | 数 |", "|---|---|" ]
+      lines << "| 一致 | #{summary.fetch(:match)}/#{total} |"
+      names.each { |status, name| lines << "| #{name} | #{summary.fetch(status)}/#{total} |" }
+      lines << "" << "### 一致しなかった問い" << ""
+      failed = run.aql_results.select { |result| result.builder_score && result.builder_score.status != :match }
+      lines.concat(list(failed) do |result|
+        score = result.builder_score
+        detail = score.status == :mismatch ? "不足 #{score.missing.to_json} 余分 #{score.extra.to_json}（#{score.aql.to_s.squish}）" : score.error
+        "#{result.question.id}: #{result.question.query} — #{names.fetch(score.status)}: #{detail}"
       end)
       lines.join("\n")
     end

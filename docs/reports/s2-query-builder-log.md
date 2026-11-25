@@ -102,3 +102,162 @@
 - 直し: 新しい spec の定数に `QB_` の接頭辞。spec 全体で重複する定数名が無いことを確かめた（`grep` で重複 0）
 - 全 suite（worktree、SQLite）: 399 examples, 0 failures, 2 pending。rubocop 146 files, no offenses
 
+## R14 PR #121 のマージ（2026-11-24）
+
+- main が進み（書く側の #113・#116・#118・#120）、`app/assets/stylesheets/application.css` が競合した。両方とも末尾への追記で、両方を残して解消（`640b6b0`、merge）
+- 取り込み後の全 suite（worktree）: 424 examples, 0 failures, 2 pending。head の CI run 45412098750 green
+- PR #121 → main `946838c`（セッションがマージ。止まらずに進めてよい範囲の実装、head の CI green、競合なし）
+
+## R15 ゲート報告: 評価 v2 に足す S2 の経路の問い（作業列 3。ゴールドの確定は人間）（2026-11-24）
+
+**判断を求めること**: (1) 案の 3 問（`spec/fixtures/evaluation/v2/aql_s2.yml`、draft）を、臨床のレビューで確定してよいか。
+(2) 確定済みの a001〜a005 に `selection` を足してよいか（下の YAML。ゴールド本体なので、セッションは足していない）。
+
+### 入れたもの（枠組み。計画書 `docs/design/s1-eval-v2-plan.md` 8 節）
+
+- aql の問いは `selection`（クエリビルダーへの入力）を持てる。`Evaluation::BuilderRoute` が、selection → ビルダー → リンタ → 期待行との照合で採点する
+- 結果は 一致／不一致／実行不能／組めない。報告に「aql: S2 の経路」の節（母数が 0 なら出さない）
+- Red／Green: 読み込みと採点器は `uninitialized constant Evaluation::BuilderRoute` → 49 examples, 0 failures。集計と報告は 16 examples, 2 failures → 61 examples, 0 failures
+- 訂正: 計画書 8 節は、実装のコミットのあとに書いた（先に書くべきだった）。中身は実装と同じ
+
+### 案の 3 問と実測（demo_initial。案を active と見なして採点。情報）
+
+| id | 問い | 条件型 | 参照 AQL | S2 の経路 |
+|---|---|---|---|---|
+| a006 | 病名に「糖尿病」を含む記録を、出所の文書名つきで | 包含（LIKE）、横断 | 一致 `[["ProblemList","2型糖尿病"],["jp_referral","2型糖尿病"]]` | 一致 |
+| a007 | 診断確度が「疑い」または「確定」の傷病名 | 値集合のコード 2 つ | 一致 `[["高血圧症"],["2型糖尿病"]]` | 一致 |
+| a008 | 拡張期血圧が 90 mmHg 未満の記録の、収縮期と拡張期 | 数値（<）、2 列 | 一致 `[[120.0, 80.0]]` | 一致 |
+
+- いまの採点（`RESET=1 bundle exec rake evaluation:run`）: card 4 問 Top-1 4/4、aql 5 問 一致 5/5、draft 3 問（a006〜a008）、保留問 2 問。
+  S2 の経路の母数は 0（selection を持つ active の問いがまだ無い）
+- 確定済みの a001〜a005 と同じ選択を組むと、5 問とも期待行に一致する（`spec/lib/query_builder/runner_spec.rb` が固定。R11）
+
+### 人間に問うこと（案の notes にも書いた）
+
+1. a006: 「糖尿病を含む」は臨床の問いとして自然か
+2. a007: demo_initial に「確定」の記録が無い。期待行が a002 と同じになる問いを置く意味があるか
+3. 日付の範囲の問いを置けない: demo_initial の problem_diagnosis 3 件は、発症日時（at0077）がすべて空（実測）。
+   日付の条件を測るには、初期データに発症日時のある記録が要る（初期データは書く側。足すなら別に裁定が要る）
+4. a001〜a005 に足す `selection`（下）
+
+```yaml
+# a001
+selection:
+  columns: [ { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 } ]
+  conditions:
+    - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }, operator: ">", value: 110 }
+# a002
+selection:
+  columns: [ { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 } ]
+  conditions:
+    - { card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }, operator: MATCHES, value: [at0074] }
+# a003
+selection:
+  columns: [ { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 } ]
+  conditions:
+    - { card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }, operator: MATCHES, value: ["2型糖尿病", "高血圧症"] }
+  composition_name: true
+# a004
+selection:
+  columns: [ { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0001 } ]
+  conditions:
+    - { card: { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0024 }, operator: "=", value: "空腹時血糖" }
+# a005
+selection:
+  columns: [ { archetype_id: openEHR-EHR-OBSERVATION.height.v2, at_code: at0004 } ]
+  conditions:
+    - { card: { archetype_id: openEHR-EHR-OBSERVATION.height.v2, at_code: at0004 }, operator: ">=", value: 170 }
+```
+
+### 残した制約
+
+- カードを `{archetype_id, at_code}` で指すので、同じアーキタイプ・同じ at-code が 1 つのテンプレートに複数ある場合（jp_referral の organisation at0001 が 3 か所）は、最初の 1 枚に当たる。いまの問いには無い
+
+
+## R16 条件を足す（R-20261125-6）: OR と NOT EXISTS が実行の経路で通るかの確認（2026-11-25）
+
+- 基準点: anlage main `79ebcc4`。`Gemfile.lock` は openehr 2.5.0、openehr-rails 0.9.0
+- やり方: リポジトリの外の一時の spec で、demo_initial（`Evaluation::Datasets.build`）の上の AQL を
+  `QueryBuilder::Linter.lint` と `OpenehrRails::Aql::Executor.execute` に通した
+- 実測（設計書 7.1 の表）: `NOT EXISTS <確度>`、`MATCHES … OR NOT EXISTS …`、`(… OR …) AND …`、数値の `< … OR > …` は、どれもリンタの指摘なしで実行でき、
+  行は手で数えたとおりだった（傷病 3 件のうち確度の記載が無いのは 1 件。血圧は 120／80 の 1 件）
+- 結論: いまの版のまま通る。止まる条件（通らなければ報告）には当たらない。上流の候補に足すものは無い
+- 読んだソース: `openehr-2.5.0/lib/openehr/aql/engine/predicate_evaluator.rb`（`Model::OrExpr`・`NotExpr`・`ExistsExpr` の分岐）
+
+## R17 自己承認した判断（設計書 7 節。R-20261125-6 の範囲内）
+
+| # | 判断 | 捨てた案 |
+|---|---|---|
+| H1 | 「未記入」は `NOT EXISTS <項目の value のパス>` で書く | 要素（`items[at…]`）に対する NOT EXISTS（実測ではどちらも同じ行。カードのパスをそのまま使えるほうにした） |
+| H2 | 「未記入を含む」は値集合の条件だけ | 数値・日付・文字列にも付ける（裁定の対象は値集合。広げるなら別に計画する） |
+| H3 | 「範囲の外」は下限と上限の両方を求め、下限 > 上限は組まない | 片方だけを許す（ふつうの比較と同じになる）。下限 > 上限を許す（すべての記録に当たる） |
+| H4 | OR を含む条件は、1 つだけのときも括弧でくくる | AND と並ぶときだけくくる（組む AQL の形が条件の数で変わる） |
+| H5 | 画面の「どちらかを満たす」は、条件ごとのチェック「前の条件と「または」でつなぐ」で作る | 組を作る別の操作（JavaScript か、画面の遷移が増える。G4 のまま、状態は URL だけにした） |
+| H6 | 「範囲の外」を選んで組み直すと、入力が「下限」「上限」に替わる。替わる前の 1 回は「下限と上限の両方が要る」と出る | 値・下限・上限を常に並べる（どの入力が効くかが分かりにくい） |
+
+## R18 サイクル: ビルダー（`37a6e49`）
+
+- Red（`bundle exec rspec spec/lib/query_builder/builder_spec.rb`。17 examples, 6 failures）:
+
+  ```
+  1) 未記入を含む: …
+       expected: "WHERE (ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {\"at0076\"} OR NOT EXISTS ev/data[at0001]/items[at0073]/value)"
+            got: "WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {\"at0076\"}"
+  2) 範囲の外: …                       QueryBuilder::Builder::InvalidSelection
+  3) どちらかを満たす: 別々の項目 …     KeyError
+  4) どちらかを満たす: 節が 2 つの条件 … KeyError
+  5) 組めない選択は InvalidSelection で止める
+       expected QueryBuilder::Builder::InvalidSelection with message matching /未記入を含むは、値集合の条件にだけ/ but nothing was raised
+  6) 組んだ AQL はどれもリンタを通る    QueryBuilder::Builder::InvalidSelection
+  ```
+
+  （その前に 2 回、spec の文字列リテラルの区切りの誤りで SyntaxError になった。実装に入る前に直した）
+- Green: `Builder` に `include_missing`、`OUTSIDE`、`{ any: […] }`。`spec/lib/query_builder` 43 examples, 0 failures
+
+## R19 実行とリンタの pin（`85d743f`。実装の変更なし）
+
+- `runner_spec` に 3 例（demo_initial の上で: 確定 0 行 → 未記入を含めて 1 行、疑い＋未記入で 3 行。範囲の外 1 行／0 行。どちらかを満たす 1 行／0 行）
+- `linter_spec` に 3 例（MATCHES と NOT EXISTS の OR は指摘なし。NOT EXISTS の中の存在しない節は error〔パス〕。OR の中の型の不一致と値集合に無いコードは error）
+- どれも書いた時点で通った（Red にならない）。リンタは OR・NOT・EXISTS の中をもとから辿っていたため。仕様の固定として残す。49 examples, 0 failures
+
+## R20 サイクル: 画面（`ab87545`）
+
+- Red（`bundle exec rspec spec/requests/queries_spec.rb`。17 examples, 6 failures）: 新しい 5 例（入力が無い、AQL に OR が無い、`conditions[0][low]` が無い など）と、
+  数値の演算子の一覧を固定していた既存の 1 例（ビルダーの `OPERATORS` に OUTSIDE が入ったため `got: [">", ">=", "<", "<=", "=", "OUTSIDE"]`）
+- Green: `QueriesController`（`include_missing`・`low`・`high`・`or`、続く「または」を 1 つの組にまとめる）、ビュー、語彙表（同じコミット）。
+  既存の 2 つの pin（演算子の一覧、値集合の条件のラベルの一覧）は、足した入力に合わせて更新した
+- 実ブラウザの spec に 2 例。1 例は、期待する AQL の文字列を書き間違えて落ちた（「範囲の外」は自分の括弧を持つので `> 110) OR …`）。spec を直した
+- 全 suite: 509 examples, 0 failures, 2 pending
+
+## R21 残っていること
+
+- 評価の問いの `selection` の形に、この 3 つの条件はまだ無い（`Evaluation::Questions.selection`）。問いの案を出すときに足す（設計書 7.6）
+- 評価の問いの案は、サンプルデータ（R-20261125-5、書く側）が main に入ってから
+- いまの初期データでは、「どちらかを満たす」の両側が別々の記録で当たる例を作れない（血圧が 1 件）。データが増えたら spec に足す
+
+## R22 評価の selection に 3 つの条件を足す（2026-11-25、R-20261125-6。R21 の 1 つめ）
+
+- サンプルデータの実装が main にまだ無く、問いの案は出せない。待たない項目として、`selection` の形だけ先に足した（計画: `docs/design/s1-eval-v2-plan.md` 8.4）
+- Red（`bundle exec rspec spec/lib/evaluation/questions_spec.rb spec/lib/evaluation/builder_route_spec.rb`。23 examples, 3 failures）:
+
+  ```
+  1) Evaluation::Questions.from_v2 selection の条件に、未記入を含む…、範囲の外…、どちらかを満たす（any）を書ける
+     Evaluation::Questions::InvalidQuestion（selection の条件には card と operator が要る）
+  2) Evaluation::BuilderRoute どちらかを満たす（any）と範囲の外（OUTSIDE）の selection: 中のカードも索引から引いて組む   KeyError
+  3) Evaluation::BuilderRoute any の中の、索引に無いカードは unbuildable                                             KeyError
+  ```
+
+  同時に足した 2 例（`include_missing` の採点、`any` が配列でないときの停止）は、書いた時点で通った。
+  前者は条件のキーをそのままビルダーに渡していたため、後者はもとの誤りの文に条件の中身（`any`）が出るため。固定として残す
+- Green: `Questions.selection_condition`（`any` を再帰で読む）、`BuilderRoute#resolve`（`any` の中のカードも索引から引く）。
+  評価の spec と `evaluation_run_spec` で 62 examples, 0 failures
+- ゴールド（`spec/fixtures/evaluation/v2/`）は変えていない
+
+## R23 実ブラウザの spec の不安定さを直す（2026-11-25）
+
+- 現象: PR #131 の CI（run 45614802792）で `spec/system/demo_query_builder_spec.rb:100`（範囲の外・どちらかを満たす）が落ちた。
+  `Unable to find select box "condition_1_operator"`。PR #131 は検索もクエリビルダーも変えていない。同じ spec は main（`5eceeca`、run 45614244452）では通っている
+- 原因（推論。再現はさせていない）: 「表示する項目に足す」「条件に足す」を 4 回続けて押していて、あいだに画面の読み直しを待っていない。
+  画面の状態は URL だけなので、読み直しの前に次のボタンを押すと、古い画面の状態で送られて前の操作が消える。R20 で足した spec の書き方の誤り
+- 直し: ボタンを押すたびに、項目・条件の数が増えたことを待つ（`have_css(…, count:)`）。同じ形のほかの 3 例にも待ちを足した。実装は変えていない
+- 確認: `bundle exec rspec spec/system/demo_query_builder_spec.rb` を 3 回続けて、3 回とも 5 examples, 0 failures

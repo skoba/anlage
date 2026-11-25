@@ -1,0 +1,28 @@
+<%# skoba/anlage#130: 文言は docs/demo/ui-vocabulary.md の「患者」の行 %>
+<h1>患者</h1>
+
+<%= form_with url: patients_path, method: :post, local: true, scope: :patient do |form| %>
+  <div class="field <%= "field-error" if @error %>">
+    <%= form.label :subject_id, "患者 ID" %>
+    <%= form.text_field :subject_id, value: @subject_id %>
+    <% if @error %><p class="field-error-message"><%= @error %></p><% end %>
+  </div>
+  <button type="submit">患者を作る</button>
+<% end %>
+
+<% if @patients.empty? %>
+  <p>患者はまだいません。</p>
+<% else %>
+  <table class="patients">
+    <thead><tr><th>患者 ID</th><th>名前空間</th><th>EHR ID</th></tr></thead>
+    <tbody>
+      <% @patients.each do |patient| %>
+        <tr>
+          <td><%= link_to patient.subject_id, patient_path(patient.ehr_id) %></td>
+          <td><%= patient.subject_namespace %></td>
+          <td><%= patient.ehr_id %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

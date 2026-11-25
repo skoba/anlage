@@ -173,3 +173,174 @@ NameError: uninitialized constant Opt::PathcardDiff
 ### M3 の先行分の残り
 
 - W1〜W6 はこれで出そろった。作業列 7（患者と EHR、カルテ記録）は M2 の出口のあと
+
+## R5 P1（`skoba/anlage#130`）: 患者（EHR）の一覧と作成（2026-11-25）
+
+計画書 `docs/design/m3-plan.md` 7 節（PR #129 → main `0cde02a`）。R-20261124-20 作業列 4。
+
+### 実測（gem の API）
+
+- `OpenehrRails::Rm::Ehr`（openehr-rails 0.9.0 `lib/openehr_rails/rm/ehr.rb:7`）: `validates :ehr_id, presence: true, uniqueness: true`、
+  `time_created`・`system_id` は before_validation で入る
+- 作り方は gem の REST と同じ: `Ehr.create!(ehr_attributes.merge(ehr_id: SecureRandom.uuid))`（`app/controllers/openehr_rails/openehr_api/ehrs_controller.rb:142`）
+- gem には患者 ID の一意の制約が無い。重複は anlage の側で（名前空間ごとに）確かめる
+
+### 判断（自己承認、計画書の範囲内）
+
+- 一覧に出すのは subject_id のある EHR だけ（gem の REST で subject なしに作られた EHR は出さない）
+- 名前空間は固定の `anlage`（入力欄を出さない）
+
+### Red
+
+```
+$ bundle exec rspec spec/requests/patients_spec.rb spec/requests/demo_navigation_spec.rb spec/requests/queries_spec.rb
+      1      Failure/Error:
+      1      Failure/Error: expect(current_items).to eq(expected), "#{path} の印"
+      2      Failure/Error: expect(links_in("nav#app_nav")).to eq(NAV_LINKS)
+      1      Failure/Error: expect(links_in("nav#app_nav")).to eq(NAV_LINKS), "#{path} のナビ"
+      1      Failure/Error: expect(nav.map(&:first)).to eq(%w[患者 テンプレート カルテ記録一覧 パスカード検索 クエリビルダー] + [ "AQL 照会" ])
+      1      Failure/Error: expect(response).to have_http_status(:ok)
+      2      Failure/Error: expect(response).to have_http_status(:unprocessable_content)
+      1 24 examples, 9 failures
+```
+
+（ナビの pin は語彙表の写しなので、語彙表と同じコミットで 6 項目に追随させた。`spec/requests/queries_spec.rb` は引く側のファイルだが、語彙の追随だけ）
+
+### Green
+
+全 suite（開発機）: `454 examples, 0 failures, 2 pending`
+
+## R6 P2（`skoba/anlage#134`）: いまの患者を選ぶ（2026-11-25）
+
+### 判断（自己承認、計画書の範囲内）
+
+- いまの患者はナビの中（リンクの下）に出す。ナビのリンクを pin する spec（6 つ）を変えないよう、選択の解除は `button_to`（form）にした
+- engine の画面（AQL 照会）も同じ partial を使うので、いまの患者は anlage のヘルパーではなく partial の中で `session[:ehr_id]` から引く
+- 選んだ EHR が無くなっていれば、選んでいないものとして扱う（エラーにしない）
+
+### Red
+
+```
+$ bundle exec rspec spec/requests/patient_selection_spec.rb
+      2      Failure/Error: expect(current_patient_text).to eq("いまの患者: 患者を選んでいません")
+      1      Failure/Error: expect(document.at_css("form[action='/patients/#{patient.ehr_id}/select'] button").text).to eq("この患者を選ぶ")
+      1      Failure/Error: expect(response).to redirect_to("/patients")
+      1 5 examples, 4 failures
+```
+
+（「無い EHR は選べない（404）」は、ルートが無い段階でも 404 で通っていた）
+
+### Green
+
+全 suite（開発機）: `459 examples, 0 failures, 2 pending`
+
+## R7 P3（`skoba/anlage#136`）: 記録を EHR に結び付ける（2026-11-25）
+
+### 実測（gem の API）
+
+- `OpenehrRails::Rm::CompositionCommitter.commit(canonical_hash, uid:, ehr: nil, owner: nil, context_start_time: nil)`
+  （openehr-rails 0.9.0 `lib/openehr_rails/rm/composition_committer.rb:12`）。`ehr:` を渡すだけで RM の composition の ehr が入る
+- AQL の EHR の述語（`FROM EHR e[ehr_id/value='…']`）は openehr 2.5.0 で評価される（spec で確認）
+
+### 判断（自己承認、計画書の範囲内）
+
+- いまの患者は `ApplicationController#current_ehr`（private）。P2 の partial の引き方と同じく、EHR が無くなっていれば nil
+- 患者の画面の記録は、RM の `Composition.latest.where(ehr:)` の uid から原本（`compositions`）を引く（RM が権威）
+- 見本の記録（`Demo::SampleCompositions`、`rake demo:reset`）は変えない（EHR に結び付けない）
+
+### Red
+
+```
+$ bundle exec rspec spec/requests/records_to_ehr_spec.rb
+      1      Failure/Error: expect(document.at_css("h2").text).to eq("カルテ記録")
+      1      Failure/Error: expect(response.body).to include("この患者のカルテ記録はまだありません。")
+      1      Failure/Error: expect(result.rows).to eq([ [ patient.ehr_id, "高血圧症" ] ])
+      1      Failure/Error: expect(rm_ehr_of(save_problem("高血圧症"))).to eq(patient)
+      1 5 examples, 4 failures
+```
+
+（「選んでいなければ結び付けない」は、従来の挙動の pin として初めから通る）
+
+### Green
+
+全 suite（開発機）: `464 examples, 0 failures, 2 pending`
+
+## R8 P4（`skoba/anlage#138`）: カルテ記録の版（修正）（2026-11-25）
+
+### 実測: 読み戻し → 組み直しで content が変わるか（6 つの fixture、FormCapability の作例値）
+
+| fixture | content が同じ | 読み戻せない値 |
+|---|---|---|
+| ProblemList | はい | 無し |
+| CardiologyEncounter・LabResultReport・bmi_calculation・patient_blood_pressure | いいえ → 単位の読み戻しのあと、はい | 単位（`__units`。`…/value/units` だけが違った） |
+| jp_referral | いいえ | INSTRUCTION（narrative・activities・protocol の CLUSTER）。Issue #30 の残り |
+
+content のほかの差（時刻など）は無かった。
+
+### 判断（自己承認、計画書の範囲内）
+
+- 修正できるかは、記録ごとに「読み戻して組み直すと content が原本と同じ」で決める（`Opt::CompositionEditability`）。規則を reader と二重に持たない
+- 単位の読み戻しを reader に足した（計画書 P4 の「修正の帳票には前の版の値が入っている」のため。単位が 2 つある BMI は、前の版の単位を選んでおく）
+- 版の番号は、同じ uid の原本の行の並び（古い順に 1 から）。commit 1 回で行が 1 つ足されるので、RM の version_tree_id と同じになる（spec で 1・2 を確認）
+- 修正しても記録の EHR は変えない（RM の head の ehr を渡す。いまの患者ではない）
+- 一覧（`/compositions`）は各記録の新しい版だけ。uid の無い古い行は、それぞれを 1 件とする
+- 修正の帳票は `forms/show` を使い、`@composition` があれば PATCH にする
+
+### Red
+
+```
+$ bundle exec rspec spec/lib/opt/composition_editability_spec.rb
+An error occurred while loading ./spec/lib/opt/composition_editability_spec.rb.
+NameError:
+$ bundle exec rspec spec/lib/opt/composition_reader_spec.rb spec/requests/record_versions_spec.rb
+      1      Failure/Error:
+      1      Failure/Error: expect { edit_problem(first, "本態性高血圧症") }.to change(Composition, :count).by(1)
+      1      Failure/Error: expect(described_class.call(template, json)).to include("blood_pressure_systolic" => "120.0", "blood_pressure_systolic__units" => "mm[Hg]")
+      1      Failure/Error: expect(document.at_css("a#edit_composition")["href"]).to eq("/compositions/#{first.id}/edit")
+      1      Failure/Error: expect(document.at_css("h2#version_history").text).to eq("版の履歴")
+      1      Failure/Error: expect(document.css("main a").map { _1["href"] }).to contain_exactly("/compositions/#{second.id}", "/compositions/#{other.id}")
+      1      Failure/Error: expect(response).to have_http_status(:unprocessable_content)
+      1      Failure/Error: expect(response.body).to include("この記録は修正できません")
+      1 13 examples, 8 failures
+
+$ bundle exec rspec spec/requests/record_versions_spec.rb   # 単位の選択（あとから足した 1 例）
+       expected: "[lb_av]/[in_i]2"
+            got: nil
+8 examples, 1 failure
+```
+
+### Green
+
+全 suite（開発機）: `476 examples, 0 failures, 2 pending`
+
+## R9 P5（`skoba/anlage#140`）: カルテ記録の削除（論理削除）（2026-11-25）
+
+### 実測（gem の API）
+
+- gem の REST の DELETE（openehr-rails 0.9.0 `openehr_api/compositions_controller.rb:57-65`）:
+  `CompositionCommitter.commit(head_composition.to_canonical_hash, uid: head_composition.uid, ehr: ehr)` のあと
+  `composition.version.update!(lifecycle_state_code: Version::LIFECYCLE_DELETED)`。anlage も同じ手順を、gem の公開されたモデルで行う
+- `Rm::Composition#to_canonical_hash`（`rm/composition.rb:35`）、`has_one :version`（:26）
+- AQL の既定の scope は削除を除かない → `docs/upstream-candidates.md` 28 項
+
+### 判断（自己承認、計画書の範囲内）
+
+- 削除では原本（`compositions`）の行を足さない（削除の版に新しい原本は無い）。削除済みかは RM の head の版の lifecycle で決める（`Composition#deleted?`）
+- 削除できるのは、新しい版の行で、削除済みでなく、uid のある記録だけ（ほかは 422）。修正（P4）も削除済みには 422
+- 削除のボタンには確認（`turbo_confirm`）を付ける
+- 一覧・患者の画面からは外すが、記録の画面（URL を直接開く）は「削除済み」と出して 200
+
+### Red
+
+```
+$ bundle exec rspec spec/requests/record_delete_spec.rb
+      1      Failure/Error:
+      1      Failure/Error: expect(document.at_css("form[action='/compositions/#{composition.id}'] input[name='_method'][value='delete']")).to be_present
+      1      Failure/Error: expect(response).to have_http_status(:unprocessable_content)
+      1      Failure/Error: expect(response.body).to include("このカルテ記録は削除済みです。")
+      1 4 examples, 4 failures
+```
+
+### Green
+
+全 suite（開発機）: `480 examples, 0 failures, 2 pending`

@@ -85,6 +85,29 @@ RSpec.describe Evaluation::Report do
     )
   end
 
+  # S2 の経路（R-20261124-21 の作業列 3）
+  it "S2 の経路の集計（一致・不一致・実行不能・組めない）と、一致しなかった問いの理由と AQL を出す。selection を持つ問いが無ければ節を出さない" do
+    expect(markdown).not_to include("S2 の経路")
+
+    question = Evaluation::Question.new(id: "a03", kind: :aql, query: "疑いの傷病名", dataset: "demo_initial", reference_aql: "SELECT 3",
+                                        expected_rows: [ [ "疑い" ] ], selection: { columns: [], conditions: [] })
+    reference = Evaluation::AqlScorer::Score.new(status: :match, rows: [], missing: [], extra: [])
+    ok = Evaluation::Runner::AqlResult.new(question: question, score: reference,
+                                           builder_score: Evaluation::BuilderRoute::Score.new(status: :match, aql: "SELECT ok", missing: [], extra: []))
+    ng = Evaluation::Runner::AqlResult.new(question: question, score: reference,
+                                           builder_score: Evaluation::BuilderRoute::Score.new(status: :unbuildable, aql: nil, missing: [], extra: [],
+                                                                                              error: "索引にカードが無い: x at0001"))
+    diff = Evaluation::Runner::AqlResult.new(question: question, score: reference,
+                                             builder_score: Evaluation::BuilderRoute::Score.new(status: :mismatch, aql: "SELECT ng", missing: [ [ "疑い" ] ], extra: []))
+    route_run = Evaluation::Runner::Run.new(card_results: [], aql_results: [ ok, ng, diff ], drafts: [], pendings: [], corpus_archetype_ids: [])
+
+    expect(described_class.render(route_run, label: "x")).to include(
+      "## aql: S2 の経路（クエリビルダーが組んだ AQL。3 問）", "| 一致 | 1/3 |", "| 不一致 | 1/3 |", "| 実行不能 | 0/3 |", "| 組めない | 1/3 |",
+      "- a03: 疑いの傷病名 — 組めない: 索引にカードが無い: x at0001",
+      "- a03: 疑いの傷病名 — 不一致: 不足 [[\"疑い\"]] 余分 []（SELECT ng）"
+    )
+  end
+
   it "期待先がコーパスに現れた保留問は「保留解除候補」と印が付く" do
     releasable = Evaluation::Runner::Run.new(
       card_results: [], aql_results: [], drafts: [],
@@ -92,5 +115,24 @@ RSpec.describe Evaluation::Report do
       corpus_archetype_ids: [ BP_V2 ]
     )
     expect(described_class.render(releasable, label: "x")).to include("- c21: 既往歴 — story がコーパスに入る **保留解除候補**")
+  end
+  # 負例だけの問い（docs/design/s1-eval-v2-plan.md 9 節、R-20261125-7）
+  it "負例だけの問いの節: 問いの数、負例が上位（top-3）に出た問いの数と、出た負例。card の集計表は変わらない" do
+    bmi = { archetype_id: "openEHR-EHR-OBSERVATION.body_mass_index.v2", at_code: nil }
+    clean = card_result(Evaluation::Question.new(id: "n1", kind: :card, query: "肥満度", expected: [], forbidden: [ bmi ]), rank: nil)
+    violated = card_result(Evaluation::Question.new(id: "n2", kind: :card, query: "BMI判定", expected: [], forbidden: [ bmi ]), rank: nil,
+                           violations: [ bmi ])
+    with_negatives = Evaluation::Runner::Run.new(card_results: run.card_results, aql_results: [], drafts: [], pendings: [],
+                                                 corpus_archetype_ids: [], negative_results: [ clean, violated ])
+    markdown = described_class.render(with_negatives, label: "x")
+
+    expect(markdown).to include("## card（3 問）", "| Top-1 | 1/3 (33.33%) |", "| 負例違反 | 1/3 |",
+                                "## card: 負例だけの問い（2 問）", "| 負例が上位（top-3）に出た問い | 1/2 |",
+                                "### 負例が上位に出た問い\n\n- n2: BMI判定 → openEHR-EHR-OBSERVATION.body_mass_index.v2")
+    expect(markdown.index("## card: 負例だけの問い")).to be_between(markdown.index("## card（3 問）"), markdown.index("## aql"))
+  end
+
+  it "負例だけの問いが無ければ、節を出さない" do
+    expect(markdown).not_to include("負例だけの問い")
   end
 end

@@ -2,7 +2,10 @@ module QueryBuilder
   # クエリビルダーの本体（docs/design/s2-query-builder-plan.md 6.3）。カード（Template.active の pathcards のハッシュ）と
   # 条件から AQL の文字列を組む。自然言語は入らない。意味（パス・型・値集合）はカードから取り、ここで決めるのは AQL の形だけ。
   #   columns:          射影するカードの配列
-  #   conditions:       [{ card:, operator:, value: }]。AND でつなぐ
+  #   conditions:       [{ card:, operator:, value: }]。AND でつなぐ。7 節（R-20261125-6）の 3 つの形:
+  #                       未記入を含む     { card:, operator: "MATCHES", value: [コード], include_missing: true }（値集合だけ）
+  #                       範囲の外         { card:, operator: "OUTSIDE", value: { low:, high: } }（数値だけ）
+  #                       どちらかを満たす { any: [条件, 条件, …] }（2 つ以上。入れ子にしない）
   #   composition_name: 真なら先頭に c/name/value（出所の文書名）
   class Builder
     class InvalidSelection < StandardError; end
@@ -14,7 +17,7 @@ module QueryBuilder
     DATE_TYPES = %w[DV_DATE_TIME DV_DATE].freeze
     # 条件の種類 → 使える演算子
     OPERATORS = {
-      number: %w[> >= < <= =], code: %w[MATCHES], date: %w[BETWEEN], text: %w[= MATCHES CONTAINS]
+      number: %w[> >= < <= = OUTSIDE], code: %w[MATCHES], date: %w[BETWEEN], text: %w[= MATCHES CONTAINS]
     }.freeze
 
     Entry = Struct.new(:rm_type, :archetype_id, :path, keyword_init: true) do
@@ -48,7 +51,7 @@ module QueryBuilder
     def build
       raise InvalidSelection, "表示する項目が 1 つも無い" if @columns.empty?
 
-      entries = (@columns + @conditions.map { |condition| condition.fetch(:card) }).map { |card| entry_of(card) }
+      entries = (@columns + @conditions.flat_map { |condition| cards_of(condition) }).map { |card| entry_of(card) }
       archetype_ids = entries.map(&:archetype_id).uniq
       unless archetype_ids.size == 1
         raise InvalidSelection, "1 つのクエリで使える ENTRY のアーキタイプは 1 つ（#{archetype_ids.join('、')}）"
@@ -59,7 +62,7 @@ module QueryBuilder
       select.unshift("c/name/value") if @composition_name
       lines = [ "SELECT #{select.join(', ')}",
                 "FROM EHR e CONTAINS COMPOSITION c CONTAINS #{entry.rm_type} #{entry.variable}[#{entry.archetype_id}]" ]
-      where = @conditions.flat_map { |condition| clauses(condition) }
+      where = @conditions.flat_map { |condition| group?(condition) ? [ any(condition) ] : clauses(condition) }
       lines << "WHERE #{where.join(' AND ')}" if where.any?
       lines.join("\n")
     end
@@ -86,6 +89,25 @@ module QueryBuilder
       "#{value_path(card)}/#{self.class.kind(card) == :number ? 'magnitude' : 'value'}"
     end
 
+    def group?(condition) = condition.key?(:any)
+
+    def cards_of(condition)
+      group?(condition) ? Array(condition[:any]).reject { |member| group?(member) }.map { |member| member.fetch(:card) } : [ condition.fetch(:card) ]
+    end
+
+    # どちらかを満たす: 中の条件を OR でつなぎ、括弧でくくる。節が 2 つの条件（日付の範囲）は、その条件を先に括弧でくくる
+    def any(group)
+      members = Array(group[:any])
+      raise InvalidSelection, "どちらかを満たすには、条件が 2 つ以上要る" if members.size < 2
+      raise InvalidSelection, "どちらかを満たすは入れ子にできない" if members.any? { |member| group?(member) }
+
+      alternatives = members.map do |member|
+        parts = clauses(member)
+        parts.size > 1 ? "(#{parts.join(' AND ')})" : parts.first
+      end
+      "(#{alternatives.join(' OR ')})"
+    end
+
     def clauses(condition)
       card = condition.fetch(:card)
       operator = condition.fetch(:operator).to_s
@@ -94,14 +116,36 @@ module QueryBuilder
         raise InvalidSelection, "#{label(card)}（#{card.dig('semantics', 'rm_type')}）に #{operator} は使えない。使えるのは #{OPERATORS.fetch(kind).join('／')}"
       end
 
+      if condition[:include_missing] && kind != :code
+        raise InvalidSelection, "#{label(card)}: 未記入を含むは、値集合の条件にだけ付けられる"
+      end
+
       path = value_path(card)
       value = condition[:value]
       case kind
-      when :number then [ "#{path}/magnitude #{operator} #{number(card, value)}" ]
-      when :code then [ "#{path}/defining_code/code_string MATCHES {#{strings(card, value)}}" ]
+      when :number then operator == "OUTSIDE" ? [ outside(card, path, value) ] : [ "#{path}/magnitude #{operator} #{number(card, value)}" ]
+      when :code then [ code(card, path, value, condition[:include_missing]) ]
       when :date then range(card, path, value)
       else text(card, path, operator, value)
       end
+    end
+
+    # 未記入を含む: その要素が書かれていない記録（NOT EXISTS）も当てる。null flavor は見ない（R-20261125-6）
+    def code(card, path, value, include_missing)
+      matches = "#{path}/defining_code/code_string MATCHES {#{strings(card, value)}}"
+      include_missing ? "(#{matches} OR NOT EXISTS #{path})" : matches
+    end
+
+    # 範囲の外: 下限より低い、または上限より高い
+    def outside(card, path, value)
+      low, high = (value.is_a?(Hash) ? value : {}).transform_keys(&:to_sym).values_at(:low, :high)
+      raise InvalidSelection, "#{label(card)} の範囲の外には、下限と上限の両方が要る" if low.to_s.strip.empty? || high.to_s.strip.empty?
+
+      low = number(card, low)
+      high = number(card, high)
+      raise InvalidSelection, "#{label(card)} の下限（#{low}）が上限（#{high}）より大きい" if low.to_f > high.to_f
+
+      "(#{path}/magnitude < #{low} OR #{path}/magnitude > #{high})"
     end
 
     def text(card, path, operator, value)

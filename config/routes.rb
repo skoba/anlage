@@ -10,6 +10,13 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
+  # 患者（EHR）の一覧・作成・詳細（skoba/anlage#130、docs/design/m3-plan.md 7 節）。:id は ehr_id
+  # いまの患者の選択と解除（skoba/anlage#134）。選んだ患者はセッションに持つ
+  delete "patients/selection", to: "patients#deselect", as: :patient_selection
+  resources :patients, only: %i[index create show] do
+    post :select, on: :member
+  end
+
   get  "templates",         to: "templates#index"
   post "templates/preview", to: "templates#preview"
   post "templates",         to: "templates#create"
@@ -32,6 +39,11 @@ Rails.application.routes.draw do
        format: false, constraints: { template_id: /[^\/]+/ }
   get  "compositions",              to: "compositions#index"
   get  "compositions/:id",          to: "compositions#show", as: :composition
+  # カルテ記録の修正（新しい版。skoba/anlage#138）
+  get   "compositions/:id/edit",    to: "compositions#edit", as: :edit_composition
+  patch "compositions/:id",         to: "compositions#update"
+  # カルテ記録の削除（論理削除。skoba/anlage#140）
+  delete "compositions/:id",        to: "compositions#destroy"
 
   get "fhir/r5/StructureDefinition/:id", to: "fhir/profiles#show",
       constraints: { id: /[^\/]+/ }, format: false

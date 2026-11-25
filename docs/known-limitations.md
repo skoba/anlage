@@ -1,0 +1,42 @@
+# 既知の制限（v0.2.0 の準備、2026-11-25）
+
+Anlage は openEHR の**参照実装**で、診療の現場で使うための製品ではない。下は、main（`e003f5f` 時点）で実測した制限の一覧。
+各項目に、根拠（ファイル・Issue・上流候補）を付けた。直す予定のものは Issue か `docs/upstream-candidates.md` にある。
+
+## 使う前に知っておくこと
+
+| # | 制限 | 根拠 |
+|---|---|---|
+| 1 | **認証と認可が無い。** 画面を開ける人は誰でも、全患者・全記録を見て、作り、修正し、削除できる。実在の患者のデータを入れない | `app/controllers/` に認証の仕組みが無い |
+| 2 | 患者は患者 ID（と名前空間 `anlage`）だけを持つ。氏名・生年月日などの患者マスタ（PARTY）は無い | `docs/design/m3-plan.md` 7.2。openehr-rails 0.9.0 に PARTY のモデルが無い |
+| 3 | 患者を選ばずに帳票を保存すると、記録はどの EHR にも属さない（AQL の `FROM EHR e[ehr_id/value=…]` では引けない） | `docs/design/m3-plan.md` 7.5 の問い 4 |
+| 4 | データベースは SQLite で、1 台で動かす前提。Docker のイメージは TLS の設定（`assume_ssl`・`force_ssl`）を切ってある。外に出すなら TLS を終端するプロキシの後ろに置く | `config/database.yml`、`config/environments/production.rb:28-31` |
+| 5 | 画面の文言は日本語だけ | `docs/demo/ui-vocabulary.md` |
+| 6 | 用語マスター（ICD-10 対応標準病名マスターなど）は同梱しない。用語サービスにもつないでいない | CLAUDE.md 絶対規律 6（コンテンツ防火壁） |
+
+## 帳票と保存
+
+| # | 制限 | 根拠 |
+|---|---|---|
+| 7 | 値集合の無い「コード化必須」の項目は、system と code の手入力になる（用語サービスが無いため）。実物の OPT での確認はまだ | `app/lib/opt/form_validator.rb` の `coded_manual_error`、Issue #82 |
+| 8 | INSTRUCTION の ACTIVITY は `action_archetype_id` が既定値の `/.*/` で、timing を持たない | `app/lib/opt/composition_builder.rb` の `DEFAULT_ACTION_ARCHETYPE_ID`、Issue #30 |
+| 9 | 必須の規則は「入れ物を書くなら必須」。入れ物の下限が 1 以上になる実物の OPT はまだ無く、その場合の判定は合成の spec でだけ確かめた | `docs/design/required-rule.md` |
+| 10 | 登録済みのテンプレートの web_template は登録の時点で固定される。版を上げたあとに新しい規則（必須の規則・入れ物の情報など）を効かせるには `rake templates:rebuild_web_template` が要る | `lib/tasks/templates.rake` |
+| 11 | 帳票の「実行時の振る舞い」（BMI の自動計算など）は `config/form_behaviors.yml` の安全な式だけ。GDL の評価器は無い | `config/form_behaviors.yml`、`docs/ideas-2027.md` |
+
+## カルテ記録の修正と削除
+
+| # | 制限 | 根拠 |
+|---|---|---|
+| 12 | 読み戻して組み直すと内容が変わる記録は修正できない。いまは jp_referral（INSTRUCTION、多段の CLUSTER、同じアーキタイプの 2 つめの ENTRY を読み戻せない） | `app/lib/opt/composition_editability.rb`、Issue #30 |
+| 13 | **削除した記録も AQL の結果には残る**（論理削除の版を、openehr-rails 0.9.0 の既定の scope が除かない）。engine の EHR の画面にも出る | `docs/upstream-candidates.md` 28 項 |
+| 14 | 削除の取り消し、版の巻き戻し、EHR の削除は無い | `docs/design/m3-plan.md` 7.6 |
+
+## AQL と検索
+
+| # | 制限 | 根拠 |
+|---|---|---|
+| 15 | AQL は最新の版だけを引く。`VERSION`・`ALL_VERSIONS` などの FROM は使えない | openehr-rails 0.9.0 `lib/openehr_rails/aql/query_validator.rb:21` |
+| 16 | canonical のデータが混ざると、埋め込みの C_ARCHETYPE_ROOT のパスが AQL で合わないことがある | Issue #7 |
+| 17 | パスカード抽出のレポート（未翻訳の疑いなど）は画面に出ない | Issue #13 |
+| 18 | 記録の出所の表示は COMPOSITION の名前（concept）で、template_id ではない。openehr の次の版（`archetype_details/template_id` に AQL が届く）を待つ | R-20261124-20 の作業列 3 |
