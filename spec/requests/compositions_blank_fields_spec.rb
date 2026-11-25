@@ -20,12 +20,24 @@ RSpec.describe "空欄の任意項目を含む Composition の保存（#34）", 
     expect(items.map { |item| item["archetype_node_id"] }).to eq(%w[at0002 at0077 at0003])
   end
 
-  it "必須（occurrences 下限 ≥1）の傷病名が空なら 422 で項目ラベル付きの説明を返す" do
-    post template_compositions_path(template.template_id), params: { values: real_params.merge("problem_diagnosis_at0002" => "") }
+  # R-20261125-1（案 B）: 傷病名（1..1）は、問題・診断名の ENTRY（0..1）を書くときに必須。発症日を書けば ENTRY は書かれる
+  it "発症日だけ書いて必須（occurrences 下限 ≥1）の傷病名が空なら 422 で項目ラベル付きの説明を返す" do
+    post template_compositions_path(template.template_id),
+         params: { values: real_params.transform_values { "" }.merge("problem_diagnosis_at0077" => "2026-09-25T00:00:00") }
 
     expect(response).to have_http_status(:unprocessable_content)
     expect(response.body).to include("プロブレム・診断名")
     expect(response.body).to include("必須項目です")
+    expect(Composition.count).to eq(0)
+  end
+
+  # R-20261125-1（案 B）: 全部が空なら、項目ではなく帳票に付くメッセージで 422
+  it "全部が空なら 422 で帳票に付くメッセージを返す（必須項目のエラーは出さない）" do
+    post template_compositions_path(template.template_id), params: { values: real_params.transform_values { "" } }
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("値が 1 つも入力されていません")
+    expect(response.body).not_to include("必須項目です")
     expect(Composition.count).to eq(0)
   end
 

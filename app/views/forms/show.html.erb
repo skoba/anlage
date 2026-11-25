@@ -8,6 +8,15 @@
 <%# skoba/anlage#47 変更 4: 帳票の振る舞い（config/form_behaviors.yml）。即時表示はクライアント、権威はサーバ %>
 <% behavior_rules = Opt::FormBehaviors.rules_for(@template.template_id) %>
 <% behavior_data = behavior_rules.empty? ? {} : { controller: "form-behaviors", form_behaviors_rules_value: behavior_rules.to_json, action: "input->form-behaviors#recalculate" } %>
+<%# R-20261125-1: 帳票全体が空のときの、帳票に付くメッセージ %>
+<% if @errors&.key?("base") %>
+  <p class="form-error"><%= @errors["base"] %></p>
+<% end %>
+<%# R-20261125-1: 必須の印の凡例（docs/demo/ui-vocabulary.md） %>
+<% marks = @template.fields.map { |field| Opt::FormValidator.required_mark(field) }.compact.uniq %>
+<% if marks.any? %>
+  <p class="required-legend"><%= safe_join([ ("* 必須" if marks.include?(:always)), ("※ この枠に書くなら必須" if marks.include?(:if_written)) ].compact, "　") %></p>
+<% end %>
 <%= form_with url: template_compositions_path(@template.template_id), method: :post, local: true, data: behavior_data do %>
   <% Opt::FormLayout.call(@template).each do |node| %>
     <%= render "forms/root_group", node: node %>
