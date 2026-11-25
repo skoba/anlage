@@ -264,3 +264,51 @@ $ bundle exec rspec spec/requests/records_to_ehr_spec.rb
 ### Green
 
 全 suite（開発機）: `464 examples, 0 failures, 2 pending`
+
+## R8 P4（`skoba/anlage#138`）: カルテ記録の版（修正）（2026-11-25）
+
+### 実測: 読み戻し → 組み直しで content が変わるか（6 つの fixture、FormCapability の作例値）
+
+| fixture | content が同じ | 読み戻せない値 |
+|---|---|---|
+| ProblemList | はい | 無し |
+| CardiologyEncounter・LabResultReport・bmi_calculation・patient_blood_pressure | いいえ → 単位の読み戻しのあと、はい | 単位（`__units`。`…/value/units` だけが違った） |
+| jp_referral | いいえ | INSTRUCTION（narrative・activities・protocol の CLUSTER）。Issue #30 の残り |
+
+content のほかの差（時刻など）は無かった。
+
+### 判断（自己承認、計画書の範囲内）
+
+- 修正できるかは、記録ごとに「読み戻して組み直すと content が原本と同じ」で決める（`Opt::CompositionEditability`）。規則を reader と二重に持たない
+- 単位の読み戻しを reader に足した（計画書 P4 の「修正の帳票には前の版の値が入っている」のため。単位が 2 つある BMI は、前の版の単位を選んでおく）
+- 版の番号は、同じ uid の原本の行の並び（古い順に 1 から）。commit 1 回で行が 1 つ足されるので、RM の version_tree_id と同じになる（spec で 1・2 を確認）
+- 修正しても記録の EHR は変えない（RM の head の ehr を渡す。いまの患者ではない）
+- 一覧（`/compositions`）は各記録の新しい版だけ。uid の無い古い行は、それぞれを 1 件とする
+- 修正の帳票は `forms/show` を使い、`@composition` があれば PATCH にする
+
+### Red
+
+```
+$ bundle exec rspec spec/lib/opt/composition_editability_spec.rb
+An error occurred while loading ./spec/lib/opt/composition_editability_spec.rb.
+NameError:
+$ bundle exec rspec spec/lib/opt/composition_reader_spec.rb spec/requests/record_versions_spec.rb
+      1      Failure/Error:
+      1      Failure/Error: expect { edit_problem(first, "本態性高血圧症") }.to change(Composition, :count).by(1)
+      1      Failure/Error: expect(described_class.call(template, json)).to include("blood_pressure_systolic" => "120.0", "blood_pressure_systolic__units" => "mm[Hg]")
+      1      Failure/Error: expect(document.at_css("a#edit_composition")["href"]).to eq("/compositions/#{first.id}/edit")
+      1      Failure/Error: expect(document.at_css("h2#version_history").text).to eq("版の履歴")
+      1      Failure/Error: expect(document.css("main a").map { _1["href"] }).to contain_exactly("/compositions/#{second.id}", "/compositions/#{other.id}")
+      1      Failure/Error: expect(response).to have_http_status(:unprocessable_content)
+      1      Failure/Error: expect(response.body).to include("この記録は修正できません")
+      1 13 examples, 8 failures
+
+$ bundle exec rspec spec/requests/record_versions_spec.rb   # 単位の選択（あとから足した 1 例）
+       expected: "[lb_av]/[in_i]2"
+            got: nil
+8 examples, 1 failure
+```
+
+### Green
+
+全 suite（開発機）: `476 examples, 0 failures, 2 pending`

@@ -6,7 +6,7 @@
       <%= render "forms/root_group", node: item %>
     <% else %>
       <%= render "templates/field", field: item, disabled: @template.preview_only?,
-                 value: @values[item["name"]], error: @errors[item["name"]] %>
+                 value: @values[item["name"]], units_value: @values["#{item['name']}__units"], error: @errors[item["name"]] %>
     <% end %>
   <% end %>
 </fieldset>

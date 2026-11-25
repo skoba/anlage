@@ -39,6 +39,9 @@ Rails.application.routes.draw do
        format: false, constraints: { template_id: /[^\/]+/ }
   get  "compositions",              to: "compositions#index"
   get  "compositions/:id",          to: "compositions#show", as: :composition
+  # カルテ記録の修正（新しい版。skoba/anlage#138）
+  get   "compositions/:id/edit",    to: "compositions#edit", as: :edit_composition
+  patch "compositions/:id",         to: "compositions#update"
 
   get "fhir/r5/StructureDefinition/:id", to: "fhir/profiles#show",
       constraints: { id: /[^\/]+/ }, format: false
