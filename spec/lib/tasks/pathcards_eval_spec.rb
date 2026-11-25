@@ -79,10 +79,10 @@ RSpec.describe "pathcards:eval" do
       expect { run_task }.to output(
         a_string_including(
           "Questions: 17",
-          "Top-1 accuracy: 14/17 (82.35%)",
+          "Top-1 accuracy: 15/17 (88.24%)",
           "Top-3 accuracy: 15/17 (88.24%)",
           "Complete failure rate: 2/17 (11.76%)",
-          "MRR: 0.8529",
+          "MRR: 0.8824",
           "bigram成立想定: 11/11",
           "複合語: 4/4",
           "同義語ギャップ: 0/2",
@@ -99,10 +99,10 @@ RSpec.describe "pathcards:eval" do
       expect(report).to include(
         "# WP4 パスカード検索評価ログ",
         "検索実装: `phase1-bigram`",
-        "Top-1精度: 14/17 (82.35%)",
+        "Top-1精度: 15/17 (88.24%)",
         "Top-3精度: 15/17 (88.24%)",
         "完全失敗率: 2/17 (11.76%)",
-        "MRR: 0.8529",
+        "MRR: 0.8824",
         "bigram成立想定: 11/11",
         "複合語: 4/4",
         "同義語ギャップ: 0/2"
