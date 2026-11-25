@@ -60,7 +60,7 @@ RSpec.describe "fsh:export / fsh:verify" do
       project_dirs = @output_dir.children.select(&:directory?)
       expect(project_dirs.size).to eq(1)
       expect(project_dirs.first.join("input/fsh").glob("*.fsh").map { |path| path.basename.to_s })
-        .to all(start_with("openehr-observation-"))
+        .to all(start_with("openehr-bmi-calculation-observation-"))
     end
   end
 
@@ -76,7 +76,7 @@ RSpec.describe "fsh:export / fsh:verify" do
     it "ProblemList の FSH に Condition.component 制約が含まれない" do
       fsh_files = OpenehrRails::Fhir::FshGenerator.new(Opt::SafeParser.parse(problem_list_xml)).to_fsh_files
 
-      expect(fsh_files.keys).to eq([ "openehr-evaluation-problem-diagnosis-v1" ])
+      expect(fsh_files.keys).to eq([ "openehr-problemlist-evaluation-problem-diagnosis-v1" ])
       expect(fsh_files.values.join).not_to include("component")
       expect(fsh_files.values.join).to include("* category contains ckm 1..1")
     end
