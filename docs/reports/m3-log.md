@@ -209,3 +209,27 @@ $ bundle exec rspec spec/requests/patients_spec.rb spec/requests/demo_navigation
 ### Green
 
 全 suite（開発機）: `454 examples, 0 failures, 2 pending`
+
+## R6 P2（`skoba/anlage#134`）: いまの患者を選ぶ（2026-11-25）
+
+### 判断（自己承認、計画書の範囲内）
+
+- いまの患者はナビの中（リンクの下）に出す。ナビのリンクを pin する spec（6 つ）を変えないよう、選択の解除は `button_to`（form）にした
+- engine の画面（AQL 照会）も同じ partial を使うので、いまの患者は anlage のヘルパーではなく partial の中で `session[:ehr_id]` から引く
+- 選んだ EHR が無くなっていれば、選んでいないものとして扱う（エラーにしない）
+
+### Red
+
+```
+$ bundle exec rspec spec/requests/patient_selection_spec.rb
+      2      Failure/Error: expect(current_patient_text).to eq("いまの患者: 患者を選んでいません")
+      1      Failure/Error: expect(document.at_css("form[action='/patients/#{patient.ehr_id}/select'] button").text).to eq("この患者を選ぶ")
+      1      Failure/Error: expect(response).to redirect_to("/patients")
+      1 5 examples, 4 failures
+```
+
+（「無い EHR は選べない（404）」は、ルートが無い段階でも 404 で通っていた）
+
+### Green
+
+全 suite（開発機）: `459 examples, 0 failures, 2 pending`
