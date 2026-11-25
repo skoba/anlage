@@ -106,8 +106,9 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
   `rake demo:reset` の初期状態（`Demo::SampleCompositions`）を使い、壇上の「1 件足す」はフォーム POST
 - 期待件数: 初期状態で **3 件**（ProblemList「2型糖尿病」〔ICD-11 5A11 付き〕・「高血圧症」、jp_referral「2型糖尿病」〔5A11 付き〕）、
   フォームから「2型糖尿病」を 1 件足すと **4 件**
-- 出所の並記は Composition 名（`c/name/value`）。`c/archetype_details/template_id/value` は現行エンジンで
-  `unsupported path attribute "archetype_details"`（`docs/upstream-candidates.md` 25 項）
+- 出所の並記は Composition 名（`c/name/value`）。`c/archetype_details/template_id/value` は、openehr 2.6.0 で
+  例外にならなくなったが、値は nil（openehr-rails 0.10.0 の `to_rm` が archetype_details を組まない。
+  `docs/upstream-candidates.md` 25 項と 2026-11-25 の追記）。切り替えは openehr-rails の修正の版のあと
 - **質疑応答用 1 行**: 「紹介先医療機関で引く」（`items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']`）は、
   openehr 2.5.0（[openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60)）で引けるようになった
   （`spec/integration/jp_referral_aql_spec.rb` の構造骨格。2026-11-24）。このクエリをその形に変えるのは、

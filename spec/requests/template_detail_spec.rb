@@ -82,8 +82,8 @@ RSpec.describe "テンプレートの詳細と版の履歴", type: :request do
 
       expect(document.css("#template_fhir_profiles > h2").text).to eq("FHIR プロファイル")
       expect(document.css("#template_fhir_profiles li a").map { [ _1.text, _1["href"] ] }).to eq([
-        [ "openehr-observation-heart-rate-pulse-v1", "/fhir/r5/StructureDefinition/openehr-observation-heart-rate-pulse-v1" ],
-        [ "openehr-observation-blood-pressure-v1", "/fhir/r5/StructureDefinition/openehr-observation-blood-pressure-v1" ]
+        [ "openehr-patient-blood-pressure-v1-observation-heart-rat-c1dc5902", "/fhir/r5/StructureDefinition/openehr-patient-blood-pressure-v1-observation-heart-rat-c1dc5902" ],
+        [ "openehr-patient-blood-pressure-v1-observation-blood-pressure-v1", "/fhir/r5/StructureDefinition/openehr-patient-blood-pressure-v1-observation-blood-pressure-v1" ]
       ])
     end
 

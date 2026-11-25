@@ -80,7 +80,8 @@ class CompositionsController < ApplicationController
     end
 
     ActiveRecord::Base.transaction do
-      deleted = OpenehrRails::Rm::CompositionCommitter.commit(head.to_canonical_hash, uid: head.uid, ehr: head.ehr)
+      deleted = OpenehrRails::Rm::CompositionCommitter.commit(head.to_canonical_hash, uid: head.uid, ehr: head.ehr,
+                                                              context_start_time: head.context_start_time)
       deleted.version.update!(lifecycle_state_code: OpenehrRails::Rm::Version::LIFECYCLE_DELETED)
     end
     redirect_to compositions_path, notice: "削除しました"

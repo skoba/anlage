@@ -252,3 +252,12 @@ selection:
 - Green: `Questions.selection_condition`（`any` を再帰で読む）、`BuilderRoute#resolve`（`any` の中のカードも索引から引く）。
   評価の spec と `evaluation_run_spec` で 62 examples, 0 failures
 - ゴールド（`spec/fixtures/evaluation/v2/`）は変えていない
+
+## R23 実ブラウザの spec の不安定さを直す（2026-11-25）
+
+- 現象: PR #131 の CI（run 45614802792）で `spec/system/demo_query_builder_spec.rb:100`（範囲の外・どちらかを満たす）が落ちた。
+  `Unable to find select box "condition_1_operator"`。PR #131 は検索もクエリビルダーも変えていない。同じ spec は main（`5eceeca`、run 45614244452）では通っている
+- 原因（推論。再現はさせていない）: 「表示する項目に足す」「条件に足す」を 4 回続けて押していて、あいだに画面の読み直しを待っていない。
+  画面の状態は URL だけなので、読み直しの前に次のボタンを押すと、古い画面の状態で送られて前の操作が消える。R20 で足した spec の書き方の誤り
+- 直し: ボタンを押すたびに、項目・条件の数が増えたことを待つ（`have_css(…, count:)`）。同じ形のほかの 3 例にも待ちを足した。実装は変えていない
+- 確認: `bundle exec rspec spec/system/demo_query_builder_spec.rb` を 3 回続けて、3 回とも 5 examples, 0 failures

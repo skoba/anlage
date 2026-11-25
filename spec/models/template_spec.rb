@@ -181,13 +181,15 @@ RSpec.describe Template, "#47 fhir_profile_ids" do
     Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture}").read)
   end
 
+  # openehr-rails 0.10.0 で id はテンプレートで修飾される（rails #55、上流候補 23 項）。64 文字を超える id は
+  # 前を残して sha256 の 8 桁で終わる（rails CHANGELOG 0.10.0）
   it "ProblemList は problem_diagnosis の 1 本" do
-    expect(template_of("ProblemList.opt").fhir_profile_ids).to eq([ "openehr-evaluation-problem-diagnosis-v1" ])
+    expect(template_of("ProblemList.opt").fhir_profile_ids).to eq([ "openehr-problemlist-evaluation-problem-diagnosis-v1" ])
   end
 
   it "patient_blood_pressure.v1 は OPT のエントリ順に 2 本" do
     expect(template_of("patient_blood_pressure.opt").fhir_profile_ids)
-      .to eq([ "openehr-observation-heart-rate-pulse-v1", "openehr-observation-blood-pressure-v1" ])
+      .to eq([ "openehr-patient-blood-pressure-v1-observation-heart-rat-c1dc5902", "openehr-patient-blood-pressure-v1-observation-blood-pressure-v1" ])
   end
 end
 
