@@ -120,6 +120,35 @@ RSpec.describe Evaluation::Questions do
       expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /r3.*rank/)
     end
 
+    # 負例だけの問い（docs/design/s1-eval-v2-plan.md 9 節、R-20261125-7）
+    it "expected が空で forbidden を持つ card の問いは、負例だけの問いとして読む。at_code の無い負例はアーキタイプを指す" do
+      write("cards.yml", <<~YAML)
+        - id: n1
+          kind: card
+          query: "肥満度"
+          expected: []
+          forbidden:
+            - { archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2 }
+        - id: p1
+          kind: card
+          query: "収縮期"
+          expected:
+            - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+      YAML
+
+      negative, positive = described_class.from_v2(dir)
+
+      expect(negative).to have_attributes(negative_only?: true, expected: [], status: :active,
+                                          forbidden: [ { archetype_id: "openEHR-EHR-OBSERVATION.body_mass_index.v2", at_code: nil } ])
+      expect(positive.negative_only?).to be(false)
+    end
+
+    it "expected も forbidden も空の card の問いは読み込みで止まる" do
+      write("bad.yml", "- { id: n2, kind: card, query: q, expected: [] }\n")
+
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /n2.*expected.*forbidden/)
+    end
+
     # S2 の経路（R-20261124-21 の作業列 3、docs/design/s1-eval-v2-plan.md 8 節）: aql の問いは、クエリビルダーへの入力（selection）を持てる
     it "aql の問いの selection（表示する項目、条件、文書名）を読む。カードは archetype_id と at_code で指す" do
       write("aql.yml", <<~YAML)

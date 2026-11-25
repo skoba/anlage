@@ -5,6 +5,7 @@ module Evaluation
   #   match:  :archetype（archetype_id の一致。v1 互換）／:card（archetype_id と at_code の両方）
   #   expected の要素は rank（順位。1 が最上位、同順位可）を持てる。rank の無い問いは全要素が同じ順位（同 7 節）
   #   selection: aql の問いの、クエリビルダーへの入力（S2 の経路。同 8 節）。無ければ nil
+  #   expected が空で forbidden を持つ card の問いは「負例だけの問い」（同 9 節）。card の集計の母数に入れず、別に数える
   #   acceptable: 許容。正解でも誤りでもなく、上位に出てよい候補（forbidden とは別）
   class Question
     KINDS = %i[card aql].freeze
@@ -43,5 +44,6 @@ module Evaluation
     def pending? = status == :pending
     def card? = kind == :card
     def aql? = kind == :aql
+    def negative_only? = card? && expected.empty? && forbidden.any?
   end
 end

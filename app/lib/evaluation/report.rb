@@ -5,7 +5,7 @@ module Evaluation
     module_function
 
     def render(run, label:)
-      [ "# 評価 v2（#{label}）", card_section(run), aql_section(run), builder_section(run), draft_section(run), pending_section(run) ]
+      [ "# 評価 v2（#{label}）", card_section(run), negative_section(run), aql_section(run), builder_section(run), draft_section(run), pending_section(run) ]
         .compact.join("\n\n") + "\n"
     end
 
@@ -38,6 +38,21 @@ module Evaluation
       lines << "" << "### 許容の出現" << ""
       lines.concat(list(run.card_results.select { |result| result.score.acceptables.any? }) do |result|
         "#{result.question.id}: #{result.question.query} → #{refs(result.score.acceptables)}"
+      end)
+      lines.join("\n")
+    end
+
+    # 負例だけの問い（期待が空で、負例だけを持つ。docs/design/s1-eval-v2-plan.md 9 節）。問いが無ければ節を出さない
+    def negative_section(run)
+      summary = run.negative_summary
+      total = summary.fetch(:questions)
+      return nil if total.zero?
+
+      lines = [ "## card: 負例だけの問い（#{total} 問）", "", "| 指標 | 値 |", "|---|---|" ]
+      lines << "| 負例が上位（top-3）に出た問い | #{summary.fetch(:violations)}/#{total} |"
+      lines << "" << "### 負例が上位に出た問い" << ""
+      lines.concat(list(run.negative_results.select { |result| result.score.violations.any? }) do |result|
+        "#{result.question.id}: #{result.question.query} → #{refs(result.score.violations)}"
       end)
       lines.join("\n")
     end
