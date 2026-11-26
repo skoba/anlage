@@ -39,7 +39,7 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     expect(page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")).to be(false)
   end
 
-  it "値集合: 傷病名を表示し、診断確度「疑い」にチェックして文書名つきで実行すると、ProblemList の 3 行と紹介状の 1 行が出る（コード値 at0074 で引く）" do
+  it "値集合: 傷病名を表示し、診断確度「疑い」にチェックしてテンプレートつきで実行すると、ProblemList の 3 行と紹介状の 1 行が出る（コード値 at0074 で引く）" do
     visit new_query_path
 
     fill_in "探したい項目", with: "診断名"
@@ -51,7 +51,7 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     click_button "検索"
     candidate("診断確度", "ProblemList").click_button "条件に足す"
     within("#query_conditions li") { check "疑い" }
-    check "文書名も表示する"
+    check "テンプレートも表示する"
     click_button "実行"
 
     expect(page).to have_css("#query_aql pre", text: 'value/defining_code/code_string MATCHES {"at0074"}')

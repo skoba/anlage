@@ -6,7 +6,7 @@ module QueryBuilder
   #                       未記入を含む     { card:, operator: "MATCHES", value: [コード], include_missing: true }（値集合だけ）
   #                       範囲の外         { card:, operator: "OUTSIDE", value: { low:, high: } }（数値だけ）
   #                       どちらかを満たす { any: [条件, 条件, …] }（2 つ以上。入れ子にしない）
-  #   composition_name: 真なら先頭に c/name/value（出所の文書名）
+  #   template_id:      真なら先頭に c/archetype_details/template_id/value（出所のテンプレート。skoba/anlage#183）
   class Builder
     class InvalidSelection < StandardError; end
 
@@ -20,12 +20,15 @@ module QueryBuilder
       number: %w[> >= < <= = OUTSIDE], code: %w[MATCHES], date: %w[BETWEEN], text: %w[= MATCHES CONTAINS]
     }.freeze
 
+    # 出所の列（記録のテンプレート）。openehr 2.6.1・openehr-rails 0.11.0 から AQL で届く
+    TEMPLATE_ID_PATH = "c/archetype_details/template_id/value".freeze
+
     Entry = Struct.new(:rm_type, :archetype_id, :path, keyword_init: true) do
       def variable = ENTRY_VARIABLES.fetch(rm_type)
     end
 
-    def self.build(columns:, conditions: [], composition_name: false)
-      new(columns, conditions, composition_name).build
+    def self.build(columns:, conditions: [], template_id: false)
+      new(columns, conditions, template_id).build
     end
 
     # カードの型 → 条件の種類（:number／:code／:date／:text）
@@ -42,10 +45,10 @@ module QueryBuilder
       Array(card.dig("constraints", "value", "code_list"))
     end
 
-    def initialize(columns, conditions, composition_name)
+    def initialize(columns, conditions, template_id)
       @columns = Array(columns)
       @conditions = Array(conditions)
-      @composition_name = composition_name
+      @template_id = template_id
     end
 
     def build
@@ -59,7 +62,7 @@ module QueryBuilder
 
       entry = entries.first
       select = @columns.map { |card| projection(card) }
-      select.unshift("c/name/value") if @composition_name
+      select.unshift(TEMPLATE_ID_PATH) if @template_id
       lines = [ "SELECT #{select.join(', ')}",
                 "FROM EHR e CONTAINS COMPOSITION c CONTAINS #{entry.rm_type} #{entry.variable}[#{entry.archetype_id}]" ]
       where = @conditions.flat_map { |condition| group?(condition) ? [ any(condition) ] : clauses(condition) }

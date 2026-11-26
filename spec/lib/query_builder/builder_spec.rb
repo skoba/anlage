@@ -64,12 +64,12 @@ RSpec.describe QueryBuilder::Builder do
       AQL
     end
 
-    it "文書名つき・文字列のいずれか: a003 と同じ形（c/name/value を先頭に、value/value の MATCHES）を組む" do
-      aql = build(columns: [ diagnosis ], composition_name: true,
+    it "テンプレートつき・文字列のいずれか: a003 と同じ形（c/archetype_details/template_id/value を先頭に、value/value の MATCHES）を組む" do
+      aql = build(columns: [ diagnosis ], template_id: true,
                   conditions: [ { card: diagnosis, operator: "MATCHES", value: [ "2型糖尿病", "高血圧症" ] } ])
 
       expect(aql).to eq(<<~AQL.chomp)
-        SELECT c/name/value, ev/data[at0001]/items[at0002]/value/value
+        SELECT c/archetype_details/template_id/value, ev/data[at0001]/items[at0002]/value/value
         FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[#{QB_PD}]
         WHERE ev/data[at0001]/items[at0002]/value/value MATCHES {"2型糖尿病", "高血圧症"}
       AQL
@@ -138,7 +138,7 @@ RSpec.describe QueryBuilder::Builder do
       selections = [
         { columns: [ systolic ], conditions: [ { card: systolic, operator: ">=", value: 110.5 } ] },
         { columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: %w[at0074 at0075] } ] },
-        { columns: [ diagnosis ], composition_name: true, conditions: [ { card: diagnosis, operator: "CONTAINS", value: "糖尿病" } ] },
+        { columns: [ diagnosis ], template_id: true, conditions: [ { card: diagnosis, operator: "CONTAINS", value: "糖尿病" } ] },
         { columns: [ analyte_result, analyte_name ], conditions: [ { card: analyte_name, operator: "=", value: "空腹時血糖" } ] },
         { columns: [ diagnosis, onset ], conditions: [ { card: onset, operator: "BETWEEN", value: { from: "2020-01-01", to: "2021-01-01" } } ] }
       ]

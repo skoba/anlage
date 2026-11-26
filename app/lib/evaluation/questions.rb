@@ -88,7 +88,7 @@ module Evaluation
       raise InvalidQuestion, "#{id}: selection に columns（表示する項目）が無い" if columns.empty?
 
       conditions = Array(raw["conditions"]).map { |condition| selection_condition(id, condition) }
-      parsed = { columns: columns, conditions: conditions, composition_name: raw["composition_name"] ? true : false }
+      parsed = { columns: columns, conditions: conditions, template_id: raw["template_id"] ? true : false }
       raw["across_versions"] ? parsed.merge(across_versions: true) : parsed
     end
 

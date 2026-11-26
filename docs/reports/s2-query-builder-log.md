@@ -391,3 +391,58 @@ selection:
 - 採点（確定のあと。`spec/lib/evaluation/runner_spec.rb` で固定）: aql 12 問、参照 12/12 一致、S2 の経路 12/12 一致。draft は 0 問
 - 全 suite: 612 examples, 0 failures, 2 pending
 - `spec/demo/`（デモクエリの期待件数）は、この直しで変わらなかった（全 suite で落ちていない）
+
+## R30 出所の列を template_id に切り替える（2026-11-26、R-20261126-8 の作業列 1、#183）
+
+自己承認。条件（openehr 2.6.1・openehr-rails 0.11.0 が main に入ること）は、anlage main `46104c6`（#178）で満たした。
+
+### 先に確かめたこと（実測。worktree の dev DB、`rake demo:reset` のあと）
+
+- `SELECT c/archetype_details/template_id/value, c/name/value FROM EHR e CONTAINS COMPOSITION c` の 65 行:
+
+  | template_id | Composition の名前 | 件数 |
+  |---|---|---|
+  | ProblemList | ProblemList | 13 |
+  | CardiologyEncounter | CardiologyEncounter | 11 |
+  | LabResultReport | LabResultReport | 26 |
+  | bmi_calculation | bmi_calculation | 7 |
+  | jp_referral | jp_referral | 2 |
+  | patient_blood_pressure.v1 | COLNEC Patient Blood Pressure.v0 | 6 |
+
+  名前と template_id が違うのは、血圧 v1 のテンプレートだけ。評価の問いで出所の列を使うのは傷病名の 4 問で、どれも ProblemList と jp_referral の記録だけを返す
+- リンタは `c/archetype_details/template_id/value` を error にしない（`builder_spec` の「組んだ AQL はどれもリンタを通る」）
+
+### Red → Green
+
+- Red 1（`spec/lib/query_builder/builder_spec.rb`。キーワードを `template_id:`、先頭の射影を `c/archetype_details/template_id/value` に書き換えて）:
+  `ArgumentError: unknown keyword: :template_id`、17 examples, 2 failures
+- Green 1: `Builder`・`Runner`・`Evaluation::BuilderRoute`・`Evaluation::Questions`・コントローラ・画面を切り替えて、17 examples, 0 failures
+- Red 2（`spec/requests/queries_spec.rb`「以前の URL（composition_name=1）も、テンプレートの列として受ける」）:
+  AQL に `SELECT c/archetype_details/template_id/value,` が無く、1 failure。
+  **順序の乱れ**: この受け口は Green 1 のときに先に書いてしまっていた。いったん外して、Red を取り直した
+- Green 2: コントローラで `params[:composition_name]` も受けて通る
+
+### 評価の問い（書き換えた 4 問と、前後の値）
+
+| 問い | 参照 AQL の先頭の列（前 → あと） | 期待行（前 → あと） |
+|---|---|---|
+| a003 2型糖尿病または高血圧症 | `c/name/value AS composition_name` → `c/archetype_details/template_id/value AS template_id` | 7 行のまま（ProblemList 6、jp_referral 1） |
+| a006 病名に「糖尿病」を含む | 同じ | 4 行のまま（ProblemList 3、jp_referral 1） |
+| a012 確定の病名（未記入を含む） | 同じ | 10 行のまま（ProblemList 9、jp_referral 1） |
+| a013 発症が 2025 年の病名 | 同じ | 3 行のまま（ProblemList 2、jp_referral 1） |
+
+- `selection` のキーは `composition_name: true` → `template_id: true`
+- 期待行の値は 1 つも変わらない（この 2 つのテンプレートでは、名前と template_id が同じ字面）
+- notes は、a003 の「template_id に届かない」を書き換え、ファイルの冒頭に切り替えの日付を足した
+- **問いの文言（query）は変えていない**。4 問とも「出所の文書名つきで」のまま。文言を「テンプレート」に改めるかは、人間のレビューの範囲として残す
+- 採点（`rake evaluation:run RESET=1`）: aql 12 問、参照 12/12 一致、S2 の経路 12/12 一致
+
+### 自己承認した判断
+
+| # | 判断 | 捨てた案 |
+|---|---|---|
+| T1 | 列の見出しは「テンプレート」、チェックは「テンプレートも表示する」。パスカードのカードの項目名、クエリビルダーの「<項目名>（<テンプレート>）」と同じ語 | 「文書名」のまま（中身が名前でなくなる）。「template_id」（画面に英字の識別子名を出す） |
+| T2 | コードのキーワード、ゴールドの `selection` のキー、URL のパラメータを `template_id` に改める。以前の URL（`composition_name=1`）は同じ列として受ける | 名前を `composition_name` のまま残す（中身と名前が食い違う）。以前の URL を受けない（保存してある URL から列が消える） |
+| T3 | デモクエリ 2・3（`docs/demo/aql-queries.md`、`spec/demo/aql_queries_spec.rb`）の `c/name/value` は触らない。クエリビルダーの列ではなく、書く側の範囲 | あわせて書き換える（裁定の範囲の外） |
+
+全 suite: 615 examples, 0 failures, 2 pending。rubocop は違反なし

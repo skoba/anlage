@@ -25,7 +25,7 @@ module Evaluation
       return score_across_versions(columns, conditions, selection) if selection[:across_versions]
 
       aql = QueryBuilder::Builder.build(columns: columns, conditions: conditions,
-                                        composition_name: selection[:composition_name] ? true : false)
+                                        template_id: selection[:template_id] ? true : false)
       lint = QueryBuilder::Linter.lint(aql, corpus: @corpus)
       return unbuildable(lint.findings.select(&:error?).map(&:message).join("／"), aql: aql) unless lint.ok?
 
@@ -42,7 +42,7 @@ module Evaluation
       aqls = QueryBuilder::CrossVersion.selections(columns: columns, conditions: conditions, corpus: @corpus,
                                                    mappings: QueryBuilder::VersionMappings.default).to_h do |version|
         [ version.archetype_id, QueryBuilder::Builder.build(columns: version.columns, conditions: version.conditions,
-                                                            composition_name: selection[:composition_name] ? true : false) ]
+                                                            template_id: selection[:template_id] ? true : false) ]
       end
       text = aqls.values.join("\n\n")
       errors = aqls.values.flat_map { |aql| QueryBuilder::Linter.lint(aql, corpus: @corpus).findings.select(&:error?) }

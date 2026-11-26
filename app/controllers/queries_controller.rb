@@ -14,13 +14,14 @@ class QueriesController < ApplicationController
     @dropped = 0
     @columns = column_refs.filter_map { |ref| find_card(ref) }
     @conditions = condition_params.filter_map { |entry| build_condition(entry) }
-    @composition_name = params[:composition_name].present?
+    # 出所の列。以前の URL（composition_name=1）も同じ列として受ける（skoba/anlage#183）
+    @template_id = params[:template_id].present? || params[:composition_name].present?
     # 版をまたいで引く（docs/design/s2-cross-version-plan.md 5 節）
     @across_versions = params[:across_versions].present?
     return if @columns.empty?
 
     @run = QueryBuilder::Runner.call(columns: @columns, conditions: grouped_selections,
-                                     composition_name: @composition_name, execute: params[:run].present?,
+                                     template_id: @template_id, execute: params[:run].present?,
                                      across_versions: @across_versions, corpus: @corpus)
   end
 

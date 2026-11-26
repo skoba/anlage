@@ -6,8 +6,11 @@
 #
 # 形式は aql.yml と同じで、selection（クエリビルダーへの入力）を持つ（同 8.1・8.4・8.5）:
 #   selection.columns / selection.conditions（card・operator・value。未記入を含む include_missing、範囲の外 OUTSIDE、どちらかを満たす any）/
-#   selection.composition_name / selection.across_versions（版をまたいで引く。参照は reference_aqls に版ごと）
+#   selection.template_id（出所のテンプレート）/ selection.across_versions（版をまたいで引く。参照は reference_aqls に版ごと）
 # 採点は 2 通り: 参照 AQL が expected_rows を返すか（ゴールドの健全性）、selection からビルダーが組んだ AQL が同じ行を返すか（S2 の経路）。
+#
+# 2026-11-26: 出所の列を、Composition 名（c/name/value）から template_id（c/archetype_details/template_id/value）に切り替えた
+#   （裁定 R-20261126-8。a006・a012・a013。期待行は実測で変わらない）。
 #
 # 閾値は、サンプルデータの「判定の目安」（docs/design/sample-data-plan.md）を使った: 高い = 収縮期 140 以上または拡張期 90 以上、低い = 収縮期 100 未満。
 # アーキタイプ ID と at-code は実物。期待行は demo_initial での実測。
@@ -17,7 +20,7 @@
   query: "病名に「糖尿病」を含む記録を、出所の文書名つきで"
   dataset: demo_initial
   reference_aql: |
-    SELECT c/name/value AS composition_name,
+    SELECT c/archetype_details/template_id/value AS template_id,
            ev/data[at0001]/items[at0002]/value/value AS diagnosis
     FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
     WHERE ev/data[at0001]/items[at0002]/value/value LIKE "*糖尿病*"
@@ -31,7 +34,7 @@
       - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
         operator: CONTAINS
         value: "糖尿病"
-    composition_name: true
+    template_id: true
   notes: "病名の部分一致（文字列の包含。AQL の LIKE は glob で、*糖尿病* と書く）。当たるのは 2型糖尿病 3 件（ProblemList 2、紹介状 1）と糖尿病性腎症 1 件。**部分一致はつなぎで、本来はコードで引く**（R-20261125-6）: いまのデータでコードを持つのは DEMO-01 の 2型糖尿病（ICD-11 5A11）だけで、DEMO-05 の 2型糖尿病はコードが無い。字面で引くと、別の病名（糖尿病性腎症）も当たる。レビュー（R-20261126-5）: つなぎの問いとして置く"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-26
@@ -113,7 +116,7 @@
   query: "確定の病名（診断確度の記載が無いものを含む）を、出所の文書名つきで"
   dataset: demo_initial
   reference_aql: |
-    SELECT c/name/value AS composition_name,
+    SELECT c/archetype_details/template_id/value AS template_id,
            ev/data[at0001]/items[at0002]/value/value AS diagnosis
     FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
     WHERE (ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0076"} OR NOT EXISTS ev/data[at0001]/items[at0073]/value)
@@ -139,7 +142,7 @@
         operator: MATCHES
         value: [at0076]
         include_missing: true
-    composition_name: true
+    template_id: true
   notes: "確定の病名（未記入を含む。値集合の条件に、その項目が書かれていない記録を OR で足す）。日本語では、病名に「疑い」が付いていなければ確定（小林、2026-11-25）。確度を書かない文書（紹介状）の傷病名も、確定の病名として引く。傷病 15 件のうち 10 件: 確度が「確定」（at0076）の 9 件と、確度の記載が無い紹介状の 1 件（DEMO-01 の 2型糖尿病）。外れるのは「疑い」4 件と「推定」1 件。未記入を含めないと 9 件になる。レビュー（R-20261126-5）: 問いはそのまま。DEMO-05 の紹介状の「狭心症」は、人物像では「狭心症の疑い」での紹介なので、サンプルデータの側に診断確度「疑い」を足した（案の時点では確度の記載が無く、期待行は 11 行だった）"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-26
@@ -149,7 +152,7 @@
   query: "発症が 2025 年の病名を、出所の文書名と発症日時つきで"
   dataset: demo_initial
   reference_aql: |
-    SELECT c/name/value AS composition_name,
+    SELECT c/archetype_details/template_id/value AS template_id,
            ev/data[at0001]/items[at0002]/value/value AS diagnosis,
            ev/data[at0001]/items[at0077]/value/value AS onset
     FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
@@ -169,7 +172,7 @@
       - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0077 }
         operator: BETWEEN
         value: { from: "2025-01-01", to: "2026-01-01" }
-    composition_name: true
+    template_id: true
   notes: "発症日の範囲（日付の範囲。from 以上、to 未満）。傷病 15 件のうち、発症日時があるのは 11 件、2025 年のものは 3 件（糖尿病性腎症 2025-10-01、狭心症 2025-11-01 が ProblemList と紹介状に 1 件ずつ）。発症日時の無い 4 件（疑い・推定の高血圧症、起立性低血圧、紹介状の 2型糖尿病）は当たらない。日時は保存された形（UTC の 00:00:00）で返る"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-26

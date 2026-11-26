@@ -186,7 +186,7 @@ RSpec.describe Evaluation::Questions do
     end
 
     # S2 の経路（R-20261124-21 の作業列 3、docs/design/s1-eval-v2-plan.md 8 節）: aql の問いは、クエリビルダーへの入力（selection）を持てる
-    it "aql の問いの selection（表示する項目、条件、文書名）を読む。カードは archetype_id と at_code で指す" do
+    it "aql の問いの selection（表示する項目、条件、出所のテンプレート）を読む。カードは archetype_id と at_code で指す" do
       write("aql.yml", <<~YAML)
         - id: a001
           kind: aql
@@ -201,7 +201,7 @@ RSpec.describe Evaluation::Questions do
               - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
                 operator: ">"
                 value: 110
-            composition_name: true
+            template_id: true
         - id: a002
           kind: aql
           query: "身長"
@@ -213,7 +213,7 @@ RSpec.describe Evaluation::Questions do
       a001, a002 = described_class.from_v2(dir)
       bp = { archetype_id: "openEHR-EHR-OBSERVATION.blood_pressure.v2", at_code: "at0004" }
 
-      expect(a001.selection).to eq(columns: [ bp ], conditions: [ { card: bp, operator: ">", value: 110 } ], composition_name: true)
+      expect(a001.selection).to eq(columns: [ bp ], conditions: [ { card: bp, operator: ">", value: 110 } ], template_id: true)
       expect(a002.selection).to be_nil
     end
 

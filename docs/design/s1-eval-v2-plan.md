@@ -251,7 +251,7 @@ selection:
     - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
       operator: ">"          # カードの型で決まる（設計書 6.3 の表）
       value: 110             # 値集合はコードの配列、日付は {from, to}
-  composition_name: false
+  template_id: false     # 出所の列（c/archetype_details/template_id/value）。2026-11-26 に composition_name から改めた（skoba/anlage#183）
 ```
 
 - カードは `{archetype_id, at_code}` で指す（`cards` と同じ形）。索引（active のカード）で最初に当たるカードを使う。

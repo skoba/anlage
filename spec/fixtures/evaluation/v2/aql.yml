@@ -10,7 +10,8 @@
 #       expected_rows（demo_initial での実測。docs/reports/s1-eval-v2-log.md R10・R12）/ cards（問いが指すカード。S2 の入力）/
 #       ordered（既定 false。行の多重集合として比べる）/ notes / reviewed_by / reviewed_at
 #
-# エンジンの制約（イベント時刻・template_id に届かない。docs/upstream-candidates.md 11・25 項）による形は notes に書いた。
+# エンジンの制約（イベント時刻に届かない。docs/upstream-candidates.md 11 項）による形は notes に書いた。
+# 2026-11-26: 出所の列を template_id に切り替えた（裁定 R-20261126-8。a003。25 項は openehr 2.6.1・openehr-rails 0.11.0 で解けた）。
 
 - id: a001
   kind: aql
@@ -62,7 +63,7 @@
   query: "2型糖尿病または高血圧症の記録を、出所の文書名つきで"
   dataset: demo_initial
   reference_aql: |
-    SELECT c/name/value AS composition_name,
+    SELECT c/archetype_details/template_id/value AS template_id,
            ev/data[at0001]/items[at0002]/value/value AS diagnosis
     FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
     WHERE ev/data[at0001]/items[at0002]/value/value MATCHES {"2型糖尿病", "高血圧症"}
@@ -77,8 +78,8 @@
       - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
         operator: MATCHES
         value: ["2型糖尿病", "高血圧症"]
-    composition_name: true
-  notes: "テンプレート横断（デモクエリ 5 と同じ AQL。spec/demo/cross_template_query_spec.rb が初期状態 7 行を固定済み。糖尿病性腎症は完全一致に当たらない）。出所は c/name/value（archetype_details/template_id は上流候補 25 項で届かない）"
+    template_id: true
+  notes: "テンプレート横断（デモクエリ 5 と同じ AQL。spec/demo/cross_template_query_spec.rb が初期状態 7 行を固定済み。糖尿病性腎症は完全一致に当たらない）。出所は template_id（c/archetype_details/template_id/value）。2026-11-26（R-20261126-8）: openehr 2.6.1・openehr-rails 0.11.0 で届くようになったので、Composition 名（c/name/value）から切り替えた。期待行は実測で変わらない（どちらも ProblemList と jp_referral を返す）"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-25
 

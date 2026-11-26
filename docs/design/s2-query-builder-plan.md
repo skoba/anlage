@@ -58,7 +58,7 @@
 {
   columns: [ { card: "<template_id>|<path>" } ],                    # 射影するカード
   conditions: [ { card:, operator: ">" | ">=" | "<" | "<=" | "=" | "MATCHES" | "BETWEEN" | "CONTAINS", value: ... } ],
-  compositions: { name: true }                                       # 出所の並記（c/name/value）
+  compositions: { name: true }                                       # 出所の並記（c/name/value。実装は 2026-11-26 に template_id に切り替えた。6.3）
 }
 ```
 
@@ -132,14 +132,14 @@
 
 ### 6.3 ビルダー
 
-`QueryBuilder::Builder.build(columns:, conditions:, composition_name:)` → AQL 文字列。入力はカード（ハッシュ）と条件だけで、自然言語は入らない。
+`QueryBuilder::Builder.build(columns:, conditions:, template_id:)` → AQL 文字列（2026-11-26 に `composition_name:` から改めた。`skoba/anlage#183`）。入力はカード（ハッシュ）と条件だけで、自然言語は入らない。
 
 - 変数は ENTRY のアーキタイプ 1 つに 1 本。カードの path を、ENTRY（OBSERVATION／EVALUATION／INSTRUCTION／ACTION／ADMIN_ENTRY）の述語の節で切り、
   そこから下をパスにする。埋め込み CLUSTER は `items[openEHR-EHR-CLUSTER.x.v1]` のまま辿る
 - FROM は `EHR e CONTAINS COMPOSITION c CONTAINS <RM 型> <変数>[<archetype_id>]`。SECTION は FROM に書かない（CONTAINS は子孫を辿るので、
   SECTION 配下の ENTRY も同じ 1 本で引ける。同じアーキタイプを持つ複数のテンプレートを横断する。デモクエリ 5 と同じ形）
 - 1 つのクエリで使える ENTRY のアーキタイプは 1 つ。2 つ以上を選ぶと `InvalidSelection`（結合の意味＝同じ文書の中か、同じ患者かを決めていない）
-- 射影: DV_QUANTITY・DV_COUNT は `value/magnitude`、ほかは `value/value`。`composition_name` が真なら先頭に `c/name/value`
+- 射影: DV_QUANTITY・DV_COUNT は `value/magnitude`、ほかは `value/value`。`template_id` が真なら先頭に `c/archetype_details/template_id/value`（出所のテンプレート。openehr 2.6.1・openehr-rails 0.11.0 から届く。それまでは `c/name/value`）
 - 条件（カードの型で決まる。`QueryBuilder::Builder.kind(card)`）:
 
 | 種類 | カード | 演算子 | AQL |

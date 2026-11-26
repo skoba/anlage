@@ -48,7 +48,7 @@
           </li>
         <% end %>
       </ul>
-      <label><%= check_box_tag "composition_name", "1", @composition_name, id: "composition_name" %> 文書名も表示する</label>
+      <label><%= check_box_tag "template_id", "1", @template_id, id: "template_id" %> テンプレートも表示する</label>
       <%= check_box_tag "across_versions", "1", @across_versions, id: "across_versions" %>
       <label for="across_versions">版をまたいで引く</label>
     <% end %>
@@ -150,7 +150,7 @@
           <thead>
             <tr>
               <% if @run.version_column? %><th>アーキタイプの版</th><% end %>
-              <% if @composition_name %><th>文書名</th><% end %>
+              <% if @template_id %><th>テンプレート</th><% end %>
               <% @columns.each do |card| %><th><%= query_card_name(card) %></th><% end %>
             </tr>
           </thead>
