@@ -658,3 +658,13 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 使いどころ: 述語なしで ENTRY を束ね、行がどのアーキタイプ（版）から来たかを列に出す。29 項の別の解き方にもなる
 - anlage の扱い: 版ごとに別の AQL を組むので、行の出どころはアプリの側で分かる。上流を待たない
 - 還流先: openehr-ruby（AQL エンジン）。25 項（`archetype_details`）と同じ類。上流への連絡は統括が行う（R-20261125-12）
+
+## 25・28 項の追記（2026-11-26）: openehr 2.6.1・openehr-rails 0.11.0 で解消（`skoba/anlage#177`）
+
+- **25 項（`archetype_details/template_id`）**: 解消。0.11.0 の `Composition#to_rm` が、行の `template_id` から `archetype_details` を組み直す（openehr-rails #64）。
+  - 実測: `rake demo:reset` の 65 件で、`SELECT c/archetype_details/template_id/value` が `ProblemList` などを返す。`c/uid/value` も返す。
+  - anlage は、デモクエリ 5 の出所を template_id に切り替えた。
+- **28 項（論理削除が AQL から外れない）**: 解消。0.11.0 の `Executor.execute` の既定の scope が `latest.not_deleted`（openehr-rails #81）。
+  - anlage の削除は、gem の `CompositionCommitter.delete` を使うようにした。Contribution の変更の種類も `deleted` になる。
+  - spec は `spec/requests/record_delete_spec.rb`。
+- 残る観察: 0.11.0 でも、COMPOSITION の `composer`・`language`・`territory`・`feeder_audit`、EVENT_CONTEXT の `health_care_facility` に AQL は届かない（実測: `unsupported path attribute`）。いまの anlage の画面と評価は使っていない。

@@ -31,7 +31,7 @@ Anlage は openEHR の**参照実装**で、診療の現場で使うための製
 | # | 制限 | 根拠 |
 |---|---|---|
 | 12 | 読み戻して組み直すと内容が変わる記録は修正できない。いまは jp_referral（INSTRUCTION、多段の CLUSTER、同じアーキタイプの 2 つめの ENTRY を読み戻せない） | `app/lib/opt/composition_editability.rb`、Issue #30 |
-| 13 | **削除した記録も AQL の結果には残る**（論理削除の版を、openehr-rails 0.9.0 の既定の scope が除かない）。engine の EHR の画面にも出る | `docs/upstream-candidates.md` 28 項 |
+| 13 | （解消。2026-11-26、`skoba/anlage#177`）openehr-rails 0.11.0 で、削除した記録は AQL の結果と engine の EHR の画面から外れる。番号はほかの項目の参照のために残す。REST の GET で削除済みの記録の本文が返るのは gem の既知の制限（openehr-rails #85） | `docs/upstream-candidates.md` 28 項、`spec/requests/record_delete_spec.rb` |
 | 14 | 削除の取り消し、版の巻き戻し、EHR の削除は無い | `docs/design/m3-plan.md` 7.6 |
 | 12a | 患者の画面の「カルテ記録」の行に出る日時は、行を作った時刻（`created_at`）で、記録日（イベント時刻・context/start_time）ではない。初期データでは、どの行も `demo:reset` を実行した時刻になる | `app/views/patients/show.html.erb`。受け入れの台本 C2・D5 |
 | 12b | テンプレートを登録していない記録（初期データの紹介状 2 通。RM の側にだけ入る）は、患者の画面とカルテ記録一覧に出ない。AQL では引ける | `app/controllers/patients_controller.rb` の `show`（原本の `compositions` から引く）。受け入れの台本 C2 |
@@ -43,4 +43,4 @@ Anlage は openEHR の**参照実装**で、診療の現場で使うための製
 | 15 | AQL は最新の版だけを引く。`VERSION`・`ALL_VERSIONS` などの FROM は使えない | openehr-rails 0.9.0 `lib/openehr_rails/aql/query_validator.rb:21` |
 | 16 | canonical のデータが混ざると、埋め込みの C_ARCHETYPE_ROOT のパスが AQL で合わないことがある | Issue #7 |
 | 17 | パスカード抽出のレポート（未翻訳の疑いなど）は画面に出ない | Issue #13 |
-| 18 | 記録の出所の表示は COMPOSITION の名前（concept）で、template_id ではない。openehr の次の版（`archetype_details/template_id` に AQL が届く）を待つ | R-20261124-20 の作業列 3 |
+| 18 | （解消。2026-11-26、`skoba/anlage#177`）openehr 2.6.1・openehr-rails 0.11.0 で `c/archetype_details/template_id/value` に AQL が届く。デモクエリ 5 は template_id で並記する。番号は残す。クエリビルダーの「文書名も表示する」と評価のゴールド a003 は、Composition 名（`c/name/value`）のまま（引く側と人間の判断） | `docs/upstream-candidates.md` 25 項、`spec/demo/cross_template_query_spec.rb` |
