@@ -7,7 +7,7 @@ module Evaluation
 
     V1_SEED = "spec/fixtures/pathcards_eval_seed.yml".freeze
     V2_DIR = "spec/fixtures/evaluation/v2".freeze
-    REQUIRED_KEYS = { card: %w[query expected], aql: %w[query dataset reference_aql expected_rows] }.freeze
+    REQUIRED_KEYS = { card: %w[query expected], aql: %w[query dataset expected_rows] }.freeze
 
     module_function
 
@@ -45,6 +45,7 @@ module Evaluation
       missing = REQUIRED_KEYS.fetch(kind).reject { |key| entry.key?(key) }
       raise InvalidQuestion, "#{id}: #{kind} の問いに必須のキー #{missing.join('・')} が無い" if missing.any?
 
+      reference_aqls = reference_aqls(id, entry) if kind == :aql
       expected = ranked_refs(id, entry["expected"])
       forbidden = card_refs(entry["forbidden"])
       if kind == :card && expected.empty? && forbidden.empty?
@@ -56,10 +57,27 @@ module Evaluation
         expected: expected, match: match, forbidden: forbidden,
         acceptable: card_refs(entry["acceptable"]),
         intent_tag: entry["intent_tag"], notes: entry["notes"],
-        dataset: entry["dataset"], reference_aql: entry["reference_aql"], expected_rows: entry["expected_rows"],
+        dataset: entry["dataset"], reference_aql: entry["reference_aql"], reference_aqls: reference_aqls,
+        expected_rows: entry["expected_rows"],
         ordered: entry.fetch("ordered", false), cards: card_refs(entry["cards"]),
         pending_until: entry["pending_until"], source: path.to_s, selection: selection(id, entry["selection"])
       )
+    end
+
+    # aql の問いは、参照 AQL（reference_aql）か、版ごとの参照 AQL（reference_aqls。アーキタイプ ID → AQL）のどちらか 1 つを持つ
+    def reference_aqls(id, entry)
+      single = entry.key?("reference_aql")
+      multiple = entry.key?("reference_aqls")
+      raise InvalidQuestion, "#{id}: aql の問いに必須のキー reference_aql（または reference_aqls）が無い" unless single || multiple
+      raise InvalidQuestion, "#{id}: reference_aql と reference_aqls は、どちらか 1 つだけを書く" if single && multiple
+      return nil if single
+
+      aqls = entry["reference_aqls"]
+      unless aqls.is_a?(Hash) && aqls.any? && aqls.values.all? { |aql| aql.is_a?(String) && aql.present? }
+        raise InvalidQuestion, "#{id}: reference_aqls は「アーキタイプ ID: AQL」の表で書く（#{aqls.inspect}）"
+      end
+
+      aqls.transform_keys(&:to_s)
     end
 
     # S2 の経路の入力（クエリビルダーの選択）。カードは {archetype_id, at_code} で指す。値はそのまま渡す（検査はビルダーとリンタ）
@@ -70,7 +88,8 @@ module Evaluation
       raise InvalidQuestion, "#{id}: selection に columns（表示する項目）が無い" if columns.empty?
 
       conditions = Array(raw["conditions"]).map { |condition| selection_condition(id, condition) }
-      { columns: columns, conditions: conditions, composition_name: raw["composition_name"] ? true : false }
+      parsed = { columns: columns, conditions: conditions, composition_name: raw["composition_name"] ? true : false }
+      raw["across_versions"] ? parsed.merge(across_versions: true) : parsed
     end
 
     # 条件は { card, operator, value, include_missing } か、どちらかを満たす { any: [条件, …] }（docs/design/s1-eval-v2-plan.md 8.4）

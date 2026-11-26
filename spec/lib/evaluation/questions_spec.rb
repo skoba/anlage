@@ -120,6 +120,42 @@ RSpec.describe Evaluation::Questions do
       expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /r3.*rank/)
     end
 
+    # 版をまたぐ問い（docs/design/s1-eval-v2-plan.md 8.5、R-20261125-10）
+    it "版ごとの参照 AQL（reference_aqls）と、selection の across_versions を読む" do
+      write("aql.yml", <<~YAML)
+        - id: x1
+          kind: aql
+          query: "版をまたいで、収縮期血圧が 140 以上"
+          dataset: demo_initial
+          reference_aqls:
+            openEHR-EHR-OBSERVATION.blood_pressure.v1: "SELECT 1"
+            openEHR-EHR-OBSERVATION.blood_pressure.v2: "SELECT 2"
+          expected_rows: []
+          selection:
+            across_versions: true
+            columns:
+              - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+      YAML
+
+      x1 = described_class.from_v2(dir).first
+
+      expect(x1.reference_aqls).to eq("openEHR-EHR-OBSERVATION.blood_pressure.v1" => "SELECT 1", "openEHR-EHR-OBSERVATION.blood_pressure.v2" => "SELECT 2")
+      expect(x1.reference_aql).to be_nil
+      expect(x1.selection).to include(across_versions: true)
+    end
+
+    it "aql の問いは reference_aql か reference_aqls のどちらか 1 つを持つ。両方、どちらも無い、reference_aqls が表でない、は読み込みで止まる" do
+      base = "id: x2, kind: aql, query: q, dataset: demo_initial, expected_rows: []"
+      write("bad.yml", "- { #{base} }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x2.*reference_aql/)
+
+      write("bad.yml", "- { #{base}, reference_aql: SELECT, reference_aqls: { a: SELECT } }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x2.*どちらか/)
+
+      write("bad.yml", "- { #{base}, reference_aqls: [ SELECT ] }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x2.*reference_aqls/)
+    end
+
     # 負例だけの問い（docs/design/s1-eval-v2-plan.md 9 節、R-20261125-7）
     it "expected が空で forbidden を持つ card の問いは、負例だけの問いとして読む。at_code の無い負例はアーキタイプを指す" do
       write("cards.yml", <<~YAML)

@@ -82,4 +82,48 @@ RSpec.describe Evaluation::BuilderRoute do
       expect(described_class.score(draft)).to have_attributes(status: :match), "#{draft.id} の S2 の経路"
     end
   end
+  # 版をまたぐ問い（docs/design/s1-eval-v2-plan.md 8.5、R-20261125-10）。demo_initial の血圧は v1 が 6 件、v2 が 11 件。
+  # 収縮期 >= 150 は v1 の 162・158 と v2 の 152。対応の表はリポジトリのもの（血圧の 2 行が active）
+  describe "版をまたぐ問い" do
+    let(:bp) { "openEHR-EHR-OBSERVATION.blood_pressure" }
+    let(:path) { "o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude" }
+    let(:expected_rows) { [ [ "#{bp}.v1", 162.0 ], [ "#{bp}.v1", 158.0 ], [ "#{bp}.v2", 152.0 ] ] }
+
+    def cross(selection, expected_rows:, aqls: nil)
+      aqls ||= %w[v1 v2].to_h do |version|
+        [ "#{bp}.#{version}", "SELECT #{path} FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[#{bp}.#{version}] WHERE #{path} >= 150" ]
+      end
+      Evaluation::Question.new(id: "x1", kind: :aql, query: "版をまたいで、収縮期血圧が 150 以上", dataset: "demo_initial",
+                               reference_aqls: aqls, expected_rows: expected_rows, selection: selection)
+    end
+
+    let(:selection) { { across_versions: true, columns: [ ROUTE_BP ], conditions: [ { card: ROUTE_BP, operator: ">=", value: 150 } ] } }
+
+    it "参照: 版ごとの AQL を実行し、行の先頭にアーキタイプの ID を足して、期待行と照合する" do
+      expect(Evaluation::AqlScorer.score(cross(selection, expected_rows: expected_rows))).to have_attributes(status: :match)
+      expect(Evaluation::AqlScorer.score(cross(selection, expected_rows: expected_rows.first(2))))
+        .to have_attributes(status: :mismatch, extra: [ [ "#{bp}.v2", 152.0 ] ])
+    end
+
+    it "参照のどれかが実行できなければ unexecutable" do
+      broken = cross(selection, expected_rows: expected_rows, aqls: { "#{bp}.v1" => "SELECT c/archetype_node_id FROM EHR e CONTAINS COMPOSITION c" })
+
+      expect(Evaluation::AqlScorer.score(broken)).to have_attributes(status: :unexecutable)
+    end
+
+    it "S2 の経路: across_versions の selection から、版ごとに組んだ AQL が期待行を返せば match。組んだ AQL を版ごとに持つ" do
+      score = described_class.score(cross(selection, expected_rows: expected_rows))
+
+      expect(score).to have_attributes(status: :match)
+      expect(score.aql).to include("OBSERVATION o[#{bp}.v1]", "OBSERVATION o[#{bp}.v2]")
+    end
+
+    it "S2 の経路: 対応の無い項目を版をまたいで引こうとすると unbuildable" do
+      pd = { archetype_id: "openEHR-EHR-EVALUATION.problem_diagnosis.v1", at_code: "at0002" }
+      score = described_class.score(cross({ across_versions: true, columns: [ pd ], conditions: [] }, expected_rows: []))
+
+      expect(score).to have_attributes(status: :unbuildable)
+      expect(score.error).to include("版の対応が無い項目がある")
+    end
+  end
 end

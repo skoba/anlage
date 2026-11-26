@@ -20,11 +20,12 @@ module Evaluation
 
     def score
       selection = @question.selection
-      aql = QueryBuilder::Builder.build(
-        columns: Array(selection[:columns]).map { |ref| card(ref) },
-        conditions: Array(selection[:conditions]).map { |condition| resolve(condition) },
-        composition_name: selection[:composition_name] ? true : false
-      )
+      columns = Array(selection[:columns]).map { |ref| card(ref) }
+      conditions = Array(selection[:conditions]).map { |condition| resolve(condition) }
+      return score_across_versions(columns, conditions, selection) if selection[:across_versions]
+
+      aql = QueryBuilder::Builder.build(columns: columns, conditions: conditions,
+                                        composition_name: selection[:composition_name] ? true : false)
       lint = QueryBuilder::Linter.lint(aql, corpus: @corpus)
       return unbuildable(lint.findings.select(&:error?).map(&:message).join("／"), aql: aql) unless lint.ok?
 
@@ -35,6 +36,21 @@ module Evaluation
     end
 
     private
+
+    # 版をまたぐ問い（docs/design/s1-eval-v2-plan.md 8.5）: 対応の表で版ごとの AQL を組み、行の先頭にアーキタイプの ID を足して採点する
+    def score_across_versions(columns, conditions, selection)
+      aqls = QueryBuilder::CrossVersion.selections(columns: columns, conditions: conditions, corpus: @corpus,
+                                                   mappings: QueryBuilder::VersionMappings.default).to_h do |version|
+        [ version.archetype_id, QueryBuilder::Builder.build(columns: version.columns, conditions: version.conditions,
+                                                            composition_name: selection[:composition_name] ? true : false) ]
+      end
+      text = aqls.values.join("\n\n")
+      errors = aqls.values.flat_map { |aql| QueryBuilder::Linter.lint(aql, corpus: @corpus).findings.select(&:error?) }
+      return unbuildable(errors.map(&:message).join("／"), aql: text) if errors.any?
+
+      scored = AqlScorer.score(@question, aqls: aqls)
+      Score.new(status: scored.status, aql: text, missing: scored.missing, extra: scored.extra, error: scored.error)
+    end
 
     # 条件のカードの参照を、索引のカードに置き換える。どちらかを満たす（any）は中の条件も置き換える
     def resolve(condition)
