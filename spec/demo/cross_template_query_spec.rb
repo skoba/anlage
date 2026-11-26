@@ -34,6 +34,7 @@ RSpec.describe "デモクエリ 5: テンプレート横断の傷病名（demo:r
   end
 
   it "壇上でフォームから 1 件足すと 8 件になる" do
+    select_patient("DEMO-01") # skoba/anlage#161: 記録は、患者を選んでから保存する
     post template_compositions_path("ProblemList"), params: {
       values: { "problem_diagnosis_at0002" => "2型糖尿病", "problem_diagnosis_at0073" => "at0074" }
     }

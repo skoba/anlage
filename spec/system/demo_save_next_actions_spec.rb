@@ -4,6 +4,8 @@ require "rails_helper"
 # 実ブラウザの操作列で固定する。ビューポートは壇上の設計解像度 1280×720（rails_helper、裁定 E）。
 # 文言は docs/demo/ui-vocabulary.md（正典）の写し。
 RSpec.describe "デモ動線: 保存後の次アクション（実ブラウザ）", type: :system, js: true do
+  before { select_patient_in_browser } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   let!(:template) do
     Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/CardiologyEncounter.opt").read).tap(&:save!)
   end

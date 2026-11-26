@@ -4,6 +4,8 @@ require "rails_helper"
 # this runs under Capybara's default rack_test driver even in a sandbox
 # without a browser installed.
 RSpec.describe "OPT-driven forms", type: :system do
+  before { select_patient_in_browser } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   let(:opt_xml) { Rails.root.join("spec/fixtures/opt/patient_blood_pressure.opt").read }
   let!(:template) { Template.build_from_opt_xml(opt_xml).tap(&:save!) }
 

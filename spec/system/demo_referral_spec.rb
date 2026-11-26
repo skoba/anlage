@@ -4,6 +4,8 @@ require "rails_helper"
 # 「紹介先医療機関」の name 述語の AQL で引ける。壇上と同じ操作列（入力欄の id、ボタンの文言）で固定する。
 # 実物 fixture: jp_referral.opt v0.2。値は作例（臨床文書ではない）。
 RSpec.describe "M2 の出口: 紹介状を帳票から入力して保存し、紹介先医療機関で引ける（実ブラウザ）", type: :system, js: true do
+  before { select_patient_in_browser } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   let!(:template) do
     Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read).tap(&:save!)
   end
