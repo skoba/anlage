@@ -1,0 +1,1 @@
+- `ANLAGE_ALLOW_DEMO_RESET=1` を与えたときだけ、production（Docker）でも `rake demo:reset` で初期データを入れられるようにした。利用者に見える変更: あり（運用の手順）。
