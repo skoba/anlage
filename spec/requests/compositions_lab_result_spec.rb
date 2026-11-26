@@ -2,6 +2,8 @@ require "rails_helper"
 
 # skoba/anlage#38: LabResultReport（埋め込み CLUSTER 一段）を保存し、AQL で数値比較できる。
 RSpec.describe "LabResultReport の保存と AQL 数値比較（#38）", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   let!(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/LabResultReport.opt").read).tap(&:save!) }
 
   it "検査名・分析名・数値＋単位を保存し、CLUSTER 配下の magnitude で WHERE できる" do

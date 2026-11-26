@@ -3,6 +3,8 @@ require_relative "support/height_seed"
 require_relative "support/problem_diagnosis_seed"
 
 RSpec.describe "デモクエリ（フォーム保存経路経由）", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   describe "1. height不等号クエリ" do
     it "供給済みクエリが期待件数（1件）で実行できる" do
       [ "165.0", "170.0", "180.0" ].each do |height|
