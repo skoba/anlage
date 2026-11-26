@@ -253,4 +253,22 @@ RSpec.describe "クエリビルダー", type: :request do
       expect(doc.at_css("#query_result")).to be_nil
     end
   end
+  # 別名で出た理由と、「対応させない」行だけに当たったときの案内（R-20261125-11、skoba/anlage#152）。demo_initial の索引
+  describe "別名で出た理由と、特定できない語の案内" do
+    it "別名で出た候補のカードに「別名「<語>」で一致」と出る（BMI）。字面で当たった候補には出ない（収縮期）" do
+      get "/queries/new", params: { q: "BMI" }
+      expect(texts("#query_candidates .pathcard .alias-reason")).to eq([ "別名「BMI」で一致" ] * 2)
+
+      get "/queries/new", params: { q: "収縮期" }
+      expect(doc.css("#query_candidates .pathcard")).not_to be_empty
+      expect(doc.css("#query_candidates .alias-reason")).to be_empty
+    end
+
+    it "「対応させない」行だけに当たって 0 件のときは、その語だけでは項目を特定できないと案内する（体格指数）" do
+      get "/queries/new", params: { q: "体格指数" }
+
+      expect(doc.at_css("#query_candidates")).to be_nil
+      expect(texts("#search-guidance")).to eq([ "「体格指数」だけでは、項目を特定できません。ほかの語と組み合わせて探してください。" ])
+    end
+  end
 end

@@ -6,6 +6,10 @@
   <%= form.submit "検索" %>
 <% end %>
 
+<% if (guidance = search_guidance(@query, @pathcards)) %>
+  <p id="search-guidance"><%= guidance %></p>
+<% end %>
+
 <section id="pathcard-results">
   <%= render partial: "pathcard", collection: @pathcards %>
 </section>
