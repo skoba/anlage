@@ -128,3 +128,37 @@ RSpec.describe "修正の帳票の単位（#138）", type: :request do
     expect(selected&.[]("value")).to eq("[lb_av]/[in_i]2")
   end
 end
+
+# skoba/anlage#171: 修正できるかの判定は、イベント時刻（保存した時刻、規則 4）を比べない。保存から時間がたっても修正できる。
+# 修正の版のイベント時刻は、元の記録の時刻を引き継ぐ（測った時刻は、値を直しても変わらない。context/start_time と同じ。#146）
+RSpec.describe "OBSERVATION を含む記録は、時間がたっても修正できる（#171）", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
+
+  before { select_patient }
+
+  let!(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/CardiologyEncounter.opt").read).tap(&:save!) }
+
+  def event_time(composition)
+    composition.rm_composition.dig("content", 0, "data", "events", 0, "time", "value")
+  end
+
+  it "保存して 1 時間あとでも修正の帳票が開け、修正の版のイベント時刻は元の記録の時刻のまま" do
+    travel_to(Time.zone.parse("2026-11-26T01:00:00Z")) do
+      post "/compositions/#{template.template_id}", params: { values: { "blood_pressure_at0004" => "148", "blood_pressure_at0005" => "86" } }
+    end
+    original = Composition.order(:id).last
+
+    travel_to(Time.zone.parse("2026-11-26T02:00:00Z")) do
+      get "/compositions/#{original.id}/edit"
+      expect(response).to have_http_status(:ok)
+
+      patch "/compositions/#{original.id}", params: { values: { "blood_pressure_at0004" => "146", "blood_pressure_at0005" => "86" } }
+      expect(response).to have_http_status(:redirect)
+    end
+
+    amended = Composition.order(:id).last
+    expect(amended.uid).to eq(original.uid)
+    expect(event_time(amended)).to eq("2026-11-26T01:00:00Z")
+    expect(Opt::CompositionEditability.editable?(template, amended.rm_composition)).to be(true)
+  end
+end
