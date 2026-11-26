@@ -38,11 +38,12 @@ RSpec.describe "UI 語彙（docs/demo/ui-vocabulary.md）", type: :request do
   end
 
   describe "帳票" do
-    it "送信ボタンは「保存」" do
+    it "送信ボタンは「保存」（患者を選んでいるとき。skoba/anlage#161）" do
       template = register("ProblemList")
+      select_patient
       get form_path(template.template_id)
 
-      expect(texts("form button[type=submit]")).to eq([ "保存" ])
+      expect(texts("form[action^='/compositions'] button[type=submit]")).to eq([ "保存" ])
     end
   end
 

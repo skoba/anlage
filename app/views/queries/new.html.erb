@@ -14,12 +14,19 @@
         <% ref = QueryBuilder::Corpus.ref(card) %>
         <article class="pathcard">
           <h2><%= query_card_name(card) %></h2>
+          <% if (reason = alias_reason(card)) %>
+            <p class="alias-reason"><%= reason %></p>
+          <% end %>
           <p><%= card.dig("identity", "template_id") %>／<%= card.dig("identity", "archetype_id") %>／<%= card.dig("identity", "at_code") %>（<%= card.dig("semantics", "rm_type") %>）</p>
           <button type="submit" name="add_column" value="<%= ref %>">表示する項目に足す</button>
           <button type="submit" name="add_condition" value="<%= ref %>">条件に足す</button>
         </article>
       <% end %>
     </section>
+  <% end %>
+
+  <% if (guidance = search_guidance(@query, @candidates)) %>
+    <p id="search-guidance"><%= guidance %></p>
   <% end %>
 
   <% if @dropped.positive? %>

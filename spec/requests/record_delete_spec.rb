@@ -7,6 +7,8 @@ require "rails_helper"
 RSpec::Matchers.define_negated_matcher :not_change, :change
 
 RSpec.describe "カルテ記録の削除（#140）", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   def document = Nokogiri::HTML(response.body)
 
   let!(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!) }
@@ -55,7 +57,7 @@ RSpec.describe "カルテ記録の削除（#140）", type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("このカルテ記録は削除済みです。")
     expect(document.at_css("a#edit_composition")).to be_nil
-    expect(document.at_css("input[name='_method'][value='delete']")).to be_nil
+    expect(document.at_css("form[action^='/compositions'] input[name='_method'][value='delete']")).to be_nil
 
     get "/compositions/#{composition.id}/edit"
     expect(response).to have_http_status(:unprocessable_content)

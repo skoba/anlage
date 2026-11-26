@@ -7,7 +7,8 @@ module Opt
   class CompositionEditability
     def self.editable?(template, canonical_hash)
       values = Opt::CompositionReader.call(template, JSON.generate(canonical_hash))
-      rebuilt = Opt::CompositionBuilder.new(template, values).build
+      # 記録した時刻（イベント時刻・履歴の起点）は入力ではない。原本の時刻で組み直して比べる（skoba/anlage#171）
+      rebuilt = Opt::CompositionBuilder.new(template, values, recorded_at: Opt::RecordedTime.of(canonical_hash) || Time.current).build
       JSON.parse(OpenEHR::Serializer::RMJSONSerializer.new(rebuilt).serialize)["content"] == canonical_hash["content"]
     rescue Opt::CompositionReader::InvalidComposition, ArgumentError, KeyError, NoMethodError, TypeError
       false

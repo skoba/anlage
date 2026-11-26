@@ -4,6 +4,8 @@ require "rails_helper"
 # 修正は同じ uid で commit し、RM の側に版が 1 つ足される（gem の committer が前の head の latest_version を下ろす）。
 # 原本（compositions）は版ごとに 1 行。一覧には各記録の新しい版だけを出す。文言は docs/demo/ui-vocabulary.md の「カルテ記録」の行
 RSpec.describe "カルテ記録の修正と版（#138）", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   def document = Nokogiri::HTML(response.body)
 
   let!(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!) }
@@ -113,6 +115,8 @@ end
 
 # 単位が 2 つ以上ある数量（bmi_calculation の BMI: kg/m2 と [lb_av]/[in_i]2）は、修正の帳票で前の版の単位を選んでおく
 RSpec.describe "修正の帳票の単位（#138）", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   it "前の版の単位が選ばれている" do
     bmi = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/bmi_calculation.opt").read).tap(&:save!)
     post "/compositions/#{bmi.template_id}", params: { values: { "body_mass_index" => "500", "body_mass_index__units" => "[lb_av]/[in_i]2" } }
@@ -122,5 +126,39 @@ RSpec.describe "修正の帳票の単位（#138）", type: :request do
 
     selected = Nokogiri::HTML(response.body).at_css("select[name='values[body_mass_index__units]'] option[selected]")
     expect(selected&.[]("value")).to eq("[lb_av]/[in_i]2")
+  end
+end
+
+# skoba/anlage#171: 修正できるかの判定は、イベント時刻（保存した時刻、規則 4）を比べない。保存から時間がたっても修正できる。
+# 修正の版のイベント時刻は、元の記録の時刻を引き継ぐ（測った時刻は、値を直しても変わらない。context/start_time と同じ。#146）
+RSpec.describe "OBSERVATION を含む記録は、時間がたっても修正できる（#171）", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
+
+  before { select_patient }
+
+  let!(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/CardiologyEncounter.opt").read).tap(&:save!) }
+
+  def event_time(composition)
+    composition.rm_composition.dig("content", 0, "data", "events", 0, "time", "value")
+  end
+
+  it "保存して 1 時間あとでも修正の帳票が開け、修正の版のイベント時刻は元の記録の時刻のまま" do
+    travel_to(Time.zone.parse("2026-11-26T01:00:00Z")) do
+      post "/compositions/#{template.template_id}", params: { values: { "blood_pressure_at0004" => "148", "blood_pressure_at0005" => "86" } }
+    end
+    original = Composition.order(:id).last
+
+    travel_to(Time.zone.parse("2026-11-26T02:00:00Z")) do
+      get "/compositions/#{original.id}/edit"
+      expect(response).to have_http_status(:ok)
+
+      patch "/compositions/#{original.id}", params: { values: { "blood_pressure_at0004" => "146", "blood_pressure_at0005" => "86" } }
+      expect(response).to have_http_status(:redirect)
+    end
+
+    amended = Composition.order(:id).last
+    expect(amended.uid).to eq(original.uid)
+    expect(event_time(amended)).to eq("2026-11-26T01:00:00Z")
+    expect(Opt::CompositionEditability.editable?(template, amended.rm_composition)).to be(true)
   end
 end

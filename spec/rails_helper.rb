@@ -20,6 +20,7 @@ ENV["SE_CHROMEDRIVER"] ||= SNAP_CHROMEDRIVER if File.executable?(SNAP_CHROMEDRIV
 require "capybara/selenium/driver"
 require_relative "support/capybara_chrome_storage_reset"
 require_relative "support/rake_tasks"
+require_relative "support/patient_selection"
 # `.adl` ドロップの `POST /templates/preview` は ADL パース（Treetop）を同期実行する
 # ため、1リクエストの所要時間が負荷状況で大きく振れる。実測レンジは静穏時 724ms、
 # CPU 8並列 busy loop 下 2793ms、開発機移行の検収時（並行セッションが別 suite と

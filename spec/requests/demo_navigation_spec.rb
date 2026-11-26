@@ -3,6 +3,8 @@ require "rails_helper"
 # skoba/anlage#47 変更 1: 各画面が孤立せず、壇上で一本の流れとして歩ける。
 # 文言は docs/demo/ui-vocabulary.md（正典）の写し（CLAUDE.md、裁定 G）。
 RSpec.describe "デモ動線: 共通ナビと保存後の次アクション", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   let!(:template) do
     Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/patient_blood_pressure.opt").read).tap(&:save!)
   end

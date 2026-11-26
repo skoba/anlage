@@ -18,6 +18,8 @@ require "action_cable/engine"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
+require_relative "../lib/middleware/optional_basic_auth"
+
 module Anlage
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
@@ -26,7 +28,11 @@ module Anlage
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks])
+    config.autoload_lib(ignore: %w[assets tasks middleware])
+
+    # 任意の Basic 認証（skoba/anlage#163、docs/design/basic-auth-plan.md）。両方を与えたときだけかける
+    config.middleware.use OptionalBasicAuth,
+                          username: ENV["ANLAGE_BASIC_AUTH_USERNAME"], password: ENV["ANLAGE_BASIC_AUTH_PASSWORD"]
 
     # Configuration for the application, engines, and railties goes here.
     #

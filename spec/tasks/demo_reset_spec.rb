@@ -114,4 +114,33 @@ RSpec.describe "demo:reset" do
     expect { run_task }.to raise_error(SystemExit)
     expect(Template.count).to eq(0)
   end
+
+  # skoba/anlage#168（R-20261126-2 の受け入れの台本）: Docker のイメージは production。全データを消して入れ直す操作なので、
+  # 明示の環境変数 ANLAGE_ALLOW_DEMO_RESET=1 を与えたときだけ production でも動かす
+  context "production で ANLAGE_ALLOW_DEMO_RESET を与えたとき" do
+    before { allow(Rails.env).to receive(:production?).and_return(true) }
+
+    around do |example|
+      original = ENV["ANLAGE_ALLOW_DEMO_RESET"]
+      example.run
+    ensure
+      ENV["ANLAGE_ALLOW_DEMO_RESET"] = original
+    end
+
+    it "1 なら動いて、患者 6 人と 65 件を入れる" do
+      ENV["ANLAGE_ALLOW_DEMO_RESET"] = "1"
+
+      run_task
+
+      expect(OpenehrRails::Rm::Ehr.count).to eq(6)
+      expect(rm_compositions.count).to eq(65)
+    end
+
+    it "1 以外（true など）では、これまでどおり止まる" do
+      ENV["ANLAGE_ALLOW_DEMO_RESET"] = "true"
+
+      expect { run_task }.to raise_error(SystemExit)
+      expect(Template.count).to eq(0)
+    end
+  end
 end

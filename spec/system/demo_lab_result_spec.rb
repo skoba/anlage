@@ -2,6 +2,8 @@ require "rails_helper"
 
 # skoba/anlage#37・#38: 実ブラウザの操作列（LabResultReport: 検査名・分析名・数値＋単位 → 保存 → AQL）。
 RSpec.describe "デモ動線: LabResultReport のフォーム入力→保存→AQL（実ブラウザ）", type: :system, js: true do
+  before { select_patient_in_browser } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   let!(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/LabResultReport.opt").read).tap(&:save!) }
 
   it "検査名・分析名・数値と単位を入力して保存し、CLUSTER 配下の数値を AQL で比較できる" do

@@ -1,4 +1,6 @@
 class CompositionsController < ApplicationController
+  PATIENT_REQUIRED_MESSAGE = "患者を選んでいません。患者を選んでから保存してください".freeze
+
   def index
     @compositions = Composition.listed.includes(:template).order(created_at: :desc)
   end
@@ -35,7 +37,9 @@ class CompositionsController < ApplicationController
     end
 
     ehr = OpenehrRails::Rm::Composition.latest.find_by(uid: previous.uid)&.ehr
-    commit = Opt::RmCompositionCommitter.call(@template, values, ehr: ehr, uid: previous.uid)
+    # 修正の版のイベント時刻は、元の記録の時刻を引き継ぐ（skoba/anlage#171）
+    commit = Opt::RmCompositionCommitter.call(@template, values, ehr: ehr, uid: previous.uid,
+                                                                recorded_at: Opt::RecordedTime.of(previous.rm_composition))
     composition = @template.compositions.create!(rm_composition: commit.canonical_hash, uid: commit.uid)
     redirect_to composition_path(composition), notice: "修正しました"
   end
@@ -49,6 +53,13 @@ class CompositionsController < ApplicationController
     if @template.preview_only?
       @values = values
       @errors = {}
+      return render "forms/show", status: :unprocessable_content
+    end
+
+    # skoba/anlage#161（R-20261126-2 の 5）: 記録は必ず EHR に属する。患者を選んでいなければ保存しない
+    unless current_ehr
+      @values = values
+      @errors = { "base" => PATIENT_REQUIRED_MESSAGE }
       return render "forms/show", status: :unprocessable_content
     end
 

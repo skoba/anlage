@@ -54,3 +54,10 @@ OpenehrRails.default_territory = "JP"
 # reverse proxy that already authenticates, network-isolated internal
 # apps) -- NOT recommended for anything reachable outside your network:
 # OpenehrRails.allow_unauthenticated_access = true
+
+# skoba/anlage#174: 任意の Basic 認証（lib/middleware/optional_basic_auth.rb、#163）を与えたときは、アプリの入口で認証済み。
+# engine（AQL 照会・FHIR・openEHR REST）の production の既定の拒否を開ける。与えなければ gem の既定のまま
+# （development／test は開く、production は 403）
+OpenehrRails.authenticate_with = OptionalBasicAuth.engine_hook(
+  username: ENV["ANLAGE_BASIC_AUTH_USERNAME"], password: ENV["ANLAGE_BASIC_AUTH_PASSWORD"]
+)
