@@ -39,7 +39,7 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     expect(page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")).to be(false)
   end
 
-  it "値集合: 傷病名を表示し、診断確度「疑い」にチェックしてテンプレートつきで実行すると、ProblemList の 3 行と紹介状の 1 行が出る（コード値 at0074 で引く）" do
+  it "値集合: 傷病名を表示し、診断確度「疑い」にチェックしてテンプレートつきで実行すると、ProblemList の 3 行と紹介状の 4 行が出る（コード値 at0074 で引く。血液内科への紹介状 3 通を含む）" do
     visit new_query_path
 
     fill_in "探したい項目", with: "診断名"
@@ -55,9 +55,10 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     click_button "実行"
 
     expect(page).to have_css("#query_aql pre", text: 'value/defining_code/code_string MATCHES {"at0074"}')
-    expect(page).to have_css("#query_result p", text: "4 行")
+    expect(page).to have_css("#query_result p", text: "7 行")
     rows = all("#query_result tbody tr").map { |row| row.all("td").map(&:text) }
-    expect(rows).to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "起立性低血圧" ], [ "ProblemList", "狭心症" ], [ "jp_referral", "狭心症" ] ])
+    expect(rows).to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "起立性低血圧" ], [ "ProblemList", "狭心症" ], [ "jp_referral", "狭心症" ],
+                              [ "jp_referral", "白血病" ], [ "jp_referral", "悪性リンパ腫" ], [ "jp_referral", "多発性骨髄腫" ] ])
   end
 
   it "組めない値（数値でない）は実行せず、理由が出る。直して実行できる" do

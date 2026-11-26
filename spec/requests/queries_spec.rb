@@ -73,14 +73,15 @@ RSpec.describe "クエリビルダー", type: :request do
     expect(texts("#query_result td")).to match_array(%w[148.0 152.0 138.0 134.0 132.0 128.0 126.0 118.0])
   end
 
-  it "実行: 診断確度のコード at0074（疑い）を選び、テンプレートも表示すると、ProblemList の 3 行と紹介状の 1 行" do
+  it "実行: 診断確度のコード at0074（疑い）を選び、テンプレートも表示すると、ProblemList の 3 行と紹介状の 4 行（血液内科への紹介状 3 通を含む）" do
     get "/queries/new", params: { columns: [ QB_DIAGNOSIS ], template_id: "1",
                                   conditions: { "0" => { card: QB_CERTAINTY, values: [ "at0074" ] } }, run: "実行" }
 
     expect(doc.at_css("#query_aql pre").text).to include('value/defining_code/code_string MATCHES {"at0074"}')
     expect(texts("#query_result th")).to eq([ "テンプレート", "プロブレム・診断名" ])
     expect(doc.css("#query_result tbody tr").map { |row| row.css("td").map { _1.text.strip } })
-      .to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "起立性低血圧" ], [ "ProblemList", "狭心症" ], [ "jp_referral", "狭心症" ] ])
+      .to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "起立性低血圧" ], [ "ProblemList", "狭心症" ], [ "jp_referral", "狭心症" ],
+                       [ "jp_referral", "白血病" ], [ "jp_referral", "悪性リンパ腫" ], [ "jp_referral", "多発性骨髄腫" ] ])
   end
 
   it "以前の URL（composition_name=1）も、テンプレートの列として受ける（skoba/anlage#183）" do

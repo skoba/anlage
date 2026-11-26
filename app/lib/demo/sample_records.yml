@@ -7,6 +7,10 @@
 # icd11: ICD-11 MMS のコード。5A11（2型糖尿病）だけを使う（設計書 2 節の 4、問い 2）
 # jp_referral: テンプレートを登録しないので、構造骨格（spec/fixtures/compositions/jp_referral/skeleton.canonical.json）の
 #   複製の値を差し替えて RM グラフにだけ入れる（設計書 2 節の 6）。department は紹介先の診療科
+#   form: true の紹介状（DEMO-07〜09、設計書 7 節、R-20261126-11）は、骨格を使わず、jp_referral.opt から作った
+#   テンプレート（保存しない）で帳票と同じ組み立てを使い、項目を埋めて RM グラフにだけ入れる（7.5 の問い 6）。
+#   sender は紹介元、receiver は紹介先、purpose は紹介目的、history は既往歴及び家族歴、synopsis は症状経過及び検査結果、
+#   treatment は治療経過。医師の氏名は書かない
 DEMO-01:
   - { row: 1, date: 2026-01-15, template: ProblemList, diagnosis: 2型糖尿病, icd11: 5A11, certainty: at0076, onset: "2018-04-01" }
   - { row: 2, date: 2026-01-15, template: ProblemList, diagnosis: 糖尿病性腎症, certainty: at0076, onset: "2025-10-01" }
@@ -83,3 +87,70 @@ DEMO-06:
   - { row: 5, date: 2026-06-01, template: LabResultReport, analyte: LDL コレステロール, result: 104, units: mg/dL }
   - { row: 6, date: 2026-06-01, template: LabResultReport, analyte: ヘモグロビン, result: 14.2, units: g/dL }
   - { row: 7, date: 2026-06-01, template: bmi_calculation, height: 172, weight: 63, bmi: 21.3, judgement: 普通体重 }
+
+# 血液内科への紹介の例（設計書 7.3 節・7.4 節、R-20261126-11。臨床のレビューは人間）
+DEMO-07:
+  - { row: 1, date: 2026-06-15, template: LabResultReport, analyte: 白血球数, result: 48500, units: /μL }
+  - { row: 2, date: 2026-06-15, template: LabResultReport, analyte: 芽球（末梢血）, result: 58, units: "%" }
+  - { row: 3, date: 2026-06-15, template: LabResultReport, analyte: ヘモグロビン, result: 8.9, units: g/dL }
+  - { row: 4, date: 2026-06-15, template: LabResultReport, analyte: 血小板数, result: 2.1, units: ×10^4/μL }
+  - { row: 5, date: 2026-06-15, template: LabResultReport, analyte: LDH, result: 1150, units: U/L }
+  - row: 6
+    date: 2026-06-18
+    template: jp_referral
+    form: true
+    service: 外来紹介
+    purpose: 白血球の異常高値と血小板の低値があり、精査加療をお願いします
+    sender: Bクリニック
+    receiver: X病院
+    department: 血液内科
+    diagnosis: 白血病
+    certainty: at0074
+    onset: "2026-06-01"
+    history: 特記事項なし。家族歴に血液疾患なし
+    synopsis: 2 週間前から倦怠感と微熱があり、下腿に点状出血を認めた。6/15 の血液検査で白血球数 48,500/μL（芽球 58%）、Hb 8.9 g/dL、血小板数 2.1×10^4/μL、LDH 1,150 U/L
+    treatment: 未治療
+
+DEMO-08:
+  - { row: 1, date: 2026-07-06, template: LabResultReport, analyte: 白血球数, result: 6800, units: /μL }
+  - { row: 2, date: 2026-07-06, template: LabResultReport, analyte: LDH, result: 412, units: U/L }
+  - { row: 3, date: 2026-07-06, template: LabResultReport, analyte: 可溶性 IL-2 受容体, result: 2450, units: U/mL }
+  - { row: 4, date: 2026-07-06, template: LabResultReport, analyte: CRP, result: 1.6, units: mg/dL }
+  - row: 5
+    date: 2026-07-09
+    template: jp_referral
+    form: true
+    service: 外来紹介
+    purpose: 頸部と鼠径部のリンパ節腫脹があり、精査をお願いします
+    sender: C内科医院
+    receiver: X病院
+    department: 血液内科
+    diagnosis: 悪性リンパ腫
+    certainty: at0074
+    onset: "2026-06-08"
+    history: 高血圧症で内服治療中
+    synopsis: 1 か月前から頸部の腫瘤に気づいた。左頸部に 2〜3 cm、両側鼠径部に 1〜2 cm の可動性のある無痛性のリンパ節を複数触れる。寝汗あり。発熱と体重減少はない。7/6 の検査で LDH 412 U/L、可溶性 IL-2 受容体 2,450 U/mL、CRP 1.6 mg/dL
+    treatment: 未治療
+
+DEMO-09:
+  - { row: 1, date: 2026-08-17, template: LabResultReport, analyte: 総蛋白, result: 10.4, units: g/dL }
+  - { row: 2, date: 2026-08-17, template: LabResultReport, analyte: アルブミン, result: 3.0, units: g/dL }
+  - { row: 3, date: 2026-08-17, template: LabResultReport, analyte: IgG, result: 5120, units: mg/dL }
+  - { row: 4, date: 2026-08-17, template: LabResultReport, analyte: クレアチニン, result: 2.06, units: mg/dL }
+  - { row: 5, date: 2026-08-17, template: LabResultReport, analyte: eGFR, result: 25, units: mL/min/1.73m2 }
+  - { row: 6, date: 2026-08-17, template: LabResultReport, analyte: カルシウム, result: 10.9, units: mg/dL }
+  - { row: 7, date: 2026-08-17, template: LabResultReport, analyte: ヘモグロビン, result: 9.4, units: g/dL }
+  - row: 8
+    date: 2026-08-20
+    template: jp_referral
+    form: true
+    service: 外来紹介
+    purpose: 腎障害と高タンパク血症があり、精査をお願いします
+    sender: Aクリニック
+    receiver: X病院
+    department: 血液内科
+    diagnosis: 多発性骨髄腫
+    certainty: at0074
+    history: 2 年前の健診で蛋白尿を指摘
+    synopsis: 3 か月前から倦怠感。8/17 の検査で総蛋白 10.4 g/dL、アルブミン 3.0 g/dL、IgG 5,120 mg/dL、クレアチニン 2.06 mg/dL（eGFR 25）、Ca 10.9 mg/dL、Hb 9.4 g/dL
+    treatment: 未治療
