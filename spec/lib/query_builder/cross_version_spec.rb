@@ -2,7 +2,7 @@ require "rails_helper"
 
 # 版をまたいで引く（docs/design/s2-cross-version-plan.md 4 節、skoba/anlage#154、R-20261125-10）。
 # データは demo_initial（血圧は blood_pressure.v2 の 120／80 が 1 件）に、blood_pressure.v1 の記録（150／95、100／60）を足したもの。
-# 対応の表は、この spec の中で active の行を作って渡す（リポジトリの表の行は、レビューが済むまで pending）。
+# 対応の表は、この spec の中で行を作って渡す（リポジトリの表に左右されないように）。リポジトリの表を使う例は最後に 1 つ。
 RSpec.describe "版をまたいで引く" do
   XV_BP = "openEHR-EHR-OBSERVATION.blood_pressure".freeze
   XV_PD = "openEHR-EHR-EVALUATION.problem_diagnosis.v1".freeze
@@ -86,9 +86,16 @@ RSpec.describe "版をまたいで引く" do
     expect(other.error).to eq("版の対応が無い項目がある: プロブレム・診断名（#{XV_PD} at0002）")
   end
 
-  it "pending の対応（候補のまま）では組まない。リポジトリの表（既定）は、まだ pending" do
+  it "pending の対応（候補のまま）では組まない" do
     expect(run(columns: [ systolic ], mappings: mappings("at0004", status: "pending")).error).to include("版の対応が無い項目がある")
-    expect(run(columns: [ systolic ]).error).to include("版の対応が無い項目がある")
+  end
+
+  # R-20261125-11: リポジトリの表（config/version_mappings.yml）の血圧の 2 行が active になった
+  it "リポジトリの表（既定）で、血圧の収縮期と拡張期を版をまたいで引ける" do
+    result = run(columns: [ systolic, diastolic ])
+
+    expect(result.error).to be_nil
+    expect(rows(result)).to eq([ [ "#{XV_BP}.v1", 150.0, 95.0 ], [ "#{XV_BP}.v1", 100.0, 60.0 ], [ "#{XV_BP}.v2", 120.0, 80.0 ] ])
   end
 
   it "索引に片方の版のカードしか無ければ、その版だけを引く" do

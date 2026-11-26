@@ -25,8 +25,8 @@ RSpec.describe "query_builder:version_candidates" do
     expect { run_task }.to output(
       a_string_including(
         "# アーキタイプの版の対応の候補（2 件）",
-        "| openEHR-EHR-OBSERVATION.blood_pressure | at0004 | v1、v2 | v1: Systolic／v2: 収縮期 | DV_QUANTITY | なし | pending |",
-        "| openEHR-EHR-OBSERVATION.blood_pressure | at0005 | v1、v2 | v1: Diastolic／v2: 拡張期 | DV_QUANTITY | なし | pending |"
+        "| openEHR-EHR-OBSERVATION.blood_pressure | at0004 | v1、v2 | v1: Systolic／v2: 収縮期 | DV_QUANTITY | なし | active |",
+        "| openEHR-EHR-OBSERVATION.blood_pressure | at0005 | v1、v2 | v1: Diastolic／v2: 拡張期 | DV_QUANTITY | なし | active |"
       )
     ).to_stdout
     expect(Rails.root.join("config/version_mappings.yml").read).to eq(table_before)
