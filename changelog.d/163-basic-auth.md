@@ -1,0 +1,4 @@
+- 任意の Basic 認証を足した。利用者に見える変更: あり（与えたときだけ）。
+  - `ANLAGE_BASIC_AUTH_USERNAME` と `ANLAGE_BASIC_AUTH_PASSWORD` を両方与えたときだけ、全画面と API にかかる。
+  - `/up` にはかからない。
+  - 与えなければ、いままでと同じ。
