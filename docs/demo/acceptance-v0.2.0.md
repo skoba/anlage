@@ -14,7 +14,7 @@
 |---|---|---|
 | A1 | リポジトリの根で `docker build -t anlage .` | 最後に `naming to docker.io/library/anlage` が出て、終わる |
 | A2 | `docker volume rm anlage-storage`（前の volume があれば。無ければ「no such volume」で構わない）のあと、`docker run -d --name anlage -p 8080:80 -e SECRET_KEY_BASE=$(openssl rand -hex 64) -e ANLAGE_BASIC_AUTH_USERNAME=demo -e ANLAGE_BASIC_AUTH_PASSWORD=<pw> -v anlage-storage:/rails/storage anlage` | コンテナの ID が 1 行出る |
-| A3 | `curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/up` を、`200` が出るまで数秒おきにくり返す | 起動の途中は `502`（前に立つ proxy が先に起きる）。起動すると `200`（`/up` に Basic 認証はかからない） |
+| A3 | `curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/up` を、`200` が出るまで数秒おきにくり返す | 起動の直後は `000`（まだつながらない）、途中は `502`（前に立つ proxy が先に起きる）。起動すると `200`（`/up` に Basic 認証はかからない） |
 | A4 | `curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/patients` | `401` |
 | A5 | ブラウザで http://localhost:8080/ を開き、利用者名 `demo` とパスワード `<pw>` を入れる | 見出し「テンプレートの取り込み」（テンプレートの画面）。左のナビの先頭に、地の色を変えて「参照実装です。認証がありません。実在の患者のデータを入れないでください。外から届く場所で動かさないでください。」 |
 | A6 | 左のナビを上から順に押す（患者／テンプレート／カルテ記録一覧／パスカード検索／クエリビルダー／AQL 照会） | どの画面にも A5 の警告が出る。AQL 照会も開ける（403 にならない） |
@@ -70,8 +70,9 @@ FROM EHR e CONTAINS COMPOSITION c[openEHR-EHR-COMPOSITION.request.v1]
 |---|---|---|
 | F1 | ナビ「クエリビルダー」→「探したい項目」に「収縮期」→「検索」→ CardiologyEncounter の「収縮期」で「表示する項目に足す」と「条件に足す」→ 演算子「>=」、値「140」→「実行」 | 「2 行」。148.0 と 152.0 |
 | F2 | ナビ「クエリビルダー」→「診断名」で検索 → ProblemList の「プロブレム・診断名」を「表示する項目に足す」→「診断確度」で検索 → 「条件に足す」→「確定」にチェック →「実行」 | 「9 行」 |
-| F3 | F2 の条件の「未記入を含む」にチェック →「実行」 | 「12 行」（確定 9 と、確度を書かない紹介状 3: 2型糖尿病、狭心症、慢性腎臓病）。AQL に `OR NOT EXISTS` が出る |
-| F4 | ナビ「クエリビルダー」→ F1 と同じ選択と条件で、「版をまたいで引く」にチェック →「実行」 | 版の対応の表（`config/version_mappings.yml`）の血圧の行が **pending** のあいだは「実行しませんでした: 版の対応が無い項目がある: 収縮期（openEHR-EHR-OBSERVATION.blood_pressure.v2 at0004）」。**active** なら、先頭の列「アーキタイプの版」つきで 6 行（v1 の 162・158・146・142、v2 の 148・152） |
+| F3 | F2 の条件の「未記入を含む」にチェック →「実行」 | 「11 行」（確定 9 と、確度を書かない紹介状 2: 2型糖尿病（DEMO-01）、慢性腎臓病（D4）。DEMO-05 の紹介状の狭心症は「疑い」なので入らない）。AQL に `OR NOT EXISTS` が出る |
+| F4 | ナビ「クエリビルダー」→ F1 と同じ選択と条件で、「版をまたいで引く」にチェック →「実行」 | 先頭の列「アーキタイプの版」つきで「6 行」（v1 の 162・158・146・142、v2 の 148・152）。版の対応の表（`config/version_mappings.yml`）の血圧の行は active（2026-11-26、PR #159） |
+| F5 | ナビ「クエリビルダー」→ F2 と同じ選択で、条件は「疑い」にチェック、「テンプレートも表示する」にチェック →「実行」 | 「7 行」。先頭の列の見出しが「テンプレート」で、ProblemList が 3 行、jp_referral が 4 行（出所は template_id。既知の制限 18 の解消） |
 
 ## G. パスカード検索（別名を含む）
 
@@ -88,6 +89,16 @@ FROM EHR e CONTAINS COMPOSITION c[openEHR-EHR-COMPOSITION.request.v1]
 | H2 | 収縮期を 1 だけ下げて「保存」 | flash「修正しました」。「版の履歴」に 2 行、2 行目に「（この版）」 |
 | H3 | 同じ記録の画面で「削除」→ 確認「このカルテ記録を削除しますか？」で OK | flash「削除しました」。カルテ記録一覧に、その記録が無い |
 | H4 | DEMO-01 の画面 | 「カルテ記録」が 18 件（H3 の記録が消えた） |
+| H5 | 画面の「EHR ID」を写し、ナビ「AQL 照会」に下の AQL（`<EHR ID>` を置き換える）を貼り、「Run query」 | 3 行: 148・152・138（H3 で削除した記録は AQL にも出ない。既知の制限 13 の解消） |
+
+H5 の AQL:
+
+```
+SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic
+FROM EHR e[ehr_id/value='<EHR ID>'] CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+```
+
+H1 で開くのは、DEMO-01 の画面でいちばん上の CardiologyEncounter（記録日 2026-10-15、収縮期 134）
 
 ## I. FHIR の読み出し
 
