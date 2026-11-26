@@ -3,6 +3,8 @@ require "rails_helper"
 # skoba/anlage#47 変更 4: サーバが権威。クライアントの計算値（や改ざん）にかかわらず、保存される
 # Composition には config/form_behaviors.yml の再計算値が入る。
 RSpec.describe "POST /compositions/bmi_calculation（form_behaviors）", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   let!(:template) do
     Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/bmi_calculation.opt").read).tap(&:save!)
   end
