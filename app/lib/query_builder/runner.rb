@@ -16,15 +16,15 @@ module QueryBuilder
       def aql = queries.empty? ? nil : queries.map(&:aql).join("\n\n")
     end
 
-    def self.call(columns:, conditions: [], composition_name: false, execute: true, across_versions: false,
+    def self.call(columns:, conditions: [], template_id: false, execute: true, across_versions: false,
                   mappings: VersionMappings.default, corpus: nil)
-      new(columns, conditions, composition_name, execute, across_versions, mappings, corpus).call
+      new(columns, conditions, template_id, execute, across_versions, mappings, corpus).call
     end
 
-    def initialize(columns, conditions, composition_name, execute, across_versions, mappings, corpus)
+    def initialize(columns, conditions, template_id, execute, across_versions, mappings, corpus)
       @columns = columns
       @conditions = conditions
-      @composition_name = composition_name
+      @template_id = template_id
       @execute = execute
       @across_versions = across_versions
       @mappings = mappings
@@ -33,7 +33,7 @@ module QueryBuilder
 
     def call
       queries = selections.map do |selection|
-        aql = Builder.build(columns: selection.columns, conditions: selection.conditions, composition_name: @composition_name)
+        aql = Builder.build(columns: selection.columns, conditions: selection.conditions, template_id: @template_id)
         Query.new(archetype_id: selection.archetype_id, aql: aql, lint: Linter.lint(aql))
       end
       lint = Linter::Lint.new(queries.flat_map { |query| query.lint.findings })

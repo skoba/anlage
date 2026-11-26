@@ -26,7 +26,7 @@ RSpec.describe QueryBuilder::Runner do
     selections = {
       "a001" => { columns: [ card(QB_BP_O, "at0004") ], conditions: [ { card: card(QB_BP_O, "at0004"), operator: ">=", value: "140" } ] },
       "a002" => { columns: [ card(QB_PD_E, "at0002") ], conditions: [ { card: card(QB_PD_E, "at0073"), operator: "MATCHES", value: [ "at0074" ] } ] },
-      "a003" => { columns: [ card(QB_PD_E, "at0002") ], composition_name: true,
+      "a003" => { columns: [ card(QB_PD_E, "at0002") ], template_id: true,
                   conditions: [ { card: card(QB_PD_E, "at0002"), operator: "MATCHES", value: [ "2型糖尿病", "高血圧症" ] } ] },
       "a004" => { columns: [ card(QB_ANALYTE_C, "at0001") ], conditions: [ { card: card(QB_ANALYTE_C, "at0024"), operator: "=", value: "空腹時血糖" } ] },
       "a005" => { columns: [ card(QB_HEIGHT_O, "at0004") ], conditions: [ { card: card(QB_HEIGHT_O, "at0004"), operator: ">=", value: "170" } ] }

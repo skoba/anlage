@@ -73,14 +73,23 @@ RSpec.describe "クエリビルダー", type: :request do
     expect(texts("#query_result td")).to match_array(%w[148.0 152.0 138.0 134.0 132.0 128.0 126.0 118.0])
   end
 
-  it "実行: 診断確度のコード at0074（疑い）を選び、文書名も表示すると、ProblemList の 3 行と紹介状の 1 行" do
-    get "/queries/new", params: { columns: [ QB_DIAGNOSIS ], composition_name: "1",
+  it "実行: 診断確度のコード at0074（疑い）を選び、テンプレートも表示すると、ProblemList の 3 行と紹介状の 1 行" do
+    get "/queries/new", params: { columns: [ QB_DIAGNOSIS ], template_id: "1",
                                   conditions: { "0" => { card: QB_CERTAINTY, values: [ "at0074" ] } }, run: "実行" }
 
     expect(doc.at_css("#query_aql pre").text).to include('value/defining_code/code_string MATCHES {"at0074"}')
-    expect(texts("#query_result th")).to eq([ "文書名", "プロブレム・診断名" ])
+    expect(texts("#query_result th")).to eq([ "テンプレート", "プロブレム・診断名" ])
     expect(doc.css("#query_result tbody tr").map { |row| row.css("td").map { _1.text.strip } })
       .to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "起立性低血圧" ], [ "ProblemList", "狭心症" ], [ "jp_referral", "狭心症" ] ])
+  end
+
+  it "以前の URL（composition_name=1）も、テンプレートの列として受ける（skoba/anlage#183）" do
+    get "/queries/new", params: { columns: [ QB_DIAGNOSIS ], composition_name: "1",
+                                  conditions: { "0" => { card: QB_CERTAINTY, values: [ "at0074" ] } }, run: "実行" }
+
+    expect(doc.at_css("#query_aql pre").text).to include("SELECT c/archetype_details/template_id/value,")
+    expect(texts("#query_result th")).to eq([ "テンプレート", "プロブレム・診断名" ])
+    expect(doc.at_css("input#template_id")["checked"]).to be_present
   end
 
   it "該当が無ければ「該当する記録はありません。」" do
