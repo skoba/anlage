@@ -15,7 +15,7 @@ class OptionalBasicAuth
   def self.engine_hook(username:, password:)
     return nil unless username.present? && password.present?
 
-    -> {}
+    -> { }
   end
 
   def initialize(app, username:, password:)
