@@ -96,7 +96,7 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
 - 状態: **spec 化済み**（`spec/demo/cross_template_query_spec.rb`）
 - クエリ:
   ```
-  SELECT c/name/value AS composition_name,
+  SELECT c/archetype_details/template_id/value AS template_id,
          ev/data[at0001]/items[at0002]/value/value AS diagnosis
   FROM EHR e CONTAINS COMPOSITION c
        CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
@@ -110,9 +110,8 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
   - jp_referral「2型糖尿病」1 件（5A11 付き）
   - 糖尿病性腎症は完全一致に当たらない
   - フォームから「2型糖尿病」を 1 件足すと **8 件**
-- 出所の並記は Composition 名（`c/name/value`）。`c/archetype_details/template_id/value` は、openehr 2.6.0 で
-  例外にならなくなったが、値は nil（openehr-rails 0.10.0 の `to_rm` が archetype_details を組まない。
-  `docs/upstream-candidates.md` 25 項と 2026-11-25 の追記）。切り替えは openehr-rails の修正の版のあと
+- 出所の並記は template_id（`c/archetype_details/template_id/value`）。openehr 2.6.1・openehr-rails 0.11.0 で届くようになり、
+  Composition 名（`c/name/value`）から切り替えた（2026-11-26、`skoba/anlage#177`。`docs/upstream-candidates.md` 25 項）
 - **質疑応答用 1 行**: 「紹介先医療機関で引く」（`items[openEHR-EHR-CLUSTER.organisation.v1, '紹介先医療機関']`）は、
   openehr 2.5.0（[openehr-ruby#60](https://github.com/skoba/openehr-ruby/issues/60)）で引けるようになった
   （`spec/integration/jp_referral_aql_spec.rb` の構造骨格。2026-11-24）。このクエリをその形に変えるのは、

@@ -5,13 +5,13 @@ require "rake"
 # 台本 3' 幕（skoba/anlage#47、裁定 2026-10-20）: 同じ問題・診断アーキタイプを使う ProblemList と
 # jp_referral が、1 本の AQL で同時に引ける（骨格契約の横串一貫性）。name 述語を使わない形
 # （紹介先医療機関で引く形は openehr 2.5.0 で引けるようになった。spec/integration/jp_referral_aql_spec.rb。
-# デモクエリ 5 をその形に変えるのは、jp_referral のフォーム保存〔M2〕のあと）。出所は Composition 名で並記する
-# （c/archetype_details/template_id は現行エンジンの終端ホップ外、log R10）。
+# デモクエリ 5 をその形に変えるのは、jp_referral のフォーム保存〔M2〕のあと）。出所は template_id で並記する
+# （openehr 2.6.1・openehr-rails 0.11.0 で c/archetype_details/template_id に届く。skoba/anlage#177。以前は Composition 名）。
 # 初期状態（rake demo:reset。docs/design/sample-data-plan.md 3 節）で 2 テンプレート・7 件、壇上でフォームから 1 件足すと 8 件。
 # 糖尿病性腎症（DEMO-01）は MATCHES の完全一致に当たらない。
 RSpec.describe "デモクエリ 5: テンプレート横断の傷病名（demo:reset の初期状態から）", type: :request do
   CROSS_TEMPLATE_AQL = <<~AQL
-    SELECT c/name/value AS composition_name,
+    SELECT c/archetype_details/template_id/value AS template_id,
            ev/data[at0001]/items[at0002]/value/value AS diagnosis
     FROM EHR e CONTAINS COMPOSITION c
          CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
