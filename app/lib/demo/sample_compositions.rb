@@ -82,13 +82,15 @@ module Demo
                              "code_string" => code } }
     end
 
-    # 紹介状: 骨格の複製の、傷病名・発症日時・紹介先の診療科を差し替える。確度は書かない（確度を書かない文書の形）
+    # 紹介状: 骨格の複製の、傷病名・発症日時・紹介先の診療科を差し替える。確度は、行に certainty があるときだけ書く
+    # （DEMO-05 は「狭心症の疑い」での紹介。DEMO-01 は確度を書かない文書の形のまま。R-20261126-5）
     def commit_referral(ehr, record, recorded_at)
       canonical = JSON.parse(Rails.root.join(JP_REFERRAL_SKELETON).read)
       section_items = canonical.dig("content", 0, "items")
       diagnosis_items = section_items.find { _1["archetype_node_id"] == PROBLEM_DIAGNOSIS }.dig("data", "items")
       diagnosis_items.find { _1["archetype_node_id"] == "at0002" }["value"] = { "_type" => "DV_TEXT", "value" => record.fetch("diagnosis") }
       code_diagnosis([ { "data" => { "items" => diagnosis_items } } ], record["icd11"]) if record["icd11"]
+      diagnosis_items << certainty_element(record["certainty"]) if record["certainty"]
       diagnosis_items << onset_element(record["onset"]) if record["onset"]
       department(section_items)["value"] = { "_type" => "DV_TEXT", "value" => record.fetch("department") }
 
@@ -102,6 +104,18 @@ module Demo
                               .select { _1["archetype_node_id"] == ORGANISATION }.second
       receiver.fetch("items").find { _1["archetype_node_id"] == ORGANISATION }
               .fetch("items").find { _1["archetype_node_id"] == "at0001" }
+    end
+
+    # 診断確度の ELEMENT。名前と値の表示は jp_referral.opt から引く（項目のラベルと、値集合のコードの表示）
+    def certainty_element(code)
+      template = Template.build_from_opt_xml(Rails.root.join(JP_REFERRAL_OPT).read)
+      label = template.fields.find { _1["name"] == "problem_diagnosis_at0073" }.fetch("label")
+      card = Opt::PathcardExtractor.call(template).cards.find { _1.dig("identity", "at_code") == "at0073" }
+      display = card.dig("constraints", "value", "code_list").find { _1["code"] == code }.fetch("label")
+      { "_type" => "ELEMENT", "archetype_node_id" => "at0073", "name" => { "_type" => "DV_TEXT", "value" => label },
+        "value" => { "_type" => "DV_CODED_TEXT", "value" => display,
+                     "defining_code" => { "_type" => "CODE_PHRASE", "code_string" => code,
+                                          "terminology_id" => { "_type" => "TERMINOLOGY_ID", "value" => "local" } } } }
     end
 
     # 発症日時の ELEMENT。名前は jp_referral.opt の用語から引く（帳票の入力欄の label と同じ）

@@ -99,7 +99,7 @@ RSpec.describe "demo:reset" do
         [ "DEMO-03", "ProblemList", "鉄欠乏性貧血", nil, "at0076" ],
         [ "DEMO-04", "ProblemList", "脂質異常症", nil, "at0076" ],
         [ "DEMO-04", "ProblemList", "高血圧症", nil, "at0075" ],
-        [ "DEMO-05", "jp_referral", "狭心症", nil, nil ],
+        [ "DEMO-05", "jp_referral", "狭心症", nil, "at0074" ],
         [ "DEMO-05", "ProblemList", "慢性腎臓病", nil, "at0076" ],
         [ "DEMO-05", "ProblemList", "狭心症", nil, "at0074" ],
         [ "DEMO-05", "ProblemList", "2型糖尿病", nil, "at0076" ],
