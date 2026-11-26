@@ -7,7 +7,7 @@ Anlage は openEHR の**参照実装**で、診療の現場で使うための製
 
 | # | 制限 | 根拠 |
 |---|---|---|
-| 1 | **認証と認可が無い。** 画面を開ける人は誰でも、全患者・全記録を見て、作り、修正し、削除できる。実在の患者のデータを入れない | `app/controllers/` に認証の仕組みが無い |
+| 1 | **認証と認可が無い。** 画面を開ける人は誰でも、全患者・全記録を見て、作り、修正し、削除できる。実在の患者のデータを入れない。環境変数を与えれば全体に Basic 認証をかけられる（README の「任意の Basic 認証」）が、利用者ごとの区別も記録の監査も無い | `app/controllers/` に認証の仕組みが無い。`docs/design/basic-auth-plan.md`（`skoba/anlage#163`） |
 | 2 | 患者は患者 ID（と名前空間 `anlage`）だけを持つ。氏名・生年月日などの患者マスタ（PARTY）は無い | `docs/design/m3-plan.md` 7.2。openehr-rails 0.9.0 に PARTY のモデルが無い |
 | 3 | 患者を選ばずに帳票を保存すると、記録はどの EHR にも属さない（AQL の `FROM EHR e[ehr_id/value=…]` では引けない） | `docs/design/m3-plan.md` 7.5 の問い 4 |
 | 4 | データベースは SQLite で、1 台で動かす前提。Docker のイメージは TLS の設定（`assume_ssl`・`force_ssl`）を切ってある。外に出すなら TLS を終端するプロキシの後ろに置く | `config/database.yml`、`config/environments/production.rb:28-31` |

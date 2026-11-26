@@ -100,6 +100,23 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/up   # 200
 http://localhost:8080/ を開き、テンプレートの画面に OPT を取り込む。試しの OPT は
 [`spec/fixtures/opt/`](spec/fixtures/opt/)（出所は [`docs/demo/opt-catalog.md`](docs/demo/opt-catalog.md)）。
 
+#### 任意の Basic 認証
+
+Anlage には利用者の登録とログインが無い。環境変数で利用者名とパスワードを**両方**与えたときだけ、
+全画面と API（AQL 照会、FHIR、openEHR REST）に Basic 認証をかける（`/up` はかけない）。
+片方だけを与えると起動しない。Basic 認証は平文で送られるので、TLS の上で使う。
+これは最低限の守りで、実在の患者のデータを入れてよいことにはならない
+（[`docs/design/basic-auth-plan.md`](docs/design/basic-auth-plan.md)）。
+
+```sh
+docker run -d --name anlage -p 8080:80 \
+  -e SECRET_KEY_BASE=$(openssl rand -hex 64) \
+  -e ANLAGE_BASIC_AUTH_USERNAME=demo -e ANLAGE_BASIC_AUTH_PASSWORD='<長いパスワード>' \
+  -v anlage-storage:/rails/storage anlage
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/patients                          # 401
+curl -s -o /dev/null -w "%{http_code}\n" -u demo:'<長いパスワード>' http://localhost:8080/patients   # 200
+```
+
 ## Current focus
 
 （2026-10-12 更新。Phase 3 デモ統合 `#47` の plan ゲート承認時）
