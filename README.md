@@ -1,5 +1,8 @@
 # Anlage
 
+> **参照実装です。認証がありません。実在の患者のデータを入れないでください。外から届く場所で動かさないでください。**
+> (This is a reference implementation without authentication. Do not enter real patient data, and do not expose it to an untrusted network.)
+
 Anlage ("foundation"/"disposition" in German) is a reference implementation of
 an openEHR-based EHR, generated from openehr-rails-startup. Its core claim:
 drop a clinical model (an Operational Template) in, and a form, validation,
