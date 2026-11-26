@@ -263,19 +263,19 @@ RSpec.describe Evaluation::Questions do
 
     # a006〜a008 は S2 の経路の案（draft、人間レビュー前。R-20261124-21 の作業列 3）。
     # 2026-11-25 に card の 9 問（c022〜c024・c026・c027・c029〜c032）と保留問 c033 を足した（R-20261125-7。レビュー済み）。
-    # c034 は負例だけの問いの案（draft）
-    it "確定した 21 問: active 18 問（card 13・aql 5）、pending 3 問（c019・c021・c033）。ほかに案 4 問（draft）" do
-      cards = %w[c008 c010 c014 c015 c022 c023 c024 c026 c027 c029 c030 c031 c032]
+    # c034「肥満度」は負例だけの問い。R-20261125-11 で active にした（採点に入れる）
+    it "確定した 22 問: active 19 問（card 13・負例だけの card 1・aql 5）、pending 3 問（c019・c021・c033）。ほかに案 3 問（draft）" do
+      cards = %w[c008 c010 c014 c015 c022 c023 c024 c026 c027 c029 c030 c031 c032 c034]
       aqls = %w[a001 a002 a003 a004 a005]
       expect(questions.values.select(&:active?).map(&:id)).to match_array(cards + aqls)
       expect(questions.values.select(&:pending?).map(&:id)).to match_array(%w[c019 c021 c033])
       expect(questions.values.reject(&:draft?).map(&:id)).to match_array(cards + aqls + %w[c019 c021 c033])
-      expect(questions.values.select(&:draft?).map(&:id)).to match_array(%w[a006 a007 a008 c034])
+      expect(questions.values.select(&:draft?).map(&:id)).to match_array(%w[a006 a007 a008])
       expect(questions.values.select { |question| question.draft? && question.aql? }).to all(have_attributes(selection: be_present))
     end
 
     it "2026-11-25 に足した 9 問と c033 は、レビューの記録（Kobayashi, Shinji、2026-11-25）を持つ。c026 は診断確度が第 1 候補で、診断名は許容" do
-      added = %w[c022 c023 c024 c026 c027 c029 c030 c031 c032 c033]
+      added = %w[c022 c023 c024 c026 c027 c029 c030 c031 c032 c033 c034]
       raw = YAML.load_file(Rails.root.join("spec/fixtures/evaluation/v2/cards.yml"), permitted_classes: [ Date ]).index_by { |entry| entry["id"] }
 
       expect(added.map { |id| raw.fetch(id).values_at("reviewed_by", "reviewed_at") }.uniq).to eq([ [ "Kobayashi, Shinji", Date.new(2026, 11, 25) ] ])
@@ -284,9 +284,17 @@ RSpec.describe Evaluation::Questions do
       expect(questions.fetch("c027").expected).to eq([ { archetype_id: PD_ID, at_code: "at0003" } ])
     end
 
-    it "c034「肥満度」（案）: 負例だけの問い。負例は body_mass_index.v2 のどのカードも" do
+    # R-20261125-11: カードの説明に「最高値」「最低値」があり、字面で届く。種類を「bigram成立想定」に直した
+    it "c031「最高血圧」・c032「最低血圧」の種類は「bigram成立想定」。notes に、説明の「最高値」「最低値」に当たることが書いてある" do
+      expect(%w[c031 c032].map { |id| questions.fetch(id).intent_tag }).to eq(%w[bigram成立想定 bigram成立想定])
+      expect(questions.fetch("c031").notes).to include("最高値")
+      expect(questions.fetch("c032").notes).to include("最低値")
+      expect(%w[c031 c032].map { |id| questions.fetch(id).notes }).to all(satisfy { |notes| !notes.include?("根拠としては扱わない") })
+    end
+
+    it "c034「肥満度」: 負例だけの問い（active）。負例は body_mass_index.v2 のどのカードも" do
       expect(questions.fetch("c034")).to have_attributes(
-        status: :draft, negative_only?: true, forbidden: [ { archetype_id: "openEHR-EHR-OBSERVATION.body_mass_index.v2", at_code: nil } ]
+        status: :active, negative_only?: true, forbidden: [ { archetype_id: "openEHR-EHR-OBSERVATION.body_mass_index.v2", at_code: nil } ]
       )
     end
 
