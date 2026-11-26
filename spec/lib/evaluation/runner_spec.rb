@@ -224,11 +224,19 @@ RSpec.describe Evaluation::Runner do
 
     # c033「脈拍」は、期待先のアーキタイプ（heart_rate-pulse.v1）が demo_initial の索引にあるので「保留解除候補」の印が付く。
     # 保留の理由は「日本語訳が済んでいない」で、索引に入ったことでは解けない（印は当てにならない。ログ R18 に書いた）
-    it "保留問は c019・c021・c033 の 3 問。解除候補の印は c033 にだけ付く。draft は案 4 問（母数外）で、負例だけの問いの母数は 0" do
+    it "保留問は c019・c021・c033 の 3 問。解除候補の印は c033 にだけ付く。draft は案 3 問（母数外）" do
       expect(run.pendings.map(&:id)).to match_array(%w[c019 c021 c033])
       expect(run.releasable_pendings.map(&:id)).to eq(%w[c033])
-      expect(run.drafts.map(&:id)).to match_array(%w[a006 a007 a008 c034])
-      expect(run.negative_summary).to eq(questions: 0, violations: 0)
+      expect(run.drafts.map(&:id)).to match_array(%w[a006 a007 a008])
+    end
+
+    # c034「肥満度」（R-20261125-11 で active）。いまの検索では 1 枚も当たらないので、負例は出ない。card 13 問の集計には入らない
+    it "負例だけの問いは c034 の 1 問で、負例が上位に出た問いは 0。intent_tag 別は bigram成立想定 5/5、複合語 5/5、同義語ギャップ 2/3" do
+      expect(run.negative_results.map { |result| result.question.id }).to eq(%w[c034])
+      expect(run.negative_summary).to eq(questions: 1, violations: 0)
+      expect(run.negative_results.first.results).to eq([])
+      expect(run.card_summary.fetch(:by_intent)).to eq("bigram成立想定" => { hits: 5, total: 5 }, "複合語" => { hits: 5, total: 5 },
+                                                       "同義語ギャップ" => { hits: 2, total: 3 })
     end
 
     it "確定した aql の 5 問は selection を持たないので、S2 の経路の母数は 0（案の確定を待つ）" do

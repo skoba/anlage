@@ -152,8 +152,8 @@
   expected:
     - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
   match: card
-  intent_tag: 同義語ギャップ
-  notes: "レビュー（2026-11-25、小林）: 採用。期待は案のとおり。訳語としては本来「収縮期血圧」が相当するが、Systolic の訳語として要素に結び付けているので、blood pressure アーキタイプの要素としては妥当。種類は「同義語ギャップ」とする（R-20261125-7）。実測（2026-11-25）: いまの検索では 1 位に出る。カードのラベルは「収縮期」で「最高」を含まないが、説明「全身の動脈血圧での最高値 …」と祖先の名前「血圧」に bigram が当たる。この 1 位を、言い換えが届いている根拠としては扱わない"
+  intent_tag: bigram成立想定
+  notes: "レビュー（2026-11-25、小林）: 採用。期待は案のとおり。訳語としては本来「収縮期血圧」が相当するが、Systolic の訳語として要素に結び付けているので、blood pressure アーキタイプの要素としては妥当。実測（2026-11-25）: いまの検索では 1 位に出る。カードのラベルは「収縮期」で「最高」を含まないが、説明「全身の動脈血圧での最高値 …」と祖先の名前「血圧」に bigram が当たる。字面で届く問いなので、種類は「bigram成立想定」（R-20261125-11）"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-25
 
@@ -163,8 +163,8 @@
   expected:
     - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
   match: card
-  intent_tag: 同義語ギャップ
-  notes: "レビュー（2026-11-25、小林）: 採用。期待は案のとおり。訳語としては本来「拡張期血圧」が相当するが、Diastolic の訳語として要素に結び付けているので、blood pressure アーキタイプの要素としては妥当。種類は「同義語ギャップ」とする（R-20261125-7）。実測（2026-11-25）: いまの検索では 1 位に出る。カードのラベルは「拡張期」で「最低」を含まないが、説明「全身の動脈血圧での最低値 …」と祖先の名前「血圧」に bigram が当たる。この 1 位を、言い換えが届いている根拠としては扱わない"
+  intent_tag: bigram成立想定
+  notes: "レビュー（2026-11-25、小林）: 採用。期待は案のとおり。訳語としては本来「拡張期血圧」が相当するが、Diastolic の訳語として要素に結び付けているので、blood pressure アーキタイプの要素としては妥当。実測（2026-11-25）: いまの検索では 1 位に出る。カードのラベルは「拡張期」で「最低」を含まないが、説明「全身の動脈血圧での最低値 …」と祖先の名前「血圧」に bigram が当たる。字面で届く問いなので、種類は「bigram成立想定」（R-20261125-11）"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-25
 
@@ -213,15 +213,16 @@
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-25
 
-# --- 負例だけの問い（期待が空。docs/design/s1-eval-v2-plan.md 9 節）。案（draft）。確定は人間
+# --- 負例だけの問い（期待が空。docs/design/s1-eval-v2-plan.md 9 節）。card の集計（Top-1 など）の母数には入らず、別に数える
 
 - id: c034
   kind: card
-  status: draft
   query: "肥満度"
   expected: []
   forbidden:
     - { archetype_id: openEHR-EHR-OBSERVATION.body_mass_index.v2 }
   match: card
   intent_tag: 負例のみ
-  notes: "臨床の判断（2026-11-25、小林。v1 q09 のコメントと同じ）: 「肥満度」が BMI のカードに着地するのは誤り（肥満度は BMI と別の指標）。負例は body_mass_index.v2 のどのカードも（at_code を書かない。いまの索引では at0004「Body mass index」と at0013「判定」）。案: 負例の範囲（アーキタイプ全体）と、active にしてよいかを見てほしい"
+  notes: "臨床の判断（2026-11-25、小林。v1 q09 のコメントと同じ）: 「肥満度」が BMI のカードに着地するのは誤り（肥満度は BMI と別の指標）。負例は body_mass_index.v2 のアーキタイプ全体（at_code を書かない。いまの索引では at0004「Body mass index」と at0013「判定」）。レビュー（2026-11-25、小林）: 負例の範囲はアーキタイプ全体。active にして採点に入れる（R-20261125-11）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-25
