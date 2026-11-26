@@ -24,9 +24,9 @@
 | # | 操作 | 画面に出るはずの結果 |
 |---|---|---|
 | B1 | `docker exec anlage bin/rails demo:reset` | 「demo:reset は production では実行しない（全データを消して入れ直す。実行するなら ANLAGE_ALLOW_DEMO_RESET=1 を与える）」で止まる |
-| B2 | `docker exec -e ANLAGE_ALLOW_DEMO_RESET=1 anlage bin/rails demo:reset` | 最後の行が `templates=5 compositions=63 rm_compositions=65` |
+| B2 | `docker exec -e ANLAGE_ALLOW_DEMO_RESET=1 anlage bin/rails demo:reset` | 最後の行が `templates=5 compositions=79 rm_compositions=84` |
 | B3 | ナビ「テンプレート」 | カードが 5 枚（CardiologyEncounter、LabResultReport、ProblemList、bmi_calculation、patient_blood_pressure.v1） |
-| B4 | ナビ「患者」 | 表に 6 行（DEMO-01〜DEMO-06。名前空間は anlage） |
+| B4 | ナビ「患者」 | 表に 9 行（DEMO-01〜DEMO-09。名前空間は anlage） |
 
 ## C. 患者を選ぶ
 
@@ -50,7 +50,7 @@
 
 | # | 操作 | 画面に出るはずの結果 |
 |---|---|---|
-| E1 | ナビ「AQL 照会」（見出しは engine の英語の「AQL Query Console」）の入力欄に、下の AQL（紹介先・傷病名・紹介日）を貼り、「Run query」 | 3 行: `X病院・2型糖尿病・2026-08-03T00:00:00Z`、`X病院・狭心症・2026-05-12T00:00:00Z`、`Y病院・慢性腎臓病・<D4 で保存した時刻>` |
+| E1 | ナビ「AQL 照会」（見出しは engine の英語の「AQL Query Console」）の入力欄に、下の AQL（紹介先・傷病名・紹介日）を貼り、「Run query」 | 6 行: `X病院・2型糖尿病・2026-08-03T00:00:00Z`、`X病院・狭心症・2026-05-12T00:00:00Z`、`X病院・白血病・2026-06-18T00:00:00Z`、`X病院・悪性リンパ腫・2026-07-09T00:00:00Z`、`X病院・多発性骨髄腫・2026-08-20T00:00:00Z`、`Y病院・慢性腎臓病・<D4 で保存した時刻>` |
 | E2 | 入力欄の AQL の末尾に `WHERE c/context/start_time/value >= "2026-09-01T00:00:00Z"` を足して「Run query」 | 1 行: `Y病院・慢性腎臓病・<D4 で保存した時刻>`（紹介日で絞れる） |
 
 E1 の AQL:

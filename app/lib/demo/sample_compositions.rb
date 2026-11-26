@@ -29,10 +29,16 @@ module Demo
       "LabResultReport" => { "test" => "laboratory_test_result_at0005", "analyte" => "laboratory_test_analyte_at0024",
                              "result" => "laboratory_test_analyte_at0001", "units" => "laboratory_test_analyte_at0001__units" },
       "bmi_calculation" => { "height" => "height", "weight" => "body_weight", "bmi" => "body_mass_index",
-                             "judgement" => "body_mass_index_at0013" }
+                             "judgement" => "body_mass_index_at0013" },
+      # 血液内科への紹介状（form: true。設計書 7.1 節の帳票の項目、R-20261126-11）
+      "jp_referral" => { "service" => "service_request_at0121", "purpose" => "service_request_at0062",
+                         "sender" => "organisation_at0001", "receiver" => "organisation_at0001_2",
+                         "department" => "organisation_at0001_3", "diagnosis" => "problem_diagnosis_at0002",
+                         "onset" => "problem_diagnosis_at0077", "certainty" => "problem_diagnosis_at0073",
+                         "history" => "story", "synopsis" => "clinical_synopsis", "treatment" => "clinical_synopsis_2" }
     }.freeze
     DEFAULTS = { "LabResultReport" => { "test" => "血液検査" } }.freeze
-    NOT_VALUES = %w[row date template icd11].freeze
+    NOT_VALUES = %w[row date template icd11 form].freeze
 
     class InvalidRecord < StandardError; end
 
@@ -48,17 +54,29 @@ module Demo
 
     def load_record(ehr, record)
       recorded_at = Time.find_zone!(RECORDED_ZONE).parse("#{record.fetch('date')} #{RECORDED_HOUR}")
+      return commit_form_referral(ehr, record, recorded_at) if record["template"] == "jp_referral" && record["form"]
       return commit_referral(ehr, record, recorded_at) if record.fetch("template") == "jp_referral"
 
       template = Template.active.find_by!(template_id: record.fetch("template"))
+      commit = commit_form(template, ehr, record, recorded_at)
+      template.compositions.create!(rm_composition: commit.canonical_hash, uid: commit.uid)
+    end
+
+    # 帳票の検査（Opt::FormValidator）を通してから、フォーム保存経路と同じ RmCompositionCommitter で入れる
+    def commit_form(template, ehr, record, recorded_at)
       values = form_values(record)
       result = Opt::FormValidator.call(template, values)
       raise InvalidRecord, "#{ehr.subject_id} ##{record["row"]}: #{result.errors}" unless result.valid?
 
-      commit = Opt::RmCompositionCommitter.call(template, values, ehr: ehr, recorded_at: recorded_at) do |canonical|
+      Opt::RmCompositionCommitter.call(template, values, ehr: ehr, recorded_at: recorded_at) do |canonical|
         code_diagnosis(canonical["content"], record["icd11"]) if record["icd11"]
       end
-      template.compositions.create!(rm_composition: commit.canonical_hash, uid: commit.uid)
+    end
+
+    # 血液内科への紹介状（設計書 7.5 の問い 6、R-20261126-11）: jp_referral は壇上で登録するので、OPT から作った
+    # テンプレートを保存しないまま、帳票と同じ組み立てで入れる。原本（compositions）は作らない（RM グラフにだけ入る）
+    def commit_form_referral(ehr, record, recorded_at)
+      commit_form(Template.build_from_opt_xml(Rails.root.join(JP_REFERRAL_OPT).read), ehr, record, recorded_at)
     end
 
     def form_values(record)

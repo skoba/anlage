@@ -42,7 +42,7 @@
     SELECT ev/data[at0001]/items[at0002]/value/value AS diagnosis
     FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
     WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0074"}
-  expected_rows: [["高血圧症"], ["起立性低血圧"], ["狭心症"], ["狭心症"]]
+  expected_rows: [["高血圧症"], ["起立性低血圧"], ["狭心症"], ["狭心症"], ["白血病"], ["悪性リンパ腫"], ["多発性骨髄腫"]]
   cards:
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
@@ -53,7 +53,7 @@
       - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
         operator: MATCHES
         value: [at0074]
-  notes: "2026-11-26（R-20261126-5）: サンプルデータの DEMO-05 の紹介状の「狭心症」に診断確度「疑い」が入ったので、期待行が 3 行 → 4 行になった（狭心症は ProblemList と紹介状に 1 件ずつ）。値集合の条件（S2 の条件型: 値集合）。本来形 = コード値 at0074（疑い）の一致（value/defining_code/code_string）。案では表示文字列「疑い」の一致で仮置きしていたが、openehr 2.5.0（anlage main 94561e9）でコード値に届くようになったので書き換えた（R-20261124-15。上流候補 10 項）。v1 q20「疑い」の臨床意図（診断確度 = at0074 の絞り込み）の AQL 形。demo_initial では疑い 3 件。確定 9 件、推定 1 件、確度の記載の無い紹介状 2 件は外れる"
+  notes: "2026-11-26（R-20261126-11）: 血液内科への紹介状 3 通（白血病・悪性リンパ腫・多発性骨髄腫、診断確度「疑い」）が入ったので、期待行が 4 行 → 7 行になった。2026-11-26（R-20261126-5）: サンプルデータの DEMO-05 の紹介状の「狭心症」に診断確度「疑い」が入ったので、期待行が 3 行 → 4 行になった（狭心症は ProblemList と紹介状に 1 件ずつ）。値集合の条件（S2 の条件型: 値集合）。本来形 = コード値 at0074（疑い）の一致（value/defining_code/code_string）。案では表示文字列「疑い」の一致で仮置きしていたが、openehr 2.5.0（anlage main 94561e9）でコード値に届くようになったので書き換えた（R-20261124-15。上流候補 10 項）。v1 q20「疑い」の臨床意図（診断確度 = at0074 の絞り込み）の AQL 形。demo_initial では疑い 3 件。確定 9 件、推定 1 件、確度の記載の無い紹介状 2 件は外れる"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-25
 
