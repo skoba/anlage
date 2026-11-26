@@ -104,8 +104,12 @@ demo_assets由来、lang=en、`skoba/anlage#5`用途限定。出所詳細はfixt
   ```
 - 投入: 1〜4 と違いフォーム POST だけでは作れない（jp_referral のフォーム保存は #30 で未対応。ICD-11 コード付きの傷病名もフォーム経路では作れない——ProblemList の at0002 は coded_free で DV_TEXT 保存、WP5／`$lookup`〔12 月〕の既知制限、`docs/backlog.md` 13）。
   `rake demo:reset` の初期状態（`Demo::SampleCompositions`）を使い、壇上の「1 件足す」はフォーム POST
-- 期待件数: 初期状態で **3 件**（ProblemList「2型糖尿病」〔ICD-11 5A11 付き〕・「高血圧症」、jp_referral「2型糖尿病」〔5A11 付き〕）、
-  フォームから「2型糖尿病」を 1 件足すと **4 件**
+- 期待件数: 初期状態で **7 件**。初期状態は `docs/design/sample-data-plan.md` 3 節の 65 件（2026-11-25、R-20261125-9）。
+  - ProblemList「2型糖尿病」2 件（DEMO-01 の ICD-11 5A11 付き、DEMO-05 のコードなし）
+  - ProblemList「高血圧症」4 件（確定 2、疑い 1、推定 1）
+  - jp_referral「2型糖尿病」1 件（5A11 付き）
+  - 糖尿病性腎症は完全一致に当たらない
+  - フォームから「2型糖尿病」を 1 件足すと **8 件**
 - 出所の並記は Composition 名（`c/name/value`）。`c/archetype_details/template_id/value` は、openehr 2.6.0 で
   例外にならなくなったが、値は nil（openehr-rails 0.10.0 の `to_rm` が archetype_details を組まない。
   `docs/upstream-candidates.md` 25 項と 2026-11-25 の追記）。切り替えは openehr-rails の修正の版のあと

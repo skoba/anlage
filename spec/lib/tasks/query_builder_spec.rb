@@ -1,7 +1,6 @@
 require "rails_helper"
 require "rake"
 
-Rails.application.load_tasks
 
 # rake query_builder:version_candidates（docs/design/s2-cross-version-plan.md 3.1）。候補を Markdown で標準出力に出すだけで、
 # 対応の表（config/version_mappings.yml）は書き換えない。

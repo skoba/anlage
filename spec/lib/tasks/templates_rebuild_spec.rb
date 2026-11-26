@@ -1,7 +1,6 @@
 require "rails_helper"
 require "rake"
 
-Rails.application.load_tasks
 
 # skoba/anlage#33 裁定 C: 登録済みテンプレートの web_template は登録時に固定され、同一
 # checksum の再投入は「already registered」で再構築されない。pathcards:backfill と対の
