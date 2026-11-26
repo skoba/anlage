@@ -100,6 +100,13 @@ docker run -d --name anlage -p 8080:80 \
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/up   # 200
 ```
 
+初期データ（fixture のテンプレート 5 本と、架空の患者 6 人・65 件のサンプル）を入れるときは、
+**全データを消して入れ直す**操作なので、環境変数で明示する:
+
+```sh
+docker exec -e ANLAGE_ALLOW_DEMO_RESET=1 anlage bin/rails demo:reset
+```
+
 http://localhost:8080/ を開き、テンプレートの画面に OPT を取り込む。試しの OPT は
 [`spec/fixtures/opt/`](spec/fixtures/opt/)（出所は [`docs/demo/opt-catalog.md`](docs/demo/opt-catalog.md)）。
 
