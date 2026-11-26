@@ -1,0 +1,2 @@
+- 任意の Basic 認証を与えたときは、production（Docker）でも AQL 照会の画面・FHIR・openEHR REST（openehr-rails の engine）が使える。利用者に見える変更: あり。
+  - 与えなければ、engine は gem の既定のまま。production では 403 を返す。

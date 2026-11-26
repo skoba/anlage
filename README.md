@@ -118,6 +118,11 @@ Anlage には利用者の登録とログインが無い。環境変数で利用�
 これは最低限の守りで、実在の患者のデータを入れてよいことにはならない
 （[`docs/design/basic-auth-plan.md`](docs/design/basic-auth-plan.md)）。
 
+openehr-rails の engine（AQL 照会の画面、`/openehr/fhir`、`/openehr/v1` の openEHR REST）は、production では
+認証の設定が無いと 403 を返す。Docker（production）でこれらを使うときは、Basic 認証を与える。
+与えたときは、入口で認証済みとして engine を開ける（`config/initializers/openehr.rb`）。
+anlage の画面（患者、帳票、カルテ記録、パスカード検索、クエリビルダー、FHIR プロファイル）は、与えなくても使える。
+
 ```sh
 docker run -d --name anlage -p 8080:80 \
   -e SECRET_KEY_BASE=$(openssl rand -hex 64) \

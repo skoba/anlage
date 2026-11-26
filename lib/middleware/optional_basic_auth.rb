@@ -9,6 +9,15 @@ class OptionalBasicAuth
   REALM = "Anlage".freeze
   UNPROTECTED_PATHS = %w[/up].freeze
 
+  # openehr-rails の engine（AQL 照会・FHIR・openEHR REST）は、development／test 以外では
+  # OpenehrRails.authenticate_with が無いと 403（skoba/anlage#174）。Basic 認証を与えたときは、入口のこのミドルウェアで
+  # 認証済みなので、engine では何もしない hook を返す。与えなければ nil（gem の既定のまま）。config/initializers/openehr.rb で使う
+  def self.engine_hook(username:, password:)
+    return nil unless username.present? && password.present?
+
+    -> { }
+  end
+
   def initialize(app, username:, password:)
     @app = app
     username = username.presence
