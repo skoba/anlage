@@ -300,6 +300,31 @@ conditions:
 - 値の中身（下限 > 上限、値集合でない項目への未記入 など）は読み込みでは見ない。ビルダーが拒み、採点は「組めない」になる（8.2）
 - いまのゴールドと案（a001〜a008）は、この形を使っていない。使う問いは、サンプルデータが増えたあとの問いの案で出す
 
+### 8.5 版をまたぐ問い（R-20261125-10 の作業列 4）
+
+クエリビルダーの「版をまたいで引く」（`docs/design/s2-cross-version-plan.md`）を、aql の問いで採点できるようにする。
+
+```yaml
+reference_aqls:                  # reference_aql の代わりに、版ごとの参照 AQL（アーキタイプ ID → AQL）
+  openEHR-EHR-OBSERVATION.blood_pressure.v1: |
+    SELECT … FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v1] WHERE …
+  openEHR-EHR-OBSERVATION.blood_pressure.v2: |
+    SELECT … CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2] WHERE …
+expected_rows:                   # 先頭の列は、行が来たアーキタイプの ID（版つき）
+  - [openEHR-EHR-OBSERVATION.blood_pressure.v1, 162.0]
+  - [openEHR-EHR-OBSERVATION.blood_pressure.v2, 148.0]
+selection:
+  across_versions: true          # 版をまたいで引く
+  columns: […]
+  conditions: […]
+```
+
+- 参照の採点: 版ごとの参照 AQL を実行し、行の先頭にそのアーキタイプの ID を足してつなぐ。どれかが実行できなければ「実行不能」
+- S2 の経路: `selection.across_versions` が真なら、対応の表（`config/version_mappings.yml` の active の行）で版ごとの AQL を組み、同じ形に採点する。
+  対応の無い項目は「組めない」
+- aql の問いは `reference_aql` か `reference_aqls` のどちらかを持つ（両方、どちらも無い、は読み込みで止める）
+- 1 本の AQL で 2 つの版を引く形は、いまのエンジンでは書けない（`docs/upstream-candidates.md` 29 項）。参照も版ごとに持つ
+
 ## 9. 負例だけの問い（R-20261125-7 による形式の拡張）
 
 状態: 計画を追記して、そのまま実装に進む（R-20261125-7）。基準点: anlage main `db588b8`。
