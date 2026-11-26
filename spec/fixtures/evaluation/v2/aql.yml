@@ -6,6 +6,7 @@
 #
 # 形式: id / kind: aql / query（日本語の問い）/ dataset（demo_initial = rake demo:reset の初期状態）/
 #       reference_aql（参照 AQL。パスは spec/fixtures/pathcards/*.golden.json の identity.path）/
+#       selection（クエリビルダーへの入力。S2 の経路の採点に使う。2026-11-26 に足した。R-20261125-6。形式は aql_s2.yml の冒頭）/
 #       expected_rows（demo_initial での実測。docs/reports/s1-eval-v2-log.md R10・R12）/ cards（問いが指すカード。S2 の入力）/
 #       ordered（既定 false。行の多重集合として比べる）/ notes / reviewed_by / reviewed_at
 #
@@ -22,6 +23,13 @@
   expected_rows: [[148.0], [152.0]]
   cards:
     - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+        operator: ">="
+        value: 140
   notes: "数値比較（S2 の条件型: 数値）。閾値は高血圧の目安の 140（R-20261125-9。旧版の 110 には臨床の意味が無かった）。demo_initial の血圧 v2（CardiologyEncounter）11 件のうち、148 と 152 の 2 件。138 以下の 9 件は外れる。v1（patient_blood_pressure）の 162・158・146・142 はアーキタイプが違うので入らない（版をまたいで引くのは R-20261125-10）。デモクエリ 1（身長 > 170）と同型"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-25
@@ -34,11 +42,18 @@
     SELECT ev/data[at0001]/items[at0002]/value/value AS diagnosis
     FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
     WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0074"}
-  expected_rows: [["高血圧症"], ["起立性低血圧"], ["狭心症"]]
+  expected_rows: [["高血圧症"], ["起立性低血圧"], ["狭心症"], ["狭心症"]]
   cards:
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
-  notes: "値集合の条件（S2 の条件型: 値集合）。本来形 = コード値 at0074（疑い）の一致（value/defining_code/code_string）。案では表示文字列「疑い」の一致で仮置きしていたが、openehr 2.5.0（anlage main 94561e9）でコード値に届くようになったので書き換えた（R-20261124-15。上流候補 10 項）。v1 q20「疑い」の臨床意図（診断確度 = at0074 の絞り込み）の AQL 形。demo_initial では疑い 3 件。確定 9 件、推定 1 件、確度の記載の無い紹介状 2 件は外れる"
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
+        operator: MATCHES
+        value: [at0074]
+  notes: "2026-11-26（R-20261126-5）: サンプルデータの DEMO-05 の紹介状の「狭心症」に診断確度「疑い」が入ったので、期待行が 3 行 → 4 行になった（狭心症は ProblemList と紹介状に 1 件ずつ）。値集合の条件（S2 の条件型: 値集合）。本来形 = コード値 at0074（疑い）の一致（value/defining_code/code_string）。案では表示文字列「疑い」の一致で仮置きしていたが、openehr 2.5.0（anlage main 94561e9）でコード値に届くようになったので書き換えた（R-20261124-15。上流候補 10 項）。v1 q20「疑い」の臨床意図（診断確度 = at0074 の絞り込み）の AQL 形。demo_initial では疑い 3 件。確定 9 件、推定 1 件、確度の記載の無い紹介状 2 件は外れる"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-25
 
@@ -55,6 +70,14 @@
                   ["ProblemList", "高血圧症"], ["ProblemList", "高血圧症"], ["jp_referral", "2型糖尿病"]]
   cards:
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+        operator: MATCHES
+        value: ["2型糖尿病", "高血圧症"]
+    composition_name: true
   notes: "テンプレート横断（デモクエリ 5 と同じ AQL。spec/demo/cross_template_query_spec.rb が初期状態 7 行を固定済み。糖尿病性腎症は完全一致に当たらない）。出所は c/name/value（archetype_details/template_id は上流候補 25 項で届かない）"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-25
@@ -71,6 +94,13 @@
   cards:
     - { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0024 }
     - { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0001 }
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0001 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1, at_code: at0024 }
+        operator: "="
+        value: "空腹時血糖"
   notes: "文字列一致で分析名を絞り、数値を射影する（S2 の条件型: 包含／一致）。埋め込み CLUSTER へのパス（items[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1]）を通る初の問い。demo_initial の空腹時血糖は 7 件（DEMO-01 の時系列 3 件を含む）。ほかの分析名の 19 件は外れる"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-25
@@ -86,6 +116,13 @@
   expected_rows: [[175.0], [170.0], [172.0]]
   cards:
     - { archetype_id: openEHR-EHR-OBSERVATION.height.v2, at_code: at0004 }
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-OBSERVATION.height.v2, at_code: at0004 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-OBSERVATION.height.v2, at_code: at0004 }
+        operator: ">="
+        value: 170
   notes: "境界値を含む数値比較（>=）。デモクエリ 1 は > 170 で境界を外す形。demo_initial の身長 7 件のうち、175・170（境界）・172 の 3 件。168・168・158・160 は外れる"
   reviewed_by: Kobayashi, Shinji
   reviewed_at: 2026-11-25

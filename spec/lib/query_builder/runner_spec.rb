@@ -77,20 +77,20 @@ RSpec.describe QueryBuilder::Runner do
       end
     end
 
-    it "未記入を含む: 「確定」だけでは 9 行、未記入を含めると確度の記載が無い紹介状の 2 行が足される。「疑い」に未記入を含めると 5 行" do
+    it "未記入を含む: 「確定」だけでは 9 行、未記入を含めると確度の記載が無い紹介状の 1 行が足される。「疑い」（4 行）に未記入を含めると 5 行" do
       diagnosis = card(QB_PD_E, "at0002")
       certainty = card(QB_PD_E, "at0073")
 
       confirmed = [ [ "2型糖尿病" ], [ "糖尿病性腎症" ], [ "高血圧症" ], [ "高血圧症" ], [ "鉄欠乏性貧血" ], [ "脂質異常症" ],
                     [ "慢性腎臓病" ], [ "2型糖尿病" ], [ "花粉症" ] ]
-      unwritten = [ [ "2型糖尿病" ], [ "狭心症" ] ]
+      unwritten = [ [ "2型糖尿病" ] ] # DEMO-01 の紹介状。DEMO-05 の紹介状の狭心症は「疑い」（R-20261126-5）
 
       expect(rows(run(columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0076" ] } ])))
         .to match_array(confirmed)
       expect(rows(run(columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0076" ], include_missing: true } ])))
         .to match_array(confirmed + unwritten)
       expect(rows(run(columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0074" ], include_missing: true } ])))
-        .to match_array([ [ "高血圧症" ], [ "起立性低血圧" ], [ "狭心症" ] ] + unwritten)
+        .to match_array([ [ "高血圧症" ], [ "起立性低血圧" ], [ "狭心症" ], [ "狭心症" ] ] + unwritten)
     end
 
     it "範囲の外: 収縮期が 100〜110 の外は 10 行（104 だけが中）、90〜140 の外は 3 行（低い 88、高い 148・152）" do

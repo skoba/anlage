@@ -61,7 +61,7 @@ DEMO-04:
   - { row: 9, date: 2026-01-20, template: bmi_calculation, height: 170, weight: 65, bmi: 22.5, judgement: 普通体重 }
 
 DEMO-05:
-  - { row: 1, date: 2026-05-12, template: jp_referral, diagnosis: 狭心症, onset: "2025-11-01", department: 循環器内科 }
+  - { row: 1, date: 2026-05-12, template: jp_referral, diagnosis: 狭心症, certainty: at0074, onset: "2025-11-01", department: 循環器内科 }
   - { row: 2, date: 2026-05-12, template: ProblemList, diagnosis: 慢性腎臓病, certainty: at0076, onset: "2023-04-01" }
   - { row: 3, date: 2026-05-12, template: ProblemList, diagnosis: 狭心症, certainty: at0074, onset: "2025-11-01" }
   - { row: 4, date: 2026-05-12, template: ProblemList, diagnosis: 2型糖尿病, certainty: at0076, onset: "2016-01-01" }

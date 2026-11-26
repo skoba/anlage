@@ -278,6 +278,16 @@ selection:
 - 確定した a001〜a005 に `selection` を足すかどうかは、ゲート報告で問う（足す YAML の案は `docs/reports/s2-query-builder-log.md` R15）
 - 案の健全性（参照 AQL と S2 の経路の両方が期待行に一致）は spec で固定する
 
+### 8.3.1 問いの決め直し（2026-11-26、R-20261125-6・R-20261125-10）
+
+サンプルデータ（患者 6 人・65 件）が main に入ったので、問いを決め直した。
+
+- 確定済みの a001〜a005 に `selection` を足した（S2 の経路の母数が 0 → 5）
+- 案（draft）は 7 問: a006（病名の部分一致）、a009（低血圧）、a010（高血圧。どちらかを満たす）、a011（範囲の外）、
+  a012（確定の病名。未記入を含む）、a013（発症日の範囲）、a014（版をまたいで、収縮期 140 以上）
+- 旧い案の a007・a008 は置き換えた（番号は使い回さない）。「疑いの病名」は、確定済みの a002 が担う
+- 臨床のレビューで見てほしいことは `docs/reports/s2-query-builder-log.md` R28
+
 ### 8.4 selection に書ける条件を足す（R-20261125-6）
 
 クエリビルダーに足した 3 つの条件（`docs/design/s2-query-builder-plan.md` 7 節）を、`selection` でも書けるようにする。
@@ -299,6 +309,31 @@ conditions:
 - 読み込みで止めるもの: `any` が配列でない、`any` の中の条件に `card`・`operator` が無い
 - 値の中身（下限 > 上限、値集合でない項目への未記入 など）は読み込みでは見ない。ビルダーが拒み、採点は「組めない」になる（8.2）
 - いまのゴールドと案（a001〜a008）は、この形を使っていない。使う問いは、サンプルデータが増えたあとの問いの案で出す
+
+### 8.5 版をまたぐ問い（R-20261125-10 の作業列 4）
+
+クエリビルダーの「版をまたいで引く」（`docs/design/s2-cross-version-plan.md`）を、aql の問いで採点できるようにする。
+
+```yaml
+reference_aqls:                  # reference_aql の代わりに、版ごとの参照 AQL（アーキタイプ ID → AQL）
+  openEHR-EHR-OBSERVATION.blood_pressure.v1: |
+    SELECT … FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v1] WHERE …
+  openEHR-EHR-OBSERVATION.blood_pressure.v2: |
+    SELECT … CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2] WHERE …
+expected_rows:                   # 先頭の列は、行が来たアーキタイプの ID（版つき）
+  - [openEHR-EHR-OBSERVATION.blood_pressure.v1, 162.0]
+  - [openEHR-EHR-OBSERVATION.blood_pressure.v2, 148.0]
+selection:
+  across_versions: true          # 版をまたいで引く
+  columns: […]
+  conditions: […]
+```
+
+- 参照の採点: 版ごとの参照 AQL を実行し、行の先頭にそのアーキタイプの ID を足してつなぐ。どれかが実行できなければ「実行不能」
+- S2 の経路: `selection.across_versions` が真なら、対応の表（`config/version_mappings.yml` の active の行）で版ごとの AQL を組み、同じ形に採点する。
+  対応の無い項目は「組めない」
+- aql の問いは `reference_aql` か `reference_aqls` のどちらかを持つ（両方、どちらも無い、は読み込みで止める）
+- 1 本の AQL で 2 つの版を引く形は、いまのエンジンでは書けない（`docs/upstream-candidates.md` 29 項）。参照も版ごとに持つ
 
 ## 9. 負例だけの問い（R-20261125-7 による形式の拡張）
 

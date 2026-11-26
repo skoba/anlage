@@ -5,17 +5,22 @@ module Evaluation
   class AqlScorer
     Score = Struct.new(:status, :rows, :missing, :extra, :error, keyword_init: true)
 
-    def self.score(question, aql: question.reference_aql)
-      new(question, aql).score
+    # aqls: 版をまたぐ問い（同 8.5）の、アーキタイプ ID → AQL。行の先頭に、その行が来たアーキタイプの ID を足してつなぐ。
+    # 既定は問いの参照（reference_aql。無ければ reference_aqls）
+    def self.score(question, aql: nil, aqls: nil)
+      aql ||= question.reference_aql unless aqls
+      aqls ||= question.reference_aqls unless aql
+      new(question, aql, aqls).score
     end
 
-    def initialize(question, aql)
+    def initialize(question, aql, aqls)
       @question = question
       @aql = aql
+      @aqls = aqls
     end
 
     def score
-      actual = OpenehrRails::Aql::Executor.execute(@aql).rows.map { |row| normalize(row) }
+      actual = execute.map { |row| normalize(row) }
       expected = @question.expected_rows.map { |row| normalize(row) }
       missing, extra = @question.ordered ? ordered_diff(expected, actual) : multiset_diff(expected, actual)
 
@@ -25,6 +30,12 @@ module Evaluation
     end
 
     private
+
+    def execute
+      return OpenehrRails::Aql::Executor.execute(@aql).rows unless @aqls
+
+      @aqls.flat_map { |archetype_id, aql| OpenehrRails::Aql::Executor.execute(aql).rows.map { |row| [ archetype_id, *row ] } }
+    end
 
     # OpenEHR::AQL::ResultSet#to_json と同じ写像: 数値は Float、JSON の基本値はそのまま、RM オブジェクトは canonical JSON に落とす。
     def normalize(row)

@@ -120,6 +120,42 @@ RSpec.describe Evaluation::Questions do
       expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /r3.*rank/)
     end
 
+    # 版をまたぐ問い（docs/design/s1-eval-v2-plan.md 8.5、R-20261125-10）
+    it "版ごとの参照 AQL（reference_aqls）と、selection の across_versions を読む" do
+      write("aql.yml", <<~YAML)
+        - id: x1
+          kind: aql
+          query: "版をまたいで、収縮期血圧が 140 以上"
+          dataset: demo_initial
+          reference_aqls:
+            openEHR-EHR-OBSERVATION.blood_pressure.v1: "SELECT 1"
+            openEHR-EHR-OBSERVATION.blood_pressure.v2: "SELECT 2"
+          expected_rows: []
+          selection:
+            across_versions: true
+            columns:
+              - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+      YAML
+
+      x1 = described_class.from_v2(dir).first
+
+      expect(x1.reference_aqls).to eq("openEHR-EHR-OBSERVATION.blood_pressure.v1" => "SELECT 1", "openEHR-EHR-OBSERVATION.blood_pressure.v2" => "SELECT 2")
+      expect(x1.reference_aql).to be_nil
+      expect(x1.selection).to include(across_versions: true)
+    end
+
+    it "aql の問いは reference_aql か reference_aqls のどちらか 1 つを持つ。両方、どちらも無い、reference_aqls が表でない、は読み込みで止まる" do
+      base = "id: x2, kind: aql, query: q, dataset: demo_initial, expected_rows: []"
+      write("bad.yml", "- { #{base} }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x2.*reference_aql/)
+
+      write("bad.yml", "- { #{base}, reference_aql: SELECT, reference_aqls: { a: SELECT } }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x2.*どちらか/)
+
+      write("bad.yml", "- { #{base}, reference_aqls: [ SELECT ] }\n")
+      expect { described_class.from_v2(dir) }.to raise_error(Evaluation::Questions::InvalidQuestion, /x2.*reference_aqls/)
+    end
+
     # 負例だけの問い（docs/design/s1-eval-v2-plan.md 9 節、R-20261125-7）
     it "expected が空で forbidden を持つ card の問いは、負例だけの問いとして読む。at_code の無い負例はアーキタイプを指す" do
       write("cards.yml", <<~YAML)
@@ -264,14 +300,24 @@ RSpec.describe Evaluation::Questions do
     # a006〜a008 は S2 の経路の案（draft、人間レビュー前。R-20261124-21 の作業列 3）。
     # 2026-11-25 に card の 9 問（c022〜c024・c026・c027・c029〜c032）と保留問 c033 を足した（R-20261125-7。レビュー済み）。
     # c034「肥満度」は負例だけの問い。R-20261125-11 で active にした（採点に入れる）
-    it "確定した 22 問: active 19 問（card 13・負例だけの card 1・aql 5）、pending 3 問（c019・c021・c033）。ほかに案 3 問（draft）" do
+    # 2026-11-26 に、S2 の経路つきの aql 7 問（a006、a009〜a014）を確定した（R-20261126-5）。draft は無くなった
+    it "確定した 29 問: active 26 問（card 13・負例だけの card 1・aql 12）、pending 3 問（c019・c021・c033）。draft は無い" do
       cards = %w[c008 c010 c014 c015 c022 c023 c024 c026 c027 c029 c030 c031 c032 c034]
-      aqls = %w[a001 a002 a003 a004 a005]
+      aqls = %w[a001 a002 a003 a004 a005 a006 a009 a010 a011 a012 a013 a014]
       expect(questions.values.select(&:active?).map(&:id)).to match_array(cards + aqls)
       expect(questions.values.select(&:pending?).map(&:id)).to match_array(%w[c019 c021 c033])
-      expect(questions.values.reject(&:draft?).map(&:id)).to match_array(cards + aqls + %w[c019 c021 c033])
-      expect(questions.values.select(&:draft?).map(&:id)).to match_array(%w[a006 a007 a008])
-      expect(questions.values.select { |question| question.draft? && question.aql? }).to all(have_attributes(selection: be_present))
+      expect(questions.values.select(&:draft?)).to be_empty
+      expect(questions.values.select(&:aql?)).to all(have_attributes(selection: be_present))
+    end
+
+    it "2026-11-26 に確定した aql の 7 問は、レビューの記録（Kobayashi, Shinji、2026-11-26）を持つ。a014 は版ごとの参照 AQL を持つ" do
+      raw = YAML.load_file(Rails.root.join("spec/fixtures/evaluation/v2/aql_s2.yml"), permitted_classes: [ Date ])
+
+      expect(raw.map { |entry| entry["id"] }).to eq(%w[a006 a009 a010 a011 a012 a013 a014])
+      expect(raw.map { |entry| entry.values_at("reviewed_by", "reviewed_at") }.uniq).to eq([ [ "Kobayashi, Shinji", Date.new(2026, 11, 26) ] ])
+      expect(questions.fetch("a014").reference_aqls.keys)
+        .to eq(%w[openEHR-EHR-OBSERVATION.blood_pressure.v1 openEHR-EHR-OBSERVATION.blood_pressure.v2])
+      expect(questions.fetch("a014").selection).to include(across_versions: true)
     end
 
     it "2026-11-25 に足した 9 問と c033 は、レビューの記録（Kobayashi, Shinji、2026-11-25）を持つ。c026 は診断確度が第 1 候補で、診断名は許容" do

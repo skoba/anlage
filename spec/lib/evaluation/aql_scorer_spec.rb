@@ -56,14 +56,14 @@ RSpec.describe Evaluation::AqlScorer do
     expect(score.error).to include("unsupported path attribute")
   end
 
-  it "コード値の条件（defining_code/code_string）は openehr 2.5.0 で実行でき、診断確度 at0074（疑い）の 3 件に一致する" do
+  it "コード値の条件（defining_code/code_string）は openehr 2.5.0 で実行でき、診断確度 at0074（疑い）の 4 件に一致する" do
     suspected = <<~AQL
       SELECT ev/data[at0001]/items[at0002]/value/value AS diagnosis
       FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
       WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0074"}
     AQL
 
-    expect(described_class.score(question(suspected, [ [ "高血圧症" ], [ "起立性低血圧" ], [ "狭心症" ] ])).status).to eq(:match)
+    expect(described_class.score(question(suspected, [ [ "高血圧症" ], [ "起立性低血圧" ], [ "狭心症" ], [ "狭心症" ] ])).status).to eq(:match)
   end
 
   it "採点対象の AQL を差し替えられる（S2・S4 が組んだ AQL を同じ採点器に渡す）" do

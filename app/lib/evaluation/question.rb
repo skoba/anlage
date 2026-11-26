@@ -6,6 +6,7 @@ module Evaluation
   #   expected の要素は rank（順位。1 が最上位、同順位可）を持てる。rank の無い問いは全要素が同じ順位（同 7 節）
   #   selection: aql の問いの、クエリビルダーへの入力（S2 の経路。同 8 節）。無ければ nil
   #   expected が空で forbidden を持つ card の問いは「負例だけの問い」（同 9 節）。card の集計の母数に入れず、別に数える
+  #   reference_aqls: 版をまたぐ aql の問いの、版ごとの参照 AQL（アーキタイプ ID → AQL。同 8.5）。そのとき reference_aql は nil
   #   acceptable: 許容。正解でも誤りでもなく、上位に出てよい候補（forbidden とは別）
   class Question
     KINDS = %i[card aql].freeze
@@ -13,12 +14,12 @@ module Evaluation
     MATCHES = %i[archetype card].freeze
 
     attr_reader :id, :kind, :status, :query, :expected, :match, :forbidden, :acceptable, :intent_tag, :notes,
-                :dataset, :reference_aql, :expected_rows, :ordered, :cards, :pending_until, :source, :selection
+                :dataset, :reference_aql, :reference_aqls, :expected_rows, :ordered, :cards, :pending_until, :source, :selection
 
     def initialize(id:, kind:, query:, status: :active, expected: [], match: :card, forbidden: [], acceptable: [],
                    intent_tag: nil,
                    notes: nil, dataset: nil, reference_aql: nil, expected_rows: nil, ordered: false, cards: [],
-                   pending_until: nil, source: nil, selection: nil)
+                   pending_until: nil, source: nil, selection: nil, reference_aqls: nil)
       @id = id
       @kind = kind
       @status = status
@@ -37,6 +38,7 @@ module Evaluation
       @pending_until = pending_until
       @source = source
       @selection = selection
+      @reference_aqls = reference_aqls
     end
 
     def active? = status == :active

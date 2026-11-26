@@ -39,7 +39,7 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     expect(page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")).to be(false)
   end
 
-  it "値集合: 傷病名を表示し、診断確度「疑い」にチェックして文書名つきで実行すると、ProblemList の 3 行が出る（コード値 at0074 で引く）" do
+  it "値集合: 傷病名を表示し、診断確度「疑い」にチェックして文書名つきで実行すると、ProblemList の 3 行と紹介状の 1 行が出る（コード値 at0074 で引く）" do
     visit new_query_path
 
     fill_in "探したい項目", with: "診断名"
@@ -55,9 +55,9 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     click_button "実行"
 
     expect(page).to have_css("#query_aql pre", text: 'value/defining_code/code_string MATCHES {"at0074"}')
-    expect(page).to have_css("#query_result p", text: "3 行")
+    expect(page).to have_css("#query_result p", text: "4 行")
     rows = all("#query_result tbody tr").map { |row| row.all("td").map(&:text) }
-    expect(rows).to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "起立性低血圧" ], [ "ProblemList", "狭心症" ] ])
+    expect(rows).to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "起立性低血圧" ], [ "ProblemList", "狭心症" ], [ "jp_referral", "狭心症" ] ])
   end
 
   it "組めない値（数値でない）は実行せず、理由が出る。直して実行できる" do
@@ -79,7 +79,7 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     expect(page).to have_css("#query_result p", text: "該当する記録はありません。")
   end
   # docs/design/s2-query-builder-plan.md 7.4（R-20261125-6）
-  it "未記入を含む: 診断確度「確定」だけでは 9 行。「未記入を含む」にチェックすると、確度の記載が無い紹介状の 2 行が足されて 11 行" do
+  it "未記入を含む: 診断確度「確定」だけでは 9 行。「未記入を含む」にチェックすると、確度の記載が無い紹介状の 1 行（2型糖尿病）が足されて 10 行" do
     visit new_query_path
 
     fill_in "探したい項目", with: "診断名"
@@ -92,15 +92,16 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     within("#query_conditions li") { check "確定" }
     click_button "実行"
     expect(page).to have_css("#query_result p", text: "9 行")
-    expect(page).not_to have_css("#query_result td", text: "狭心症")
+    expect(all("#query_result tbody td").map(&:text).count("2型糖尿病")).to eq(2)
 
     within("#query_conditions li") { check "未記入を含む" }
     click_button "実行"
 
     expect(page).to have_css("#query_aql pre", text: 'MATCHES {"at0076"} OR NOT EXISTS ev/data[at0001]/items[at0073]/value)')
     expect(page).to have_css("#query_lint p", text: "指摘はありません。")
-    expect(page).to have_css("#query_result p", text: "11 行")
-    expect(page).to have_css("#query_result td", text: "狭心症")
+    expect(page).to have_css("#query_result p", text: "10 行")
+    expect(all("#query_result tbody td").map(&:text).count("2型糖尿病")).to eq(3)
+    expect(page).not_to have_css("#query_result td", text: "狭心症")
   end
 
   it "範囲の外・どちらかを満たす: 収縮期が 100〜110 の外、または拡張期 >= 90 で実行すると、10 行が出る（104／66 だけが外れる）" do
