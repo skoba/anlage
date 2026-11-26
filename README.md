@@ -63,7 +63,7 @@ Anlageが実証しようとしているのは、openEHR標準の役割の転換�
 - **テンプレートの管理**: 詳細・版の履歴・2 つの版の差分（項目とパスカード）
   （[`spec/requests/template_detail_spec.rb`](spec/requests/template_detail_spec.rb)、
   [`spec/requests/template_diff_screen_spec.rb`](spec/requests/template_diff_screen_spec.rb)）
-- **患者（EHR）とカルテ記録**: 患者を作って選び、保存した記録をその EHR に結び付ける。記録の修正（openEHR の版）と
+- **患者（EHR）とカルテ記録**: 患者を作って選び、保存した記録をその EHR に結び付ける（患者を選ばないと保存できない）。記録の修正（openEHR の版）と
   論理削除（[`spec/requests/patients_spec.rb`](spec/requests/patients_spec.rb)、
   [`spec/requests/records_to_ehr_spec.rb`](spec/requests/records_to_ehr_spec.rb)、
   [`spec/requests/record_versions_spec.rb`](spec/requests/record_versions_spec.rb)、
