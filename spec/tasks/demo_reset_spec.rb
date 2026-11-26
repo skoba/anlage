@@ -1,7 +1,6 @@
 require "rails_helper"
 require "rake"
 
-Rails.application.load_tasks
 
 # skoba/anlage#47 (1): `rake demo:reset` は既知の初期状態を 1 コマンドで作る（解決形 (b) enhancement）。
 # 初期状態 = fixture 5 件が active・pathcards 生成済み・superseded 無し・サンプルのカルテ記録だけがある。

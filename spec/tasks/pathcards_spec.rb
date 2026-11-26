@@ -1,7 +1,6 @@
 require "rails_helper"
 require "rake"
 
-Rails.application.load_tasks
 
 RSpec.describe "pathcards:backfill" do
   subject(:run_task) do

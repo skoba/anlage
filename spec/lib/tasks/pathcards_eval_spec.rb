@@ -2,7 +2,6 @@ require "rails_helper"
 require "rake"
 require "yaml"
 
-Rails.application.load_tasks
 
 RSpec.describe "pathcards:eval" do
   let(:seed_path) { Rails.root.join("spec/fixtures/pathcards_eval_seed.yml") }
