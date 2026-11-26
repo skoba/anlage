@@ -15,6 +15,7 @@ Anlage は openEHR の**参照実装**で、診療の現場で使うための製
 | 5a | テンプレートの項目名は OPT の言語のまま。patient_blood_pressure（英語の OPT）の項目は、パスカード検索で日本語（例「収縮期」）では引けず、英語（「Systolic」）で引ける | `spec/fixtures/opt/patient_blood_pressure.opt`（`docs/demo/opt-catalog.md`）。受け入れの台本 G2（`docs/reports/acceptance-v0.2.0-log.md`） |
 | 6 | 用語マスター（ICD-10 対応標準病名マスターなど）は同梱しない。用語サービスにもつないでいない | CLAUDE.md 絶対規律 6（コンテンツ防火壁） |
 | 6a | Docker（production）では、Basic 認証を与えないと、openehr-rails の engine（AQL 照会の画面、`/openehr/fhir`、`/openehr/v1`）が 403 を返す（gem の既定）。与えれば使える | openehr-rails 0.10.0 `app/controllers/openehr_rails/application_controller.rb:20-26`、`config/initializers/openehr.rb`（`skoba/anlage#174`） |
+| 6b | Docker（production）で Basic 認証を与えずに起動すると、engine の画面と API は 403 になるが、anlage の画面（患者、帳票、カルテ記録、パスカード検索、クエリビルダー）は認証なしで開いたままになる。README の Docker の手順は、Basic 認証を与える形を先に書いている | `config/application.rb`（`OptionalBasicAuth` は両方の環境変数があるときだけかかる）。R-20261126-7 の統括の読み直し |
 
 ## 帳票と保存
 

@@ -91,13 +91,17 @@ bundle exec rspec         # テスト（system spec に Chrome が要る）
 
 イメージは本番用の設定（`RAILS_ENV=production`）。`config/master.key` が無くても、`SECRET_KEY_BASE` を渡せば起動する。
 データ（SQLite）は `/rails/storage` に置かれるので、volume にする。
+Basic 認証（下の「任意の Basic 認証」）を与えて起動する形を、先に書く。
 
 ```sh
 docker build -t anlage .
 docker run -d --name anlage -p 8080:80 \
   -e SECRET_KEY_BASE=$(openssl rand -hex 64) \
+  -e ANLAGE_BASIC_AUTH_USERNAME=demo -e ANLAGE_BASIC_AUTH_PASSWORD='<長いパスワード>' \
   -v anlage-storage:/rails/storage anlage
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/up   # 200
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/up                                 # 200（/up に認証はかからない）
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/patients                          # 401
+curl -s -o /dev/null -w "%{http_code}\n" -u demo:'<長いパスワード>' http://localhost:8080/patients   # 200
 ```
 
 初期データ（fixture のテンプレート 5 本と、架空の患者 9 人・84 件のサンプル）を入れるときは、
@@ -107,7 +111,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/up   # 200
 docker exec -e ANLAGE_ALLOW_DEMO_RESET=1 anlage bin/rails demo:reset
 ```
 
-http://localhost:8080/ を開き、テンプレートの画面に OPT を取り込む。試しの OPT は
+http://localhost:8080/ を開き（利用者名 `demo` とパスワードを入れる）、テンプレートの画面に OPT を取り込む。試しの OPT は
 [`spec/fixtures/opt/`](spec/fixtures/opt/)（出所は [`docs/demo/opt-catalog.md`](docs/demo/opt-catalog.md)）。
 
 #### 任意の Basic 認証
@@ -118,19 +122,12 @@ Anlage には利用者の登録とログインが無い。環境変数で利用�
 これは最低限の守りで、実在の患者のデータを入れてよいことにはならない
 （[`docs/design/basic-auth-plan.md`](docs/design/basic-auth-plan.md)）。
 
-openehr-rails の engine（AQL 照会の画面、`/openehr/fhir`、`/openehr/v1` の openEHR REST）は、production では
-認証の設定が無いと 403 を返す。Docker（production）でこれらを使うときは、Basic 認証を与える。
-与えたときは、入口で認証済みとして engine を開ける（`config/initializers/openehr.rb`）。
-anlage の画面（患者、帳票、カルテ記録、パスカード検索、クエリビルダー、FHIR プロファイル）は、与えなくても使える。
+与えずに起動したとき（`ANLAGE_BASIC_AUTH_*` を外した `docker run`）:
 
-```sh
-docker run -d --name anlage -p 8080:80 \
-  -e SECRET_KEY_BASE=$(openssl rand -hex 64) \
-  -e ANLAGE_BASIC_AUTH_USERNAME=demo -e ANLAGE_BASIC_AUTH_PASSWORD='<長いパスワード>' \
-  -v anlage-storage:/rails/storage anlage
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/patients                          # 401
-curl -s -o /dev/null -w "%{http_code}\n" -u demo:'<長いパスワード>' http://localhost:8080/patients   # 200
-```
+- openehr-rails の engine（AQL 照会の画面、`/openehr/fhir`、`/openehr/v1` の openEHR REST）は、production では
+  認証の設定が無いと 403 を返す（gem の既定）。与えたときは、入口で認証済みとして engine を開ける（`config/initializers/openehr.rb`）
+- **anlage の画面（患者、帳票、カルテ記録、パスカード検索、クエリビルダー、FHIR プロファイル）は、認証なしで開いたままになる**。
+  誰でも全患者の記録を見て、作り、修正し、削除できる（[既知の制限](docs/known-limitations.md) 6b）
 
 ## Current focus
 
