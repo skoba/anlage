@@ -13,6 +13,7 @@ Anlage は openEHR の**参照実装**で、診療の現場で使うための製
 | 4 | データベースは SQLite で、1 台で動かす前提。Docker のイメージは TLS の設定（`assume_ssl`・`force_ssl`）を切ってある。外に出すなら TLS を終端するプロキシの後ろに置く | `config/database.yml`、`config/environments/production.rb:28-31` |
 | 5 | 画面の文言は日本語だけ | `docs/demo/ui-vocabulary.md` |
 | 6 | 用語マスター（ICD-10 対応標準病名マスターなど）は同梱しない。用語サービスにもつないでいない | CLAUDE.md 絶対規律 6（コンテンツ防火壁） |
+| 6a | Docker（production）では、Basic 認証を与えないと、openehr-rails の engine（AQL 照会の画面、`/openehr/fhir`、`/openehr/v1`）が 403 を返す（gem の既定）。与えれば使える | openehr-rails 0.10.0 `app/controllers/openehr_rails/application_controller.rb:20-26`、`config/initializers/openehr.rb`（`skoba/anlage#174`） |
 
 ## 帳票と保存
 
