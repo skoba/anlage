@@ -12,6 +12,7 @@ Anlage は openEHR の**参照実装**で、診療の現場で使うための製
 | 3 | （解消。2026-11-26、`skoba/anlage#161`）患者を選ばないと帳票を保存できない。番号はほかの項目の参照のために残す。#161 より前に保存した、患者に結び付かない記録は、そのまま残る | R-20261126-2 の 5、`docs/design/m3-plan.md` 7.5 の問い 4 |
 | 4 | データベースは SQLite で、1 台で動かす前提。Docker のイメージは TLS の設定（`assume_ssl`・`force_ssl`）を切ってある。外に出すなら TLS を終端するプロキシの後ろに置く | `config/database.yml`、`config/environments/production.rb:28-31` |
 | 5 | 画面の文言は日本語だけ | `docs/demo/ui-vocabulary.md` |
+| 5a | テンプレートの項目名は OPT の言語のまま。patient_blood_pressure（英語の OPT）の項目は、パスカード検索で日本語（例「収縮期」）では引けず、英語（「Systolic」）で引ける | `spec/fixtures/opt/patient_blood_pressure.opt`（`docs/demo/opt-catalog.md`）。受け入れの台本 G2（`docs/reports/acceptance-v0.2.0-log.md`） |
 | 6 | 用語マスター（ICD-10 対応標準病名マスターなど）は同梱しない。用語サービスにもつないでいない | CLAUDE.md 絶対規律 6（コンテンツ防火壁） |
 | 6a | Docker（production）では、Basic 認証を与えないと、openehr-rails の engine（AQL 照会の画面、`/openehr/fhir`、`/openehr/v1`）が 403 を返す（gem の既定）。与えれば使える | openehr-rails 0.10.0 `app/controllers/openehr_rails/application_controller.rb:20-26`、`config/initializers/openehr.rb`（`skoba/anlage#174`） |
 
@@ -32,6 +33,8 @@ Anlage は openEHR の**参照実装**で、診療の現場で使うための製
 | 12 | 読み戻して組み直すと内容が変わる記録は修正できない。いまは jp_referral（INSTRUCTION、多段の CLUSTER、同じアーキタイプの 2 つめの ENTRY を読み戻せない） | `app/lib/opt/composition_editability.rb`、Issue #30 |
 | 13 | **削除した記録も AQL の結果には残る**（論理削除の版を、openehr-rails 0.9.0 の既定の scope が除かない）。engine の EHR の画面にも出る | `docs/upstream-candidates.md` 28 項 |
 | 14 | 削除の取り消し、版の巻き戻し、EHR の削除は無い | `docs/design/m3-plan.md` 7.6 |
+| 12a | 患者の画面の「カルテ記録」の行に出る日時は、行を作った時刻（`created_at`）で、記録日（イベント時刻・context/start_time）ではない。初期データでは、どの行も `demo:reset` を実行した時刻になる | `app/views/patients/show.html.erb`。受け入れの台本 C2・D5 |
+| 12b | テンプレートを登録していない記録（初期データの紹介状 2 通。RM の側にだけ入る）は、患者の画面とカルテ記録一覧に出ない。AQL では引ける | `app/controllers/patients_controller.rb` の `show`（原本の `compositions` から引く）。受け入れの台本 C2 |
 
 ## AQL と検索
 
