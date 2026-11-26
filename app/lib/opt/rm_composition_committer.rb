@@ -9,22 +9,27 @@ module Opt
 
     # ehr: いまの患者の EHR（OpenehrRails::Rm::Ehr、skoba/anlage#136）。nil なら EHR に結び付けない
     # uid: 修正のとき、元の記録の uid（skoba/anlage#138）。同じ uid の commit で、gem の committer が版を 1 つ足す。nil なら新しい記録
-    def self.call(template, values, ehr: nil, uid: nil)
-      new(template, values, ehr: ehr, uid: uid).call
+    # recorded_at: 記録日時（skoba/anlage#144。サンプルデータの記録日）。nil なら保存した時刻。
+    #   OBSERVATION のイベント時刻・履歴の起点と、新しい記録の context/start_time に入る
+    # ブロック: commit の前に canonical を書き換える（サンプルデータの ICD-11 コード付きの傷病名。Demo::SampleCompositions）
+    def self.call(template, values, ehr: nil, uid: nil, recorded_at: nil, &edit)
+      new(template, values, ehr: ehr, uid: uid, recorded_at: recorded_at).call(&edit)
     end
 
-    def initialize(template, values, ehr: nil, uid: nil)
+    def initialize(template, values, ehr: nil, uid: nil, recorded_at: nil)
       @template = template
       @values = values
       @ehr = ehr
       @uid = uid
+      @recorded_at = recorded_at || Time.current
     end
 
     def call
-      rm_composition = Opt::CompositionBuilder.new(@template, @values).build
+      rm_composition = Opt::CompositionBuilder.new(@template, @values, recorded_at: @recorded_at).build
       canonical_hash = JSON.parse(
         OpenEHR::Serializer::RMJSONSerializer.new(rm_composition).serialize
       )
+      yield canonical_hash if block_given?
       committable_hash = canonical_hash.deep_dup
       remove_non_structural_entry_keys(committable_hash)
 
@@ -42,7 +47,7 @@ module Opt
     # setting は渡さない（OPT に制約が無く、anlage では決めない。gem が組む）
     def context_start_time
       head = @uid && OpenehrRails::Rm::Composition.latest.find_by(uid: @uid)
-      head&.context_start_time || Time.current
+      head&.context_start_time || @recorded_at
     end
 
     # SECTION は items を辿って、配下の ENTRY からも外す（skoba/anlage#80）

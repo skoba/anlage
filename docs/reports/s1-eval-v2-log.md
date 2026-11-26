@@ -296,3 +296,24 @@ Out of scope: 検索実装の改良（S3）、クエリビルダーとリンタ�
   heart_rate-pulse.v1 は demo_initial の索引にもうあるので、印が付いてしまう。裁定は「c019・c021 と同じ形」なので、そのとおりに足した。
   直すなら、保留の理由の種類（索引に無い／訳が無い）を形式に足す。裁定に無いので、手を付けていない
 - c034 の `intent_tag`「負例のみ」は、セッションが付けた仮の名前
+
+## R19 レビューのあとのゴールドの直し（2026-11-26、R-20261125-11）
+
+- PR #131 は、この直しの前に人間がマージした（main `ab0dda0`）。直しは続きの PR で出す（ゴールドを変えるので、マージは人間）
+- Red（先に spec の pin を書き換えた。`bundle exec rspec spec/lib/evaluation spec/lib/tasks/evaluation_run_spec.rb`、79 examples, 7 failures）:
+  問いの数と id（c034 が draft のまま）、レビューの記録（c034 に無い）、c031・c032 の種類、c034 の status、draft の一覧、
+  負例だけの問いの集計（母数 0）、報告の節（出ない）
+- Green: `spec/fixtures/evaluation/v2/cards.yml` を裁定のとおりに直した
+  - c034: `status: draft` を外して active。`reviewed_by: Kobayashi, Shinji`、`reviewed_at: 2026-11-25`。負例は body_mass_index.v2 のアーキタイプ全体
+  - c031・c032: `intent_tag` を「bigram成立想定」に。notes から「種類は同義語ギャップとする…根拠としては扱わない」を外し、実測（説明に「最高値」「最低値」）を残した
+  - spec の matcher の書き間違い（文字列に `exclude`）を 1 つ直して、86 examples, 0 failures
+- 採点（`RESET=1 bundle exec rake evaluation:run`、demo_initial、別名表あり）
+
+  | 問い | 直す前（main `df37baf`） | 直したあと |
+  |---|---|---|
+  | ゴールド v2 の card 13 問 | Top-1 10/13、Top-3 12/13、完全失敗 0/13、MRR 0.8526、recall@3 0.8846、負例違反 0/13 | 同じ |
+  | 種類別（hit@3） | bigram成立想定 3/3、複合語 5/5、同義語ギャップ 4/5 | bigram成立想定 5/5、複合語 5/5、同義語ギャップ 2/3 |
+  | 負例だけの問い | 母数 0（c034 は draft） | 1 問。負例が上位に出た問い 0/1（「肥満度」は 1 枚も当たらない） |
+
+  - 「同義語ギャップ」の残り 3 問は c022「病名」・c023「疾患名」（別名表で当たる）と c027「診断日」（4 位）
+  - c034 が 0/1 なのは、「肥満度」が字面でどのカードにも当たらないため。検索が BMI を避けているわけではない（段 E で言い換えを入れたときに、初めて効く問い）
