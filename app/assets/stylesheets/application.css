@@ -64,6 +64,17 @@ body {
   background: #f3f4f6;
 }
 
+/* skoba/anlage#162: 参照実装の警告。ナビの先頭に、地の色を変えて出す */
+#reference_warning {
+  margin: 0 0 1rem;
+  padding: 0.5rem;
+  border: 1px solid #b45309;
+  background: #fef3c7;
+  color: #7c2d12;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 #app_nav a {
   display: block;
   padding: 0.4rem 0.5rem;
