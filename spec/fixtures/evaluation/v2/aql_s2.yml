@@ -1,16 +1,18 @@
-# 評価 v2 のゴールド（aql 種、S2 の経路つき）の案。裁定 R-20261124-21 の作業列 3。docs/design/s1-eval-v2-plan.md 8 節。
-# すべて status: draft（人間レビュー前。採点の母数に入らない）。レビュー確定時に status を外す。
+# 評価 v2 のゴールド（aql 種、S2 の経路つき）の案。docs/design/s1-eval-v2-plan.md 8 節。
+# すべて status: draft（人間レビュー前。採点の母数に入らない）。レビュー確定時に status を外し、reviewed_by・reviewed_at を書く。
 #
-# 形式は aql.yml と同じで、selection（クエリビルダーへの入力）を足したもの:
-#   selection.columns（表示する項目。カードを {archetype_id, at_code} で指す）/
-#   selection.conditions（card・operator・value。operator はカードの型で決まる: 数値は > >= < <= =、値集合は MATCHES とコードの配列、
-#   日付は BETWEEN と {from, to}、文字列は =・MATCHES・CONTAINS）/ selection.composition_name（文書名を先頭に出す）
-# 採点は 2 通り: reference_aql が expected_rows を返すか（ゴールドの健全性）、selection からビルダーが組んだ AQL が同じ行を返すか（S2 の経路）。
+# 2026-11-26: サンプルデータ（患者 6 人・65 件。docs/design/sample-data-plan.md 3 節）で、問いを決め直した（R-20261125-6、R-20261125-10）。
+#   旧い案の a007（「疑い」または「確定」）と a008（拡張期 90 未満）は、新しい問いに置き換えた（a009〜a014。番号は使い回さない）。
+#   a006（病名の部分一致）は残した。
 #
-# 人間レビューの範囲: 問いの文言が臨床的に自然か、参照 AQL と selection が問いの意図を表しているか、期待行がその意図の正解か。
-# アーキタイプ ID と at-code は実物（spec/fixtures/pathcards/*.golden.json）。期待行は demo_initial での実測（docs/reports/s2-query-builder-log.md R15）。
-# 2026-11-25: サンプルデータを 65 件に増やしたのに合わせ、書く側が期待行だけを実測に追随させた（R-20261125-9 の問い 3。
-#   docs/reports/sample-data-log.md R2）。notes の demo_initial の記述は旧データのまま。問いの決め直しは引く側（R-20261125-6）
+# 形式は aql.yml と同じで、selection（クエリビルダーへの入力）を足したもの（同 8.1・8.4・8.5）:
+#   selection.columns / selection.conditions（card・operator・value。未記入を含む include_missing、範囲の外 OUTSIDE、どちらかを満たす any）/
+#   selection.composition_name / selection.across_versions（版をまたいで引く。参照は reference_aqls に版ごと）
+# 採点は 2 通り: 参照 AQL が expected_rows を返すか（ゴールドの健全性）、selection からビルダーが組んだ AQL が同じ行を返すか（S2 の経路）。
+#
+# 人間レビューの範囲: 問いの文言が臨床的に自然か、閾値が妥当か、参照 AQL と selection が問いの意図を表しているか、期待行がその意図の正解か。
+# 閾値は、サンプルデータの「判定の目安」（高い = 収縮期 140 以上または拡張期 90 以上、低い = 収縮期 100 未満）をそのまま使った。臨床の確定は人間。
+# アーキタイプ ID と at-code は実物。期待行は demo_initial での実測（docs/reports/s2-query-builder-log.md R28）。
 
 - id: a006
   kind: aql
@@ -33,46 +35,21 @@
         operator: CONTAINS
         value: "糖尿病"
     composition_name: true
-  notes: "文字列の包含（S2 の条件型: 包含。AQL の LIKE は glob で、*糖尿病* と書く）。テンプレート横断（ProblemList と jp_referral）。a003 は病名を列挙する形（MATCHES）で、こちらは部分一致。【人間に問う】「糖尿病を含む」は臨床の問いとして自然か（1型・2型・妊娠糖尿病などをまとめて引く意図）"
+  notes: "病名の部分一致（文字列の包含。AQL の LIKE は glob で、*糖尿病* と書く）。当たるのは 2型糖尿病 3 件（ProblemList 2、紹介状 1）と糖尿病性腎症 1 件。**部分一致はつなぎで、本来はコードで引く**（R-20261125-6）: いまのデータでコードを持つのは DEMO-01 の 2型糖尿病（ICD-11 5A11）だけで、DEMO-05 の 2型糖尿病はコードが無い。字面で引くと、別の病名（糖尿病性腎症）も当たる。【人間に問う】「糖尿病を含む」を、つなぎの問いとして評価に置いてよいか"
   reviewed_by:
   reviewed_at:
 
-- id: a007
+- id: a009
   kind: aql
   status: draft
-  query: "診断確度が「疑い」または「確定」の傷病名"
-  dataset: demo_initial
-  reference_aql: |
-    SELECT ev/data[at0001]/items[at0002]/value/value AS diagnosis
-    FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
-    WHERE ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0074", "at0076"}
-  expected_rows: [["2型糖尿病"], ["糖尿病性腎症"], ["高血圧症"], ["高血圧症"], ["高血圧症"], ["起立性低血圧"], ["鉄欠乏性貧血"],
-                  ["脂質異常症"], ["慢性腎臓病"], ["狭心症"], ["2型糖尿病"], ["花粉症"]]
-  cards:
-    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
-    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
-  selection:
-    columns:
-      - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
-    conditions:
-      - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
-        operator: MATCHES
-        value: [at0074, at0076]
-  notes: "値集合のコードを 2 つ選ぶ形（at0074 疑い、at0076 確定）。a002 はコード 1 つ。demo_initial には確定の記録が無いので、期待行は a002 と同じ 2 行（診断確度の無い jp_referral の 1 件は入らない）。【人間に問う】確定の記録が無いデータで、この問いをゴールドに置く意味があるか（確定の記録を足すなら、初期データは書く側）"
-  reviewed_by:
-  reviewed_at:
-
-- id: a008
-  kind: aql
-  status: draft
-  query: "拡張期血圧が 90 mmHg 未満の記録の、収縮期と拡張期"
+  query: "収縮期血圧が 100 mmHg 未満（低血圧）の記録の、収縮期と拡張期"
   dataset: demo_initial
   reference_aql: |
     SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic,
            o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude AS diastolic
     FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
-    WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude < 90
-  expected_rows: [[148.0, 86.0], [138.0, 84.0], [134.0, 82.0], [88.0, 54.0], [96.0, 60.0], [104.0, 66.0], [126.0, 88.0], [118.0, 76.0]]
+    WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude < 100
+  expected_rows: [[88.0, 54.0], [96.0, 60.0]]
   cards:
     - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
     - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
@@ -81,9 +58,162 @@
       - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
       - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
     conditions:
-      - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
+      - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
         operator: "<"
-        value: 90
-  notes: "2 つの項目を表示し、表示しない側の条件ではなく拡張期で絞る（S2 の条件型: 数値、演算子 <）。a001 は収縮期 1 列。demo_initial の血圧は CardiologyEncounter の 120/80 の 1 件"
+        value: 100
+  notes: "低血圧（数値の上限。2 列の射影）。blood_pressure.v2 の 11 件のうち、DEMO-03 の 88/54 と 96/60 の 2 件。104/66 は外れる。v1 の記録は入らない（版をまたぐのは a014）。【人間に問う】低血圧の閾値は収縮期 100 未満でよいか（サンプルデータの目安をそのまま使った）"
+  reviewed_by:
+  reviewed_at:
+
+- id: a010
+  kind: aql
+  status: draft
+  query: "収縮期血圧が 140 mmHg 以上、または拡張期血圧が 90 mmHg 以上（高血圧）の記録の、収縮期と拡張期"
+  dataset: demo_initial
+  reference_aql: |
+    SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic,
+           o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude AS diastolic
+    FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+    WHERE (o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude >= 140 OR o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude >= 90)
+  expected_rows: [[148.0, 86.0], [152.0, 92.0], [132.0, 94.0], [128.0, 92.0]]
+  cards:
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+      - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }
+    conditions:
+      - any:
+          - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }, operator: ">=", value: 140 }
+          - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }, operator: ">=", value: 90 }
+  notes: "高血圧（どちらかを満たす。別々の項目の条件を OR でつなぐ）。blood_pressure.v2 の 11 件のうち 4 件: 収縮期だけ高い 148/86、両方高い 152/92、拡張期だけ高い 132/94 と 128/92。条件が効いていないと 11 件、収縮期だけで引くと 2 件、拡張期だけで引くと 3 件になる。a001（収縮期 140 以上）との違いは、拡張期だけ高い 2 件が入ること"
+  reviewed_by:
+  reviewed_at:
+
+- id: a011
+  kind: aql
+  status: draft
+  query: "収縮期血圧が 100〜139 mmHg の範囲の外（低いか高い）の記録"
+  dataset: demo_initial
+  reference_aql: |
+    SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic
+    FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+    WHERE (o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude < 100 OR o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude > 139)
+  expected_rows: [[148.0], [152.0], [88.0], [96.0]]
+  cards:
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+        operator: OUTSIDE
+        value: { low: 100, high: 139 }
+  notes: "範囲の外（1 つの項目で、下限より低い、または上限より高い）。血圧は低くても高くても問題なので、両方を 1 回で引く（R-20261125-6）。blood_pressure.v2 の 11 件のうち、低い 88・96 と、高い 148・152 の 4 件。【人間に問う】範囲を 100〜139 と置いてよいか（140 以上を高い、100 未満を低いとした）"
+  reviewed_by:
+  reviewed_at:
+
+- id: a012
+  kind: aql
+  status: draft
+  query: "確定の病名（診断確度の記載が無いものを含む）を、出所の文書名つきで"
+  dataset: demo_initial
+  reference_aql: |
+    SELECT c/name/value AS composition_name,
+           ev/data[at0001]/items[at0002]/value/value AS diagnosis
+    FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+    WHERE (ev/data[at0001]/items[at0073]/value/defining_code/code_string MATCHES {"at0076"} OR NOT EXISTS ev/data[at0001]/items[at0073]/value)
+  expected_rows:
+    - ["ProblemList", "2型糖尿病"]
+    - ["ProblemList", "糖尿病性腎症"]
+    - ["ProblemList", "高血圧症"]
+    - ["ProblemList", "高血圧症"]
+    - ["ProblemList", "鉄欠乏性貧血"]
+    - ["ProblemList", "脂質異常症"]
+    - ["ProblemList", "慢性腎臓病"]
+    - ["ProblemList", "2型糖尿病"]
+    - ["ProblemList", "花粉症"]
+    - ["jp_referral", "2型糖尿病"]
+    - ["jp_referral", "狭心症"]
+  cards:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
+        operator: MATCHES
+        value: [at0076]
+        include_missing: true
+    composition_name: true
+  notes: "確定の病名（未記入を含む。値集合の条件に、その項目が書かれていない記録を OR で足す）。日本語では、病名に「疑い」が付いていなければ確定（小林、2026-11-25）。確度を書かない文書（紹介状）の傷病名も、確定の病名として引く。傷病 15 件のうち 11 件: 確度が「確定」（at0076）の 9 件と、確度の記載が無い紹介状の 2 件。外れるのは「疑い」3 件と「推定」1 件。未記入を含めないと 9 件になる。【人間に問う】紹介状の「狭心症」（確度なし）は、同じ患者の ProblemList では「疑い」。確度を書かない文書の病名を確定として引くと、これが入る。それでよいか"
+  reviewed_by:
+  reviewed_at:
+
+- id: a013
+  kind: aql
+  status: draft
+  query: "発症が 2025 年の病名を、出所の文書名と発症日時つきで"
+  dataset: demo_initial
+  reference_aql: |
+    SELECT c/name/value AS composition_name,
+           ev/data[at0001]/items[at0002]/value/value AS diagnosis,
+           ev/data[at0001]/items[at0077]/value/value AS onset
+    FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+    WHERE ev/data[at0001]/items[at0077]/value/value >= "2025-01-01" AND ev/data[at0001]/items[at0077]/value/value < "2026-01-01"
+  expected_rows:
+    - ["ProblemList", "糖尿病性腎症", "2025-10-01T00:00:00Z"]
+    - ["ProblemList", "狭心症", "2025-11-01T00:00:00Z"]
+    - ["jp_referral", "狭心症", "2025-11-01T00:00:00Z"]
+  cards:
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+    - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0077 }
+  selection:
+    columns:
+      - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
+      - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0077 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0077 }
+        operator: BETWEEN
+        value: { from: "2025-01-01", to: "2026-01-01" }
+    composition_name: true
+  notes: "発症日の範囲（日付の範囲。from 以上、to 未満）。傷病 15 件のうち、発症日時があるのは 11 件、2025 年のものは 3 件（糖尿病性腎症 2025-10-01、狭心症 2025-11-01 が ProblemList と紹介状に 1 件ずつ）。発症日時の無い 4 件（疑い・推定の高血圧症、起立性低血圧、紹介状の 2型糖尿病）は当たらない。日時は保存された形（UTC の 00:00:00）で返る"
+  reviewed_by:
+  reviewed_at:
+
+- id: a014
+  kind: aql
+  status: draft
+  query: "アーキタイプの版をまたいで、収縮期血圧が 140 mmHg 以上の記録"
+  dataset: demo_initial
+  reference_aqls:
+    openEHR-EHR-OBSERVATION.blood_pressure.v1: |
+      SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic
+      FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v1]
+      WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude >= 140
+    openEHR-EHR-OBSERVATION.blood_pressure.v2: |
+      SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic
+      FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+      WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude >= 140
+  expected_rows:
+    - ["openEHR-EHR-OBSERVATION.blood_pressure.v1", 162.0]
+    - ["openEHR-EHR-OBSERVATION.blood_pressure.v1", 158.0]
+    - ["openEHR-EHR-OBSERVATION.blood_pressure.v1", 146.0]
+    - ["openEHR-EHR-OBSERVATION.blood_pressure.v1", 142.0]
+    - ["openEHR-EHR-OBSERVATION.blood_pressure.v2", 148.0]
+    - ["openEHR-EHR-OBSERVATION.blood_pressure.v2", 152.0]
+  cards:
+    - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+  selection:
+    across_versions: true
+    columns:
+      - { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+    conditions:
+      - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
+        operator: ">="
+        value: 140
+  notes: "版をまたいで引く（R-20261125-10）。blood_pressure の v1（patient_blood_pressure、6 件）と v2（CardiologyEncounter、11 件）の収縮期を、対応の表（config/version_mappings.yml の at0004）で束ねる。140 以上は v1 の 4 件と v2 の 2 件。a001（v2 だけ）は 2 件で、v1 の 4 件を取りこぼす。先頭の列は、行が来たアーキタイプの ID。1 本の AQL では書けない（docs/upstream-candidates.md 29 項）ので、参照も版ごとに持つ"
   reviewed_by:
   reviewed_at:

@@ -224,10 +224,10 @@ RSpec.describe Evaluation::Runner do
 
     # c033「脈拍」は、期待先のアーキタイプ（heart_rate-pulse.v1）が demo_initial の索引にあるので「保留解除候補」の印が付く。
     # 保留の理由は「日本語訳が済んでいない」で、索引に入ったことでは解けない（印は当てにならない。ログ R18 に書いた）
-    it "保留問は c019・c021・c033 の 3 問。解除候補の印は c033 にだけ付く。draft は案 3 問（母数外）" do
+    it "保留問は c019・c021・c033 の 3 問。解除候補の印は c033 にだけ付く。draft は案 7 問（母数外）" do
       expect(run.pendings.map(&:id)).to match_array(%w[c019 c021 c033])
       expect(run.releasable_pendings.map(&:id)).to eq(%w[c033])
-      expect(run.drafts.map(&:id)).to match_array(%w[a006 a007 a008])
+      expect(run.drafts.map(&:id)).to match_array(%w[a006 a009 a010 a011 a012 a013 a014])
     end
 
     # c034「肥満度」（R-20261125-11 で active）。いまの検索では 1 枚も当たらないので、負例は出ない。card 13 問の集計には入らない
@@ -239,8 +239,9 @@ RSpec.describe Evaluation::Runner do
                                                        "同義語ギャップ" => { hits: 2, total: 3 })
     end
 
-    it "確定した aql の 5 問は selection を持たないので、S2 の経路の母数は 0（案の確定を待つ）" do
-      expect(run.builder_summary).to eq(questions: 0, match: 0, mismatch: 0, unexecutable: 0, unbuildable: 0)
+    # 2026-11-26 に、確定した 5 問に selection を足した（R-20261125-6）。クエリビルダーが組んだ AQL が、参照 AQL と同じ期待行を返す
+    it "確定した aql の 5 問は、S2 の経路（selection からビルダーが組んだ AQL）でも 5 問とも一致する" do
+      expect(run.builder_summary).to eq(questions: 5, match: 5, mismatch: 0, unexecutable: 0, unbuildable: 0)
     end
   end
 end

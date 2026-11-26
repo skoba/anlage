@@ -300,13 +300,13 @@ RSpec.describe Evaluation::Questions do
     # a006〜a008 は S2 の経路の案（draft、人間レビュー前。R-20261124-21 の作業列 3）。
     # 2026-11-25 に card の 9 問（c022〜c024・c026・c027・c029〜c032）と保留問 c033 を足した（R-20261125-7。レビュー済み）。
     # c034「肥満度」は負例だけの問い。R-20261125-11 で active にした（採点に入れる）
-    it "確定した 22 問: active 19 問（card 13・負例だけの card 1・aql 5）、pending 3 問（c019・c021・c033）。ほかに案 3 問（draft）" do
+    it "確定した 22 問: active 19 問（card 13・負例だけの card 1・aql 5）、pending 3 問（c019・c021・c033）。ほかに案 7 問（draft）" do
       cards = %w[c008 c010 c014 c015 c022 c023 c024 c026 c027 c029 c030 c031 c032 c034]
       aqls = %w[a001 a002 a003 a004 a005]
       expect(questions.values.select(&:active?).map(&:id)).to match_array(cards + aqls)
       expect(questions.values.select(&:pending?).map(&:id)).to match_array(%w[c019 c021 c033])
       expect(questions.values.reject(&:draft?).map(&:id)).to match_array(cards + aqls + %w[c019 c021 c033])
-      expect(questions.values.select(&:draft?).map(&:id)).to match_array(%w[a006 a007 a008])
+      expect(questions.values.select(&:draft?).map(&:id)).to match_array(%w[a006 a009 a010 a011 a012 a013 a014])
       expect(questions.values.select { |question| question.draft? && question.aql? }).to all(have_attributes(selection: be_present))
     end
 
