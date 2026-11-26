@@ -1,7 +1,6 @@
 require "rails_helper"
 require "rake"
 
-Rails.application.load_tasks
 
 # rake evaluation:run（docs/design/s1-eval-v2-plan.md 2.5）。報告は標準出力だけで、docs/reports/ には書かない。
 # aql の問いは dataset を作り直す（dev DB を壊す）ので、RESET=1 のときだけ採点する。

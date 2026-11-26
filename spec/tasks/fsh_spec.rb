@@ -3,7 +3,6 @@ require "rake"
 require "tmpdir"
 require "yaml"
 
-Rails.application.load_tasks
 
 # fsh-plan v1 の出力提供形（`docs/design/fsh-plan.md`「出力の提供形」裁定・
 # 判断4）。FSH 本文は gem の `OpenehrRails::Fhir::FshGenerator` の出力そのもの

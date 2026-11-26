@@ -1,7 +1,6 @@
 require "rails_helper"
 require "rake"
 
-Rails.application.load_tasks
 
 # 台本 3' 幕（skoba/anlage#47、裁定 2026-10-20）: 同じ問題・診断アーキタイプを使う ProblemList と
 # jp_referral が、1 本の AQL で同時に引ける（骨格契約の横串一貫性）。name 述語を使わない形

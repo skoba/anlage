@@ -19,6 +19,7 @@ ENV["SE_CHROMEDRIVER"] ||= SNAP_CHROMEDRIVER if File.executable?(SNAP_CHROMEDRIV
 # Chrome 158 が拒否する後始末の呼び出しを置き換える（skoba/anlage#73。消す条件は skoba/anlage#74）
 require "capybara/selenium/driver"
 require_relative "support/capybara_chrome_storage_reset"
+require_relative "support/rake_tasks"
 # `.adl` ドロップの `POST /templates/preview` は ADL パース（Treetop）を同期実行する
 # ため、1リクエストの所要時間が負荷状況で大きく振れる。実測レンジは静穏時 724ms、
 # CPU 8並列 busy loop 下 2793ms、開発機移行の検収時（並行セッションが別 suite と
