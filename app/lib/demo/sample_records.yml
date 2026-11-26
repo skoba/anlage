@@ -1,0 +1,85 @@
+# rake demo:reset のサンプルのカルテ記録（skoba/anlage#144、R-20261125-9 で承認）。
+# docs/design/sample-data-plan.md 3 節の表と 1 行ずつ対応する（row は表の #）。値は合成、患者は架空。臨床文書ではない。
+#
+# date: 記録日。09:00（日本時間）に保存したものとして入れる（OBSERVATION のイベント時刻と context/start_time）
+# 項目の名前は Demo::SampleCompositions::FIELDS で帳票の入力欄の名前に写す。
+# certainty（診断確度）は OPT の値集合のコード: at0074 疑い／at0075 推定／at0076 確定（ProblemList.opt・jp_referral.opt）
+# icd11: ICD-11 MMS のコード。5A11（2型糖尿病）だけを使う（設計書 2 節の 4、問い 2）
+# jp_referral: テンプレートを登録しないので、構造骨格（spec/fixtures/compositions/jp_referral/skeleton.canonical.json）の
+#   複製の値を差し替えて RM グラフにだけ入れる（設計書 2 節の 6）。department は紹介先の診療科
+DEMO-01:
+  - { row: 1, date: 2026-01-15, template: ProblemList, diagnosis: 2型糖尿病, icd11: 5A11, certainty: at0076, onset: "2018-04-01" }
+  - { row: 2, date: 2026-01-15, template: ProblemList, diagnosis: 糖尿病性腎症, certainty: at0076, onset: "2025-10-01" }
+  - { row: 3, date: 2026-01-15, template: ProblemList, diagnosis: 高血圧症, certainty: at0076, onset: "2020-06-01" }
+  - { row: 4, date: 2026-01-15, template: CardiologyEncounter, systolic: 148, diastolic: 86 }
+  - { row: 5, date: 2026-04-15, template: CardiologyEncounter, systolic: 152, diastolic: 92 }
+  - { row: 6, date: 2026-07-15, template: CardiologyEncounter, systolic: 138, diastolic: 84 }
+  - { row: 7, date: 2026-10-15, template: CardiologyEncounter, systolic: 134, diastolic: 82 }
+  - { row: 8, date: 2026-01-15, template: LabResultReport, analyte: 空腹時血糖, result: 156, units: mg/dL }
+  - { row: 9, date: 2026-04-15, template: LabResultReport, analyte: 空腹時血糖, result: 142, units: mg/dL }
+  - { row: 10, date: 2026-07-15, template: LabResultReport, analyte: 空腹時血糖, result: 128, units: mg/dL }
+  - { row: 11, date: 2026-01-15, template: LabResultReport, analyte: HbA1c, result: 8.1, units: "%" }
+  - { row: 12, date: 2026-04-15, template: LabResultReport, analyte: HbA1c, result: 7.6, units: "%" }
+  - { row: 13, date: 2026-07-15, template: LabResultReport, analyte: HbA1c, result: 7.2, units: "%" }
+  - { row: 14, date: 2026-01-15, template: LabResultReport, analyte: クレアチニン, result: 1.32, units: mg/dL }
+  - { row: 15, date: 2026-07-15, template: LabResultReport, analyte: クレアチニン, result: 1.45, units: mg/dL }
+  - { row: 16, date: 2026-01-15, template: bmi_calculation, height: 168, weight: 74, bmi: 26.2, judgement: 肥満（1度） }
+  - { row: 17, date: 2026-07-15, template: bmi_calculation, height: 168, weight: 71, bmi: 25.2, judgement: 肥満（1度） }
+  - { row: 18, date: 2026-08-03, template: jp_referral, diagnosis: 2型糖尿病, icd11: 5A11, department: 内科 }
+
+DEMO-02:
+  - { row: 1, date: 2026-02-10, template: ProblemList, diagnosis: 高血圧症, certainty: at0074 }
+  - { row: 2, date: 2026-05-11, template: ProblemList, diagnosis: 高血圧症, certainty: at0076, onset: "2026-02-01" }
+  - { row: 3, date: 2026-02-10, template: patient_blood_pressure.v1, systolic: 162, diastolic: 78, pulse: 72 }
+  - { row: 4, date: 2026-03-10, template: patient_blood_pressure.v1, systolic: 158, diastolic: 76, pulse: 70 }
+  - { row: 5, date: 2026-05-11, template: patient_blood_pressure.v1, systolic: 146, diastolic: 74, pulse: 68 }
+  - { row: 6, date: 2026-08-10, template: patient_blood_pressure.v1, systolic: 128, diastolic: 72, pulse: 66 }
+  - { row: 7, date: 2026-02-10, template: bmi_calculation, height: 175, weight: 80, bmi: 26.1, judgement: 肥満（1度） }
+  - { row: 8, date: 2026-02-10, template: LabResultReport, analyte: 空腹時血糖, result: 102, units: mg/dL }
+  - { row: 9, date: 2026-02-10, template: LabResultReport, analyte: LDL コレステロール, result: 128, units: mg/dL }
+
+DEMO-03:
+  - { row: 1, date: 2026-03-05, template: ProblemList, diagnosis: 起立性低血圧, certainty: at0074 }
+  - { row: 2, date: 2026-03-05, template: ProblemList, diagnosis: 鉄欠乏性貧血, certainty: at0076, onset: "2026-03-01" }
+  - { row: 3, date: 2026-03-05, template: CardiologyEncounter, systolic: 88, diastolic: 54 }
+  - { row: 4, date: 2026-03-19, template: CardiologyEncounter, systolic: 96, diastolic: 60 }
+  - { row: 5, date: 2026-06-05, template: CardiologyEncounter, systolic: 104, diastolic: 66 }
+  - { row: 6, date: 2026-03-05, template: LabResultReport, analyte: ヘモグロビン, result: 9.8, units: g/dL }
+  - { row: 7, date: 2026-06-05, template: LabResultReport, analyte: ヘモグロビン, result: 11.9, units: g/dL }
+  - { row: 8, date: 2026-03-05, template: LabResultReport, analyte: 空腹時血糖, result: 84, units: mg/dL }
+  - { row: 9, date: 2026-03-05, template: bmi_calculation, height: 158, weight: 45, bmi: 18.0, judgement: 低体重 }
+
+DEMO-04:
+  - { row: 1, date: 2026-01-20, template: ProblemList, diagnosis: 脂質異常症, certainty: at0076, onset: "2024-09-01" }
+  - { row: 2, date: 2026-04-20, template: ProblemList, diagnosis: 高血圧症, certainty: at0075 }
+  - { row: 3, date: 2026-01-20, template: CardiologyEncounter, systolic: 132, diastolic: 94 }
+  - { row: 4, date: 2026-04-20, template: CardiologyEncounter, systolic: 128, diastolic: 92 }
+  - { row: 5, date: 2026-07-20, template: CardiologyEncounter, systolic: 126, diastolic: 88 }
+  - { row: 6, date: 2026-01-20, template: LabResultReport, analyte: LDL コレステロール, result: 168, units: mg/dL }
+  - { row: 7, date: 2026-07-20, template: LabResultReport, analyte: LDL コレステロール, result: 142, units: mg/dL }
+  - { row: 8, date: 2026-01-20, template: LabResultReport, analyte: 空腹時血糖, result: 96, units: mg/dL }
+  - { row: 9, date: 2026-01-20, template: bmi_calculation, height: 170, weight: 65, bmi: 22.5, judgement: 普通体重 }
+
+DEMO-05:
+  - { row: 1, date: 2026-05-12, template: jp_referral, diagnosis: 狭心症, onset: "2025-11-01", department: 循環器内科 }
+  - { row: 2, date: 2026-05-12, template: ProblemList, diagnosis: 慢性腎臓病, certainty: at0076, onset: "2023-04-01" }
+  - { row: 3, date: 2026-05-12, template: ProblemList, diagnosis: 狭心症, certainty: at0074, onset: "2025-11-01" }
+  - { row: 4, date: 2026-05-12, template: ProblemList, diagnosis: 2型糖尿病, certainty: at0076, onset: "2016-01-01" }
+  - { row: 5, date: 2026-05-12, template: patient_blood_pressure.v1, systolic: 142, diastolic: 68, pulse: 80 }
+  - { row: 6, date: 2026-09-01, template: patient_blood_pressure.v1, systolic: 118, diastolic: 64, pulse: 76 }
+  - { row: 7, date: 2026-05-12, template: LabResultReport, analyte: クレアチニン, result: 1.88, units: mg/dL }
+  - { row: 8, date: 2026-09-01, template: LabResultReport, analyte: クレアチニン, result: 1.95, units: mg/dL }
+  - { row: 9, date: 2026-05-12, template: LabResultReport, analyte: eGFR, result: 27, units: mL/min/1.73m2 }
+  - { row: 10, date: 2026-09-01, template: LabResultReport, analyte: eGFR, result: 26, units: mL/min/1.73m2 }
+  - { row: 11, date: 2026-05-12, template: LabResultReport, analyte: HbA1c, result: 6.9, units: "%" }
+  - { row: 12, date: 2026-09-01, template: LabResultReport, analyte: HbA1c, result: 7.0, units: "%" }
+  - { row: 13, date: 2026-05-12, template: bmi_calculation, height: 160, weight: 58, bmi: 22.7, judgement: 普通体重 }
+
+DEMO-06:
+  - { row: 1, date: 2026-06-01, template: ProblemList, diagnosis: 花粉症, certainty: at0076, onset: "2015-03-01" }
+  - { row: 2, date: 2026-06-01, template: CardiologyEncounter, systolic: 118, diastolic: 76 }
+  - { row: 3, date: 2026-06-01, template: LabResultReport, analyte: 空腹時血糖, result: 92, units: mg/dL }
+  - { row: 4, date: 2026-06-01, template: LabResultReport, analyte: HbA1c, result: 5.4, units: "%" }
+  - { row: 5, date: 2026-06-01, template: LabResultReport, analyte: LDL コレステロール, result: 104, units: mg/dL }
+  - { row: 6, date: 2026-06-01, template: LabResultReport, analyte: ヘモグロビン, result: 14.2, units: g/dL }
+  - { row: 7, date: 2026-06-01, template: bmi_calculation, height: 172, weight: 63, bmi: 21.3, judgement: 普通体重 }

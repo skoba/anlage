@@ -24,7 +24,7 @@ RSpec.describe QueryBuilder::Runner do
 
   it "a001〜a005 と同じ選択を組んで実行すると、ゴールドの期待行と同じ行を返す（リンタの error なし）" do
     selections = {
-      "a001" => { columns: [ card(QB_BP_O, "at0004") ], conditions: [ { card: card(QB_BP_O, "at0004"), operator: ">", value: "110" } ] },
+      "a001" => { columns: [ card(QB_BP_O, "at0004") ], conditions: [ { card: card(QB_BP_O, "at0004"), operator: ">=", value: "140" } ] },
       "a002" => { columns: [ card(QB_PD_E, "at0002") ], conditions: [ { card: card(QB_PD_E, "at0073"), operator: "MATCHES", value: [ "at0074" ] } ] },
       "a003" => { columns: [ card(QB_PD_E, "at0002") ], composition_name: true,
                   conditions: [ { card: card(QB_PD_E, "at0002"), operator: "MATCHES", value: [ "2型糖尿病", "高血圧症" ] } ] },
@@ -67,8 +67,8 @@ RSpec.describe QueryBuilder::Runner do
     expect(run.lint.ok?).to be(true)
     expect(run.aql).to start_with("SELECT o/data[at0001]")
   end
-  # docs/design/s2-query-builder-plan.md 7 節（R-20261125-6）。demo_initial の傷病は 3 件（高血圧症〔疑い〕、2型糖尿病〔疑い〕、
-  # 2型糖尿病〔確度の記載なし〕）、血圧は 1 件（120／80）。値集合のコードは at0074＝疑い、at0076＝確定
+  # docs/design/s2-query-builder-plan.md 7 節（R-20261125-6）。demo_initial（docs/design/sample-data-plan.md 3 節）の傷病は 15 件
+  # （確定 9、疑い 3、推定 1、確度の記載なしの紹介状 2）、血圧 v2 は 11 件。値集合のコードは at0074＝疑い、at0076＝確定
   describe "未記入を含む、範囲の外、どちらかを満たす" do
     def run(**selection)
       described_class.call(**selection).tap do |result|
@@ -77,31 +77,39 @@ RSpec.describe QueryBuilder::Runner do
       end
     end
 
-    it "未記入を含む: 「確定」だけでは 0 行、未記入を含めると確度の記載が無い 1 行。「疑い」に未記入を含めると 3 行" do
+    it "未記入を含む: 「確定」だけでは 9 行、未記入を含めると確度の記載が無い紹介状の 2 行が足される。「疑い」に未記入を含めると 5 行" do
       diagnosis = card(QB_PD_E, "at0002")
       certainty = card(QB_PD_E, "at0073")
 
-      expect(rows(run(columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0076" ] } ]))).to eq([])
+      confirmed = [ [ "2型糖尿病" ], [ "糖尿病性腎症" ], [ "高血圧症" ], [ "高血圧症" ], [ "鉄欠乏性貧血" ], [ "脂質異常症" ],
+                    [ "慢性腎臓病" ], [ "2型糖尿病" ], [ "花粉症" ] ]
+      unwritten = [ [ "2型糖尿病" ], [ "狭心症" ] ]
+
+      expect(rows(run(columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0076" ] } ])))
+        .to match_array(confirmed)
       expect(rows(run(columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0076" ], include_missing: true } ])))
-        .to eq([ [ "2型糖尿病" ] ])
+        .to match_array(confirmed + unwritten)
       expect(rows(run(columns: [ diagnosis ], conditions: [ { card: certainty, operator: "MATCHES", value: [ "at0074" ], include_missing: true } ])))
-        .to match_array([ [ "高血圧症" ], [ "2型糖尿病" ], [ "2型糖尿病" ] ])
+        .to match_array([ [ "高血圧症" ], [ "起立性低血圧" ], [ "狭心症" ] ] + unwritten)
     end
 
-    it "範囲の外: 収縮期 120 は、100〜110 の外（1 行）で、90〜140 の中（0 行）" do
+    it "範囲の外: 収縮期が 100〜110 の外は 10 行（104 だけが中）、90〜140 の外は 3 行（低い 88、高い 148・152）" do
       systolic = card(QB_BP_O, "at0004")
 
-      expect(rows(run(columns: [ systolic ], conditions: [ { card: systolic, operator: "OUTSIDE", value: { low: 100, high: 110 } } ]))).to eq([ [ 120.0 ] ])
-      expect(rows(run(columns: [ systolic ], conditions: [ { card: systolic, operator: "OUTSIDE", value: { low: 90, high: 140 } } ]))).to eq([])
+      expect(rows(run(columns: [ systolic ], conditions: [ { card: systolic, operator: "OUTSIDE", value: { low: 100, high: 110 } } ])))
+        .to match_array([ [ 148.0 ], [ 152.0 ], [ 138.0 ], [ 134.0 ], [ 88.0 ], [ 96.0 ], [ 132.0 ], [ 128.0 ], [ 126.0 ], [ 118.0 ] ])
+      expect(rows(run(columns: [ systolic ], conditions: [ { card: systolic, operator: "OUTSIDE", value: { low: 90, high: 140 } } ]))).to match_array([ [ 148.0 ], [ 152.0 ], [ 88.0 ] ])
     end
 
-    it "どちらかを満たす: 収縮期 >= 140 または拡張期 >= 80 は 1 行（拡張期で当たる）。どちらも外れると 0 行。ほかの条件とは AND" do
+    it "どちらかを満たす: 収縮期 >= 140 または拡張期 >= 80 は 7 行、拡張期 >= 90 にすると 4 行（拡張期だけ高い 132／94・128／92 を含む）。ほかの条件とは AND" do
       systolic = card(QB_BP_O, "at0004")
       diastolic = card(QB_BP_O, "at0005")
       either = ->(low) { { any: [ { card: systolic, operator: ">=", value: "140" }, { card: diastolic, operator: ">=", value: low } ] } }
 
-      expect(rows(run(columns: [ systolic, diastolic ], conditions: [ either.call("80") ]))).to eq([ [ 120.0, 80.0 ] ])
-      expect(rows(run(columns: [ systolic, diastolic ], conditions: [ either.call("90") ]))).to eq([])
+      expect(rows(run(columns: [ systolic, diastolic ], conditions: [ either.call("80") ])))
+        .to match_array([ [ 148.0, 86.0 ], [ 152.0, 92.0 ], [ 138.0, 84.0 ], [ 134.0, 82.0 ], [ 132.0, 94.0 ], [ 128.0, 92.0 ], [ 126.0, 88.0 ] ])
+      expect(rows(run(columns: [ systolic, diastolic ], conditions: [ either.call("90") ])))
+        .to match_array([ [ 148.0, 86.0 ], [ 152.0, 92.0 ], [ 132.0, 94.0 ], [ 128.0, 92.0 ] ])
       expect(rows(run(columns: [ systolic, diastolic ], conditions: [ either.call("80"), { card: systolic, operator: ">", value: "200" } ]))).to eq([])
     end
   end

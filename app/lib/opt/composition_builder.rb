@@ -39,9 +39,11 @@ module Opt
     # 要素の区切りは全角のセミコロン（値の側も DV_TEXT なので、改行は入らない）
     NARRATIVE_SEPARATOR = "；"
 
-    def initialize(template, values)
+    # recorded_at: OBSERVATION のイベント時刻と履歴の起点（skoba/anlage#144）。既定は保存した時刻（規則 4）
+    def initialize(template, values, recorded_at: Time.current)
       @template = template
       @values = values.stringify_keys
+      @recorded_at = recorded_at
     end
 
     def build
@@ -323,14 +325,14 @@ module Opt
       event = OpenEHR::RM::DataStructures::History::PointEvent.new(
         archetype_node_id: event_node_id,
         name: dv_text(node_label(entry, event_node_id) || "event"),
-        time: dv_date_time(Time.current),
+        time: dv_date_time(@recorded_at),
         data: item_tree
       )
 
       OpenEHR::RM::DataStructures::History::History.new(
         archetype_node_id: history_node_id,
         name: dv_text(node_label(entry, history_node_id) || "history"),
-        origin: dv_date_time(Time.current),
+        origin: dv_date_time(@recorded_at),
         events: [ event ]
       )
     end

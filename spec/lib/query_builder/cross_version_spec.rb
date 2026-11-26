@@ -1,7 +1,8 @@
 require "rails_helper"
 
 # 版をまたいで引く（docs/design/s2-cross-version-plan.md 4 節、skoba/anlage#154、R-20261125-10）。
-# データは demo_initial（血圧は blood_pressure.v2 の 120／80 が 1 件）に、blood_pressure.v1 の記録（150／95、100／60）を足したもの。
+# データは demo_initial（docs/design/sample-data-plan.md 3 節。血圧は blood_pressure.v1 が 6 件、v2 が 11 件）に、
+# blood_pressure.v1 の記録（150／95、100／60）を足したもの。行は v1、v2 の順で、版の中は記録を入れた順
 # 対応の表は、この spec の中で active の行を作って渡す（リポジトリの表の行は、レビューが済むまで pending）。
 RSpec.describe "版をまたいで引く" do
   XV_BP = "openEHR-EHR-OBSERVATION.blood_pressure".freeze
@@ -58,21 +59,48 @@ RSpec.describe "版をまたいで引く" do
     result = run(columns: [ systolic, diastolic ], mappings: both)
 
     expect(result).to have_attributes(executed?: true, error: nil)
-    expect(rows(result)).to eq([ [ "#{XV_BP}.v1", 150.0, 95.0 ], [ "#{XV_BP}.v1", 100.0, 60.0 ], [ "#{XV_BP}.v2", 120.0, 80.0 ] ])
+    expect(rows(result)).to eq([
+      [ "#{XV_BP}.v1", 162.0, 78.0 ], [ "#{XV_BP}.v1", 158.0, 76.0 ], [ "#{XV_BP}.v1", 146.0, 74.0 ],
+      [ "#{XV_BP}.v1", 128.0, 72.0 ], [ "#{XV_BP}.v1", 142.0, 68.0 ], [ "#{XV_BP}.v1", 118.0, 64.0 ],
+      [ "#{XV_BP}.v1", 150.0, 95.0 ], [ "#{XV_BP}.v1", 100.0, 60.0 ], [ "#{XV_BP}.v2", 148.0, 86.0 ],
+      [ "#{XV_BP}.v2", 152.0, 92.0 ], [ "#{XV_BP}.v2", 138.0, 84.0 ], [ "#{XV_BP}.v2", 134.0, 82.0 ],
+      [ "#{XV_BP}.v2", 88.0, 54.0 ], [ "#{XV_BP}.v2", 96.0, 60.0 ], [ "#{XV_BP}.v2", 104.0, 66.0 ],
+      [ "#{XV_BP}.v2", 132.0, 94.0 ], [ "#{XV_BP}.v2", 128.0, 92.0 ], [ "#{XV_BP}.v2", 126.0, 88.0 ],
+      [ "#{XV_BP}.v2", 118.0, 76.0 ]
+    ])
   end
 
-  it "条件は両方の版に効く: 収縮期 >= 120 は v1 の 150 と v2 の 120。「どちらかを満たす」（収縮期 >= 140 または拡張期 >= 80）も同じ 2 行" do
+  it "条件は両方の版に効く: 収縮期 >= 120 は v1 の 6 行と v2 の 7 行。「どちらかを満たす」（収縮期 >= 140 または拡張期 >= 80）は v1 の 5 行と v2 の 7 行" do
     expect(rows(run(columns: [ systolic ], conditions: [ { card: systolic, operator: ">=", value: "120" } ], mappings: both)))
-      .to eq([ [ "#{XV_BP}.v1", 150.0 ], [ "#{XV_BP}.v2", 120.0 ] ])
+      .to eq([
+        [ "#{XV_BP}.v1", 162.0 ], [ "#{XV_BP}.v1", 158.0 ], [ "#{XV_BP}.v1", 146.0 ],
+        [ "#{XV_BP}.v1", 128.0 ], [ "#{XV_BP}.v1", 142.0 ], [ "#{XV_BP}.v1", 150.0 ],
+        [ "#{XV_BP}.v2", 148.0 ], [ "#{XV_BP}.v2", 152.0 ], [ "#{XV_BP}.v2", 138.0 ],
+        [ "#{XV_BP}.v2", 134.0 ], [ "#{XV_BP}.v2", 132.0 ], [ "#{XV_BP}.v2", 128.0 ],
+        [ "#{XV_BP}.v2", 126.0 ]
+      ])
     either = { any: [ { card: systolic, operator: ">=", value: "140" }, { card: diastolic, operator: ">=", value: "80" } ] }
     expect(rows(run(columns: [ systolic, diastolic ], conditions: [ either ], mappings: both)))
-      .to eq([ [ "#{XV_BP}.v1", 150.0, 95.0 ], [ "#{XV_BP}.v2", 120.0, 80.0 ] ])
+      .to eq([
+        [ "#{XV_BP}.v1", 162.0, 78.0 ], [ "#{XV_BP}.v1", 158.0, 76.0 ], [ "#{XV_BP}.v1", 146.0, 74.0 ],
+        [ "#{XV_BP}.v1", 142.0, 68.0 ], [ "#{XV_BP}.v1", 150.0, 95.0 ], [ "#{XV_BP}.v2", 148.0, 86.0 ],
+        [ "#{XV_BP}.v2", 152.0, 92.0 ], [ "#{XV_BP}.v2", 138.0, 84.0 ], [ "#{XV_BP}.v2", 134.0, 82.0 ],
+        [ "#{XV_BP}.v2", 132.0, 94.0 ], [ "#{XV_BP}.v2", 128.0, 92.0 ], [ "#{XV_BP}.v2", 126.0, 88.0 ]
+      ])
   end
 
   it "v1 のカードを選んでも、同じ結果になる" do
     result = run(columns: [ card("#{XV_BP}.v1", "at0004") ], mappings: both)
 
-    expect(rows(result)).to eq([ [ "#{XV_BP}.v1", 150.0 ], [ "#{XV_BP}.v1", 100.0 ], [ "#{XV_BP}.v2", 120.0 ] ])
+    expect(rows(result)).to eq([
+      [ "#{XV_BP}.v1", 162.0 ], [ "#{XV_BP}.v1", 158.0 ], [ "#{XV_BP}.v1", 146.0 ],
+      [ "#{XV_BP}.v1", 128.0 ], [ "#{XV_BP}.v1", 142.0 ], [ "#{XV_BP}.v1", 118.0 ],
+      [ "#{XV_BP}.v1", 150.0 ], [ "#{XV_BP}.v1", 100.0 ], [ "#{XV_BP}.v2", 148.0 ],
+      [ "#{XV_BP}.v2", 152.0 ], [ "#{XV_BP}.v2", 138.0 ], [ "#{XV_BP}.v2", 134.0 ],
+      [ "#{XV_BP}.v2", 88.0 ], [ "#{XV_BP}.v2", 96.0 ], [ "#{XV_BP}.v2", 104.0 ],
+      [ "#{XV_BP}.v2", 132.0 ], [ "#{XV_BP}.v2", 128.0 ], [ "#{XV_BP}.v2", 126.0 ],
+      [ "#{XV_BP}.v2", 118.0 ]
+    ])
   end
 
   it "対応の無い項目を含む選択は組まない（ID が似ているだけの項目を、まとめて引かない）" do
@@ -97,7 +125,12 @@ RSpec.describe "版をまたいで引く" do
     result = QueryBuilder::Runner.call(across_versions: true, columns: [ card("#{XV_BP}.v2", "at0004") ], mappings: both)
 
     expect(result.queries.map(&:archetype_id)).to eq([ "#{XV_BP}.v2" ])
-    expect(rows(result)).to eq([ [ "#{XV_BP}.v2", 120.0 ] ])
+    expect(rows(result)).to eq([
+      [ "#{XV_BP}.v2", 148.0 ], [ "#{XV_BP}.v2", 152.0 ], [ "#{XV_BP}.v2", 138.0 ],
+      [ "#{XV_BP}.v2", 134.0 ], [ "#{XV_BP}.v2", 88.0 ], [ "#{XV_BP}.v2", 96.0 ],
+      [ "#{XV_BP}.v2", 104.0 ], [ "#{XV_BP}.v2", 132.0 ], [ "#{XV_BP}.v2", 128.0 ],
+      [ "#{XV_BP}.v2", 126.0 ], [ "#{XV_BP}.v2", 118.0 ]
+    ])
   end
 
   it "どれかの版の AQL にリンタの error があれば、どの版も実行しない" do
@@ -117,7 +150,7 @@ RSpec.describe "版をまたいで引く" do
   it "across_versions を付けなければ、これまでどおり選んだ版だけを引く（先頭に版の列は無い）" do
     result = QueryBuilder::Runner.call(columns: [ systolic ], mappings: both)
 
-    expect(rows(result)).to eq([ [ 120.0 ] ])
+    expect(rows(result)).to eq([ [ 148.0 ], [ 152.0 ], [ 138.0 ], [ 134.0 ], [ 88.0 ], [ 96.0 ], [ 104.0 ], [ 132.0 ], [ 128.0 ], [ 126.0 ], [ 118.0 ] ])
     expect(result.version_column?).to be(false)
     expect(result.queries.size).to eq(1)
   end

@@ -7,22 +7,22 @@ RSpec.describe Evaluation::BuilderRoute do
 
   before { Evaluation::Datasets.build("demo_initial") }
 
-  def question(selection, expected_rows: [ [ 120.0 ] ])
-    Evaluation::Question.new(id: "a001", kind: :aql, query: "収縮期血圧が 110 mmHg を超える記録", dataset: "demo_initial",
+  def question(selection, expected_rows: [ [ 148.0 ], [ 152.0 ] ])
+    Evaluation::Question.new(id: "a001", kind: :aql, query: "収縮期血圧が 140 mmHg 以上の記録", dataset: "demo_initial",
                              reference_aql: "SELECT 1", expected_rows: expected_rows, selection: selection)
   end
 
   it "selection から組んだ AQL が期待行を返せば match。組んだ AQL を持つ" do
-    score = described_class.score(question({ columns: [ ROUTE_BP ], conditions: [ { card: ROUTE_BP, operator: ">", value: 110 } ] }))
+    score = described_class.score(question({ columns: [ ROUTE_BP ], conditions: [ { card: ROUTE_BP, operator: ">=", value: 140 } ] }))
 
     expect(score).to have_attributes(status: :match, missing: [], extra: [])
-    expect(score.aql).to end_with("/items[at0004]/value/magnitude > 110")
+    expect(score.aql).to end_with("/items[at0004]/value/magnitude >= 140")
   end
 
   it "期待行と違えば mismatch で、不足と余分の行が出る" do
-    score = described_class.score(question({ columns: [ ROUTE_BP ], conditions: [ { card: ROUTE_BP, operator: ">", value: 130 } ] }))
+    score = described_class.score(question({ columns: [ ROUTE_BP ], conditions: [ { card: ROUTE_BP, operator: ">=", value: 150 } ] }))
 
-    expect(score).to have_attributes(status: :mismatch, missing: [ [ 120.0 ] ], extra: [])
+    expect(score).to have_attributes(status: :mismatch, missing: [ [ 148.0 ] ], extra: [])
   end
 
   it "索引に無いカードを指す selection と、組めない selection は unbuildable で、理由を持つ" do
@@ -35,22 +35,27 @@ RSpec.describe Evaluation::BuilderRoute do
     expect(invalid.error).to include("CONTAINS")
   end
 
-  # docs/design/s1-eval-v2-plan.md 8.4（R-20261125-6）。demo_initial の血圧は 120／80 の 1 件、傷病 3 件のうち確度の記載が無いのは 2型糖尿病 の 1 件
+  # docs/design/s1-eval-v2-plan.md 8.4（R-20261125-6）。demo_initial（docs/design/sample-data-plan.md 3 節）の血圧 v2 は 11 件で、
+  # 収縮期 130〜140 の中かつ拡張期 90 未満は 138／84 と 134／82 の 2 件。傷病の確定は 9 件、確度の記載が無いのは紹介状の 2 件
   it "どちらかを満たす（any）と範囲の外（OUTSIDE）の selection: 中のカードも索引から引いて組む" do
     diastolic = ROUTE_BP.merge(at_code: "at0005")
     either = { any: [ { card: ROUTE_BP, operator: "OUTSIDE", value: { low: 130, high: 140 } }, { card: diastolic, operator: ">=", value: 90 } ] }
-    score = described_class.score(question({ columns: [ ROUTE_BP ], conditions: [ either ] }))
+    score = described_class.score(question({ columns: [ ROUTE_BP ], conditions: [ either ] },
+                                           expected_rows: [ [ 148.0 ], [ 152.0 ], [ 88.0 ], [ 96.0 ], [ 104.0 ], [ 132.0 ], [ 128.0 ], [ 126.0 ], [ 118.0 ] ]))
 
     expect(score).to have_attributes(status: :match)
     expect(score.aql.lines.last).to match(%r{\AWHERE \(\(o/.+at0004\]/value/magnitude < 130 OR o/.+at0004\]/value/magnitude > 140\) OR o/.+at0005\]/value/magnitude >= 90\)\z})
   end
 
-  it "未記入を含む（include_missing）の selection: 確定または未記入で、確度の記載が無い 1 行" do
+  it "未記入を含む（include_missing）の selection: 確定 9 行と、確度の記載が無い紹介状の 2 行" do
     pd = "openEHR-EHR-EVALUATION.problem_diagnosis.v1"
     selection = { columns: [ { archetype_id: pd, at_code: "at0002" } ],
                   conditions: [ { card: { archetype_id: pd, at_code: "at0073" }, operator: "MATCHES", value: [ "at0076" ], include_missing: true } ] }
 
-    expect(described_class.score(question(selection, expected_rows: [ [ "2型糖尿病" ] ]))).to have_attributes(status: :match)
+    expected = [ [ "2型糖尿病" ], [ "2型糖尿病" ], [ "2型糖尿病" ], [ "糖尿病性腎症" ], [ "高血圧症" ], [ "高血圧症" ], [ "鉄欠乏性貧血" ],
+                 [ "脂質異常症" ], [ "慢性腎臓病" ], [ "花粉症" ], [ "狭心症" ] ]
+
+    expect(described_class.score(question(selection, expected_rows: expected))).to have_attributes(status: :match)
   end
 
   it "any の中の、索引に無いカードは unbuildable" do

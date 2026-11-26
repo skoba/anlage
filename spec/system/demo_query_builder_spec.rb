@@ -2,7 +2,8 @@ require "rails_helper"
 
 # クエリビルダー（docs/design/s2-query-builder-plan.md 6.4、R-20261124-21）を実ブラウザの操作列で通す。
 # 臨床の言葉で項目を探す → 表示する項目と条件に足す → 型に応じた条件を入れる → AQL と検査を見る → 実行して行を見る。
-# データは demo_initial（rake demo:reset の初期状態）。期待する行は評価 v2 のゴールド a001・a002 と同じ。文言は docs/demo/ui-vocabulary.md の写し。
+# データは demo_initial（rake demo:reset の初期状態。docs/design/sample-data-plan.md 3 節）。期待する行は demo_initial での実測
+# （a002 はゴールドと同じ。数値の例は > 110 のままで、ゴールド a001 は R-20261125-9 で >= 140 に変わった）。文言は docs/demo/ui-vocabulary.md の写し。
 RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: true do
   before { Evaluation::Datasets.build("demo_initial") }
 
@@ -10,7 +11,7 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     find("#query_candidates .pathcard", text: template, match: :first) { |card| card.has_css?("h2", text: name, exact_text: true) }
   end
 
-  it "数値: 「収縮期」を探して項目と条件に足し、> 110 で実行すると 120.0 の 1 行が出る" do
+  it "数値: 「収縮期」を探して項目と条件に足し、> 110 で実行すると 8 行が出る（88・96・104 は外れる）" do
     visit new_query_path
     within("nav#app_nav") { expect(page).to have_css("a[aria-current=page]", text: "クエリビルダー") }
 
@@ -32,13 +33,13 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
 
     click_button "実行"
 
-    expect(page).to have_css("#query_result p", text: "1 行")
+    expect(page).to have_css("#query_result p", text: "8 行")
     expect(page).to have_css("#query_result th", text: "収縮期")
-    expect(page).to have_css("#query_result td", text: "120.0")
+    expect(all("#query_result tbody td").map(&:text)).to match_array(%w[148.0 152.0 138.0 134.0 132.0 128.0 126.0 118.0])
     expect(page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")).to be(false)
   end
 
-  it "値集合: 傷病名を表示し、診断確度「疑い」にチェックして文書名つきで実行すると、ProblemList の 2 行が出る（コード値 at0074 で引く）" do
+  it "値集合: 傷病名を表示し、診断確度「疑い」にチェックして文書名つきで実行すると、ProblemList の 3 行が出る（コード値 at0074 で引く）" do
     visit new_query_path
 
     fill_in "探したい項目", with: "診断名"
@@ -54,9 +55,9 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     click_button "実行"
 
     expect(page).to have_css("#query_aql pre", text: 'value/defining_code/code_string MATCHES {"at0074"}')
-    expect(page).to have_css("#query_result p", text: "2 行")
+    expect(page).to have_css("#query_result p", text: "3 行")
     rows = all("#query_result tbody tr").map { |row| row.all("td").map(&:text) }
-    expect(rows).to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "2型糖尿病" ] ])
+    expect(rows).to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "起立性低血圧" ], [ "ProblemList", "狭心症" ] ])
   end
 
   it "組めない値（数値でない）は実行せず、理由が出る。直して実行できる" do
@@ -78,7 +79,7 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     expect(page).to have_css("#query_result p", text: "該当する記録はありません。")
   end
   # docs/design/s2-query-builder-plan.md 7.4（R-20261125-6）
-  it "未記入を含む: 診断確度「確定」だけでは該当なし。「未記入を含む」にチェックすると、確度の記載が無い 1 行が出る" do
+  it "未記入を含む: 診断確度「確定」だけでは 9 行。「未記入を含む」にチェックすると、確度の記載が無い紹介状の 2 行が足されて 11 行" do
     visit new_query_path
 
     fill_in "探したい項目", with: "診断名"
@@ -90,18 +91,19 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     candidate("診断確度", "ProblemList").click_button "条件に足す"
     within("#query_conditions li") { check "確定" }
     click_button "実行"
-    expect(page).to have_css("#query_result p", text: "該当する記録はありません。")
+    expect(page).to have_css("#query_result p", text: "9 行")
+    expect(page).not_to have_css("#query_result td", text: "狭心症")
 
     within("#query_conditions li") { check "未記入を含む" }
     click_button "実行"
 
     expect(page).to have_css("#query_aql pre", text: 'MATCHES {"at0076"} OR NOT EXISTS ev/data[at0001]/items[at0073]/value)')
     expect(page).to have_css("#query_lint p", text: "指摘はありません。")
-    expect(page).to have_css("#query_result p", text: "1 行")
-    expect(page).to have_css("#query_result td", text: "2型糖尿病")
+    expect(page).to have_css("#query_result p", text: "11 行")
+    expect(page).to have_css("#query_result td", text: "狭心症")
   end
 
-  it "範囲の外・どちらかを満たす: 収縮期が 100〜110 の外、または拡張期 >= 90 で実行すると、120／80 の 1 行が出る" do
+  it "範囲の外・どちらかを満たす: 収縮期が 100〜110 の外、または拡張期 >= 90 で実行すると、10 行が出る（104／66 だけが外れる）" do
     visit new_query_path
 
     fill_in "探したい項目", with: "血圧"
@@ -129,13 +131,16 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
 
     expect(page).to have_css("#query_conditions li .connector", text: "または")
     expect(page).to have_css("#query_aql pre", text: "/items[at0004]/value/magnitude > 110) OR o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude >= 90)")
-    expect(page).to have_css("#query_result p", text: "1 行")
-    expect(all("#query_result tbody td").map(&:text)).to eq([ "120.0", "80.0" ])
+    expect(page).to have_css("#query_result p", text: "10 行")
+    expect(all("#query_result tbody tr").map { |row| row.all("td").map(&:text) }).to match_array(
+      [ %w[148.0 86.0], %w[152.0 92.0], %w[138.0 84.0], %w[134.0 82.0], %w[88.0 54.0], %w[96.0 60.0],
+        %w[132.0 94.0], %w[128.0 92.0], %w[126.0 88.0], %w[118.0 76.0] ]
+    )
     expect(page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")).to be(false)
   end
   # docs/design/s2-cross-version-plan.md 5 節（skoba/anlage#154、R-20261125-10）。対応の表は、この spec の中で active の行を渡す
   # （リポジトリの表の行は、レビューが済むまで pending）。blood_pressure.v1 の記録（150／95）を 1 件足す
-  it "版をまたいで引く: 収縮期 >= 120 で実行すると、blood_pressure.v1 の 150 と v2 の 120 が、アーキタイプの版の列つきで 1 つの表に出る" do
+  it "版をまたいで引く: 収縮期 >= 120 で実行すると、blood_pressure.v1 の 6 行と v2 の 7 行が、アーキタイプの版の列つきで 1 つの表に出る" do
     bp = "openEHR-EHR-OBSERVATION.blood_pressure"
     mappings = QueryBuilder::VersionMappings.new(%w[at0004 at0005].map do |at_code|
       { "concept" => bp, "at_code" => at_code, "versions" => %w[v1 v2], "source" => "spec",
@@ -156,16 +161,22 @@ RSpec.describe "クエリビルダー（実ブラウザ）", type: :system, js: 
     select ">=", from: "condition_0_operator"
     fill_in "condition_0_value", with: "120"
     click_button "実行"
-    expect(page).to have_css("#query_result p", text: "1 行")
+    expect(page).to have_css("#query_result p", text: "7 行")
 
     check "版をまたいで引く"
     click_button "実行"
 
     expect(page).to have_css("#query_aql h3", count: 2)
     expect(all("#query_aql h3").map(&:text)).to eq([ "#{bp}.v1", "#{bp}.v2" ])
-    expect(page).to have_css("#query_result p", text: "2 行")
+    expect(page).to have_css("#query_result p", text: "13 行")
     expect(all("#query_result thead th").map(&:text)).to eq(%w[アーキタイプの版 収縮期])
-    expect(all("#query_result tbody tr").map { |row| row.all("td").map(&:text) }).to eq([ [ "#{bp}.v1", "150.0" ], [ "#{bp}.v2", "120.0" ] ])
+    expect(all("#query_result tbody tr").map { |row| row.all("td").map(&:text) }).to eq([
+      [ "#{bp}.v1", "162.0" ], [ "#{bp}.v1", "158.0" ], [ "#{bp}.v1", "146.0" ],
+      [ "#{bp}.v1", "128.0" ], [ "#{bp}.v1", "142.0" ], [ "#{bp}.v1", "150.0" ],
+      [ "#{bp}.v2", "148.0" ], [ "#{bp}.v2", "152.0" ], [ "#{bp}.v2", "138.0" ],
+      [ "#{bp}.v2", "134.0" ], [ "#{bp}.v2", "132.0" ], [ "#{bp}.v2", "128.0" ],
+      [ "#{bp}.v2", "126.0" ]
+    ])
     expect(page.evaluate_script("document.documentElement.scrollWidth > document.documentElement.clientWidth")).to be(false)
   end
 end
