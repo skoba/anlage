@@ -632,3 +632,29 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   - 再現: anlage の `spec/lib/evaluation/aql_scorer_spec.rb` の例を `c/archetype_details/template_id/value` にして、
     demo_initial の行が nil で返ることを見る。
   - 起票の文面の案は `docs/reports/openehr-bump-log.md` R1。
+
+## 29. AQL の `CONTAINS (A OR B)` が、片方しか当たらない行で `unbound variable` になる（openehr 2.6.0）
+
+- 現象（実測、2026-11-26。openehr 2.6.0・openehr-rails 0.10.0。はじめに見たのは 2.5.0・0.9.0、2026-11-25）:
+  - `SELECT o/…/magnitude, o2/…/magnitude FROM EHR e CONTAINS COMPOSITION c CONTAINS (OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v1] OR OBSERVATION o2[openEHR-EHR-OBSERVATION.blood_pressure.v2])`
+    → `OpenEHR::AQL::SemanticError: unbound variable: "o"`
+  - SELECT に `o` だけを書いても同じ（`o` が束縛されない行、つまり v2 だけを含む composition で落ちる）
+  - 落ちる場所: `openehr-2.6.0/lib/openehr/aql/engine/binding.rb:9`（`Binding#[]` の `Hash#fetch`）
+- 期待（推論。AQL の仕様は読んでいない）: OR の片方だけが当たった行では、当たらなかった側の変数のパスは null になる
+- 使いどころ: アーキタイプの版をまたいで引く（blood_pressure の v1 と v2 を 1 本の AQL で）。`docs/design/s2-cross-version-plan.md` 2 節
+- anlage の扱い: 版ごとに別の AQL を組み、行をアプリの側でつなぐ（`QueryBuilder::CrossVersion`、`skoba/anlage#154`）。
+  上流が直っても、この作りは変えない（R-20261125-11）。迂回ではなく設計なので、消す条件は無い
+- 再現: demo_initial（`rake demo:reset`）に、patient_blood_pressure.v1 の記録を 1 件足して、上の AQL を `OpenehrRails::Aql::Executor.execute` に渡す
+  （記録の足し方は `spec/lib/query_builder/cross_version_spec.rb` の `before`）
+- 還流先: openehr-ruby（AQL エンジン）。上流への連絡は統括が行う（R-20261125-12）。anlage のセッションは投稿しない
+
+## 30. AQL のパスで `archetype_node_id` に届かない（openehr 2.6.0）
+
+- 現象（実測、2026-11-26。openehr 2.6.0・openehr-rails 0.10.0。はじめに見たのは 2.5.0・0.9.0、2026-11-25）:
+  - `SELECT o/archetype_node_id FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]`
+    → `OpenehrRails::Aql::UnsupportedFeature: unsupported path attribute "archetype_node_id" on a OpenEHR::RM::Composition::Content::Entry::Observation`
+  - WHERE でも同じ（`CONTAINS OBSERVATION o WHERE o/archetype_node_id MATCHES {"…v1", "…v2"}`）
+- 原因（ソースを読んだ）: 終端のホップの許可リスト `ALLOWED_TERMINAL_HOPS`（`lib/openehr/aql/engine/path_evaluator.rb`）に `archetype_node_id` が無い
+- 使いどころ: 述語なしで ENTRY を束ね、行がどのアーキタイプ（版）から来たかを列に出す。29 項の別の解き方にもなる
+- anlage の扱い: 版ごとに別の AQL を組むので、行の出どころはアプリの側で分かる。上流を待たない
+- 還流先: openehr-ruby（AQL エンジン）。25 項（`archetype_details`）と同じ類。上流への連絡は統括が行う（R-20261125-12）
