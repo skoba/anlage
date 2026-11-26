@@ -5,6 +5,8 @@ class ApplicationController < ActionController::Base
   # Changes to the importmap will invalidate the etag for HTML responses
   stale_when_importmap_changes
 
+  helper_method :current_ehr
+
   private
 
   # いまの患者の EHR（skoba/anlage#134・#136）。選んでいないか、EHR が無くなっていれば nil

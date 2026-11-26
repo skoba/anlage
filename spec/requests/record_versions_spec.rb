@@ -4,6 +4,8 @@ require "rails_helper"
 # 修正は同じ uid で commit し、RM の側に版が 1 つ足される（gem の committer が前の head の latest_version を下ろす）。
 # 原本（compositions）は版ごとに 1 行。一覧には各記録の新しい版だけを出す。文言は docs/demo/ui-vocabulary.md の「カルテ記録」の行
 RSpec.describe "カルテ記録の修正と版（#138）", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   def document = Nokogiri::HTML(response.body)
 
   let!(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!) }
@@ -113,6 +115,8 @@ end
 
 # 単位が 2 つ以上ある数量（bmi_calculation の BMI: kg/m2 と [lb_av]/[in_i]2）は、修正の帳票で前の版の単位を選んでおく
 RSpec.describe "修正の帳票の単位（#138）", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   it "前の版の単位が選ばれている" do
     bmi = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/bmi_calculation.opt").read).tap(&:save!)
     post "/compositions/#{bmi.template_id}", params: { values: { "body_mass_index" => "500", "body_mass_index__units" => "[lb_av]/[in_i]2" } }

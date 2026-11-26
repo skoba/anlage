@@ -1,5 +1,8 @@
 # Anlage
 
+> **参照実装です。認証がありません。実在の患者のデータを入れないでください。外から届く場所で動かさないでください。**
+> (This is a reference implementation without authentication. Do not enter real patient data, and do not expose it to an untrusted network.)
+
 Anlage ("foundation"/"disposition" in German) is a reference implementation of
 an openEHR-based EHR, generated from openehr-rails-startup. Its core claim:
 drop a clinical model (an Operational Template) in, and a form, validation,
@@ -63,7 +66,7 @@ Anlageが実証しようとしているのは、openEHR標準の役割の転換�
 - **テンプレートの管理**: 詳細・版の履歴・2 つの版の差分（項目とパスカード）
   （[`spec/requests/template_detail_spec.rb`](spec/requests/template_detail_spec.rb)、
   [`spec/requests/template_diff_screen_spec.rb`](spec/requests/template_diff_screen_spec.rb)）
-- **患者（EHR）とカルテ記録**: 患者を作って選び、保存した記録をその EHR に結び付ける。記録の修正（openEHR の版）と
+- **患者（EHR）とカルテ記録**: 患者を作って選び、保存した記録をその EHR に結び付ける（患者を選ばないと保存できない）。記録の修正（openEHR の版）と
   論理削除（[`spec/requests/patients_spec.rb`](spec/requests/patients_spec.rb)、
   [`spec/requests/records_to_ehr_spec.rb`](spec/requests/records_to_ehr_spec.rb)、
   [`spec/requests/record_versions_spec.rb`](spec/requests/record_versions_spec.rb)、
@@ -99,6 +102,23 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/up   # 200
 
 http://localhost:8080/ を開き、テンプレートの画面に OPT を取り込む。試しの OPT は
 [`spec/fixtures/opt/`](spec/fixtures/opt/)（出所は [`docs/demo/opt-catalog.md`](docs/demo/opt-catalog.md)）。
+
+#### 任意の Basic 認証
+
+Anlage には利用者の登録とログインが無い。環境変数で利用者名とパスワードを**両方**与えたときだけ、
+全画面と API（AQL 照会、FHIR、openEHR REST）に Basic 認証をかける（`/up` はかけない）。
+片方だけを与えると起動しない。Basic 認証は平文で送られるので、TLS の上で使う。
+これは最低限の守りで、実在の患者のデータを入れてよいことにはならない
+（[`docs/design/basic-auth-plan.md`](docs/design/basic-auth-plan.md)）。
+
+```sh
+docker run -d --name anlage -p 8080:80 \
+  -e SECRET_KEY_BASE=$(openssl rand -hex 64) \
+  -e ANLAGE_BASIC_AUTH_USERNAME=demo -e ANLAGE_BASIC_AUTH_PASSWORD='<長いパスワード>' \
+  -v anlage-storage:/rails/storage anlage
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/patients                          # 401
+curl -s -o /dev/null -w "%{http_code}\n" -u demo:'<長いパスワード>' http://localhost:8080/patients   # 200
+```
 
 ## Current focus
 

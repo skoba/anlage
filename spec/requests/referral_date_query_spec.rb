@@ -6,6 +6,8 @@ require "rails_helper"
 # context_start_time 列に持つ（0.10.0 lib/openehr_rails/rm/composition_committer.rb:12-41、rm_object_builder.rb:97-106）。
 # setting は anlage では決めない（OPT に制約が無い。gem が組む）。
 RSpec.describe "紹介日（context/start_time）で引ける", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   include ActiveSupport::Testing::TimeHelpers
 
   REFERRAL_DATE_AQL = <<~AQL.freeze

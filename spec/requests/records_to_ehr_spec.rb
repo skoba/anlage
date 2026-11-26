@@ -27,12 +27,21 @@ RSpec.describe "記録を EHR に結び付ける（#136）", type: :request do
     expect(rm_ehr_of(save_problem("高血圧症"))).to eq(patient)
   end
 
-  it "患者を選んでいなければ、これまでどおり EHR に結び付けない" do
-    expect(rm_ehr_of(save_problem("高血圧症"))).to be_nil
+  # skoba/anlage#161（R-20261126-2 の 5）で、患者を選ばずには保存できなくなった（spec/requests/patient_required_spec.rb）
+  it "患者を選んでいなければ保存しない（422。記録は増えない）" do
+    expect { post "/compositions/#{template.template_id}", params: { values: { "problem_diagnosis_at0002" => "高血圧症" } } }
+      .not_to change(Composition, :count)
+    expect(response).to have_http_status(:unprocessable_content)
+  end
+
+  # #161 より前に保存した、患者に結び付かない記録（開発機に残るもの）の代わり。フォームからは作れないので、committer で直接入れる
+  def save_unassigned(name)
+    commit = Opt::RmCompositionCommitter.call(template, { "problem_diagnosis_at0002" => name })
+    template.compositions.create!(rm_composition: commit.canonical_hash, uid: commit.uid)
   end
 
   it "患者の画面に、その患者の記録が新しい順に出る（ほかの患者・未割り当ての記録は出ない）" do
-    save_problem("未割り当て")
+    save_unassigned("未割り当て")
     post "/patients/#{other.ehr_id}/select"
     save_problem("ほかの患者")
     post "/patients/#{patient.ehr_id}/select"

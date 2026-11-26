@@ -5,6 +5,8 @@ require "rails_helper"
 # jp_referral の帳票は、#30（D）と #117（C）で保存できるようになった（それまでは閲覧専用で保存ボタンが無かった）。
 # 検索結果は実測（docs/reports/demo-integration-log.md R12）。文言は docs/demo/ui-vocabulary.md の写し。
 RSpec.describe "デモ動線: パスカード検索から帳票へ（実ブラウザ）", type: :system, js: true do
+  before { select_patient_in_browser } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   before do
     template = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/jp_referral.opt").read)
     template.pathcards = Opt::PathcardExtractor.call(template).cards

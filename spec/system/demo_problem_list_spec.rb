@@ -5,6 +5,8 @@ require "rails_helper"
 # 2026-08-26 以来の空 select（外部値集合のみの DV_CODED_TEXT）が POST 直叩きの
 # spec/demo/ で隠れていたため、凍結受入条件に本 spec の green を加える（CLAUDE.md）。
 RSpec.describe "デモ動線: ProblemList のフォーム入力→保存→AQL（実ブラウザ）", type: :system, js: true do
+  before { select_patient_in_browser } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   let!(:template) do
     Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!)
   end

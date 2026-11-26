@@ -4,6 +4,8 @@ require "rails_helper"
 # CompositionBuilder#dv_date_time が nil.iso8601 で 500。空欄の要素は Composition に
 # 含めず、OPT の occurrences 下限 ≥1 の要素が空なら 422 で説明する。
 RSpec.describe "空欄の任意項目を含む Composition の保存（#34）", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   let!(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read).tap(&:save!) }
 
   # 2026-09-25 の実ブラウザ送信で 500 になった実パラメータ（at0030／at0073 が空）
