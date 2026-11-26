@@ -301,3 +301,12 @@ selection:
 
 - 候補は 2 件（血圧の収縮期 at0004、拡張期 at0005。v1 と v2）。問うことは `docs/design/s2-cross-version-plan.md` 9 節
 - 評価の問いの案（「版をまたいで、収縮期が 140 以上」など）は、サンプルデータが main に入ったあとに、R-20261125-6 の問いの案と一緒に出す
+
+## R27 版の対応の 2 行を active にする（2026-11-26、R-20261125-11）
+
+- Red（先に spec の pin を書き換えた。`spec/lib/query_builder`・`spec/requests/queries_spec.rb`・`spec/lib/tasks/query_builder_spec.rb`、89 examples, 4 failures）:
+  リポジトリの表の状態（pending のまま）、既定の表で版をまたいで引く 2 例（「版の対応が無い項目がある」）、rake の出力（pending）
+- Green: `config/version_mappings.yml` の 2 行を `status: active` にし、`reviewed_by: Kobayashi, Shinji`、`reviewed_at: 2026-11-25` と、
+  確かめた範囲の note を書いた。実ブラウザの spec を含めて 95 examples, 0 failures
+- 「対応の無い項目では実行しない」の画面の例は、血圧が active になったので、プロブレム・診断名を使う形に替えた
+- これで、画面で「版をまたいで引く」をチェックすると、表を差し替えなくても血圧の v1 と v2 が 1 つの表に出る
