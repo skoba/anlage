@@ -254,11 +254,25 @@ RSpec.describe "クエリビルダー", type: :request do
       expect(doc.css("#query_aql h3")).to be_empty
     end
 
-    it "対応の無い項目（リポジトリの表は、まだ pending）では実行せず、理由を出す" do
+    it "対応の無い項目（プロブレム・診断名）では実行せず、理由を出す" do
+      get "/queries/new", params: { columns: [ QB_DIAGNOSIS ], across_versions: "1", run: "実行" }
+
+      expect(texts("#query_error"))
+        .to eq([ "実行しませんでした: 版の対応が無い項目がある: プロブレム・診断名（openEHR-EHR-EVALUATION.problem_diagnosis.v1 at0002）" ])
+      expect(doc.at_css("#query_result")).to be_nil
+    end
+
+    # R-20261125-11: リポジトリの表の血圧の 2 行が active。表を差し替えなくても引ける
+    it "リポジトリの表のままで、収縮期を版をまたいで引ける" do
       get "/queries/new", params: { columns: [ QB_SYSTOLIC ], across_versions: "1", run: "実行" }
 
-      expect(texts("#query_error")).to eq([ "実行しませんでした: 版の対応が無い項目がある: 収縮期（#{bp}.v2 at0004）" ])
-      expect(doc.at_css("#query_result")).to be_nil
+      table = doc.css("#query_result tbody tr").map { |row| row.css("td").map { _1.text.strip } }
+      expected = QueryBuilder::Runner.call(across_versions: true, mappings: active_mappings,
+                                           columns: [ QueryBuilder::Corpus.active.find(QB_SYSTOLIC) ])
+
+      expect(doc.at_css("#query_error")).to be_nil
+      expect(table.map(&:first).uniq).to eq([ "#{bp}.v1", "#{bp}.v2" ])
+      expect(table).to eq(expected.rows.map { |row| row.map(&:to_s) })
     end
   end
 end

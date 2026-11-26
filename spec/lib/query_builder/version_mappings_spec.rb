@@ -86,13 +86,16 @@ RSpec.describe "アーキタイプの版の対応" do
       end
     end
 
-    # リポジトリの表（config/version_mappings.yml）。最初の候補 2 行は、人間のレビューが済むまで pending（R-20261125-10）
-    it "リポジトリの表: 血圧の収縮期と拡張期の 2 行が pending。active の行は無い" do
+    # リポジトリの表（config/version_mappings.yml）。最初の 2 行は、レビューを経て active になった（R-20261125-11。小林、2026-11-25）。
+    # 行を変えたら、この例も同じコミットで直す
+    it "リポジトリの表: 血圧の収縮期と拡張期の 2 行が active で、レビューの記録と、確かめた範囲の注記を持つ" do
       rows = described_class.default.rows
 
       expect(rows.map { |r| [ r.concept, r.at_code, r.versions, r.status ] })
-        .to eq([ [ VM_BP, "at0004", %w[v1 v2], :pending ], [ VM_BP, "at0005", %w[v1 v2], :pending ] ])
-      expect(described_class.default.archetype_ids(card("v2", "at0004"))).to be_nil
+        .to eq([ [ VM_BP, "at0004", %w[v1 v2], :active ], [ VM_BP, "at0005", %w[v1 v2], :active ] ])
+      expect(rows.map { |r| [ r.reviewed_by, r.reviewed_at ] }.uniq).to eq([ [ "Kobayashi, Shinji", Date.new(2026, 11, 25) ] ])
+      expect(rows.map(&:note)).to all(include("at-code、パス、型、単位、値の範囲が同じ").and(include("改訂の内容は、セッションは比べていない")))
+      expect(described_class.default.archetype_ids(card("v2", "at0004"))).to eq([ "#{VM_BP}.v1", "#{VM_BP}.v2" ])
     end
   end
 end
