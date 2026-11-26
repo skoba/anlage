@@ -366,3 +366,28 @@ selection:
 | Q1 | 版をまたぐ問いの参照は、版ごとの AQL の表（`reference_aqls`）で持つ | 1 本の AQL（いまのエンジンでは書けない。上流の候補 29 項）。参照を持たない問い（ゴールドの健全性を見られない） |
 | Q2 | 旧い案の番号（a007・a008）は使い回さず、新しい問いは a009 から | 番号を詰める（ログや PR の記述と食い違う） |
 | Q3 | 「疑いの病名」は新しい問いを足さず、a002 に `selection` を足す | 同じ中身の問いを draft で重ねる |
+
+## R29 レビューの結果の反映（2026-11-26、R-20261126-5）
+
+- 7 問（a006、a009〜a014）を確定した: `status: draft` を外し、`reviewed_by: Kobayashi, Shinji`、`reviewed_at: 2026-11-26`。
+  notes の「人間に問う」を、決まったこと（閾値はサンプルデータの「判定の目安」、a006 はつなぎの問い、a014 の先頭の列は版つきのアーキタイプ ID）に書き換えた
+- サンプルデータの直し（書く側のファイル。この 1 行は、この PR で直してよいと裁定にある）
+  - `app/lib/demo/sample_records.yml` の DEMO-05 の紹介状の「狭心症」に `certainty: at0074`（疑い）を足した
+  - 紹介状の読み込み（`app/lib/demo/sample_compositions.rb` の `commit_referral`）は、確度を書かない作りだった。行に `certainty` があるときだけ、
+    診断確度の ELEMENT（at0073）を足すようにした。項目の名前と値の表示は jp_referral.opt から引く。DEMO-01 の紹介状は、確度を書かないまま
+  - Red: `spec/tasks/demo_reset_spec.rb:78`（傷病名 15 件の診断確度とコード）の DEMO-05 の紹介状の行を `at0074` に書き換えて、1 failure。Green で 8 examples, 0 failures
+  - 設計書 `docs/design/sample-data-plan.md` の表と集計を合わせた（疑い 3 → 4、記載なし 2 → 1）
+- **この直しで期待行が変わった問い**
+
+  | 問い | 前 | あと |
+  |---|---|---|
+  | a002 診断確度が「疑い」の傷病名（確定済み） | 3 行（高血圧症、起立性低血圧、狭心症） | 4 行（紹介状の狭心症が加わる） |
+  | a012 確定の病名（確度の記載が無いものを含む） | 11 行（確定 9、記載なし 2） | 10 行（確定 9、記載なし 1。紹介状の狭心症が外れる） |
+
+  ほかの問い（a001、a003〜a006、a009〜a011、a013、a014）は変わらない。a013（発症が 2025 年）は紹介状の狭心症を含むが、確度は見ていないので 3 行のまま
+- 追随した spec の pin（全 suite で 11 failures。どれも「疑い」の行数か「確定＋未記入」の行数を固定していた）:
+  `aql_scorer_spec`、`builder_route_spec`（2）、`evaluation/runner_spec`（2）、`query_builder/runner_spec`（2）、`queries_spec`（2）、`demo_query_builder_spec`（2）。
+  あわせて、問いの数の pin（`questions_spec`、`evaluation/runner_spec`）を、draft 7 問 → 確定に合わせた
+- 採点（確定のあと。`spec/lib/evaluation/runner_spec.rb` で固定）: aql 12 問、参照 12/12 一致、S2 の経路 12/12 一致。draft は 0 問
+- 全 suite: 612 examples, 0 failures, 2 pending
+- `spec/demo/`（デモクエリの期待件数）は、この直しで変わらなかった（全 suite で落ちていない）
