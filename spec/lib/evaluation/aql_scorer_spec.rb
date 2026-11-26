@@ -46,10 +46,10 @@ RSpec.describe Evaluation::AqlScorer do
   end
 
   # openehr 2.5.0 で defining_code/code_string には届くようになった（上流候補 10 項は解消）。
-  # openehr 2.6.0 で archetype_details も例外にならなくなった（値は nil。上流候補 25 項の追記）。届かない例は COMPOSITION の uid
-  # （openehr-rails 0.10.0 CHANGELOG の Known limitations、rails #46）
-  it "エンジンが実行できない AQL（COMPOSITION の uid への到達）は unexecutable として理由を持つ" do
-    unsupported = "SELECT c/uid/value AS uid FROM EHR e CONTAINS COMPOSITION c"
+  # openehr 2.6.1・openehr-rails 0.11.0 で archetype_details と uid にも届く（上流候補 25 項は解消）。届かない例は composer
+  # （実測: `unsupported path attribute "composer"`。skoba/anlage#177）
+  it "エンジンが実行できない AQL（COMPOSITION の composer への到達）は unexecutable として理由を持つ" do
+    unsupported = "SELECT c/composer/name/value AS composer FROM EHR e CONTAINS COMPOSITION c"
     score = described_class.score(question(unsupported, [ [ "ProblemList" ] ]))
 
     expect(score.status).to eq(:unexecutable)
