@@ -120,3 +120,22 @@
   - v1 はサンプルの 6 件と spec が足す分、v2 は 11 件。
   - 行は v1、v2 の順で、版の中は記録を入れた順。
 - 初期データに依る 13 ファイル（119 examples）が green。
+
+## R4（2026-11-26）CI の時間: rake のタスクの読み込みの重複を直した
+
+- PR #156 の CI は green だった（run 45726399508）。ただし test が **15 分 46 秒**かかった。main の直近は 3〜4 分。
+- 実測:
+  - 全 suite の `--profile` で、demo:reset を呼ぶ例は 1 件あたり 10〜15 秒。単体の demo:reset は 2.3 秒。
+  - 8 つの spec ファイルが、読み込みのときに `Rails.application.load_tasks` を呼ぶ。
+    1 回呼ぶごとに、同じタスクに同じ処理（action）が足される。3 回呼ぶと `Rake::Task['demo:reset'].actions.size == 3`（scratch の spec で実測）。
+  - 全 suite では、invoke 1 回で demo:reset が約 8 回走っていた。以前からある欠陥で、6 件のサンプルでは目立たなかった。
+- 判断（自己承認）:
+  - 採った案: タスクの読み込みを `spec/support/rake_tasks.rb` の 1 か所にして（`rails_helper` から require）、8 ファイルの呼び出しを消す。
+  - 捨てた案:
+    - サンプルを減らす（承認された設計を変える）。
+    - 各ファイルの呼び出しに `if Rake::Task.tasks.empty?` を付ける（同じ書き方が 8 か所に残る）。
+  - 消した呼び出しのうち 4 ファイルは引く側のもの（`spec/lib/tasks/*`）。中身は 1 行の削除だけ。
+- Red（`spec/tasks/rake_tasks_loaded_once_spec.rb`。fsh_spec・demo_reset_spec と一緒に流す）:
+  - `got: ["demo:reset", "evaluation:run", "fsh:export", "fsh:verify", "pathcards:backfill", "pathcards:eval", "query_builder:version_candidates", "templates:rebuild_web_template"]`
+  - Rails 自身の `db:load_config` と `tmp` は、1 回の読み込みでも処理が 2 つある。pin は anlage のタスク（`lib/tasks/*.rake` の namespace）に絞った。
+- Green: 全 suite 577 examples、0 failures、2 pending、**4 分 32 秒**（手元）。
