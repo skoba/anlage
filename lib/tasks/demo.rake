@@ -16,7 +16,10 @@ namespace :demo do
 
   desc "Reset the demo state: purge compositions and the RM graph, re-register the 5 fixture templates (not jp_referral), load sample compositions"
   task reset: :environment do
-    abort "demo:reset は production では実行しない" if Rails.env.production?
+    # skoba/anlage#168: Docker のイメージは production。全データを消して入れ直すので、明示の ANLAGE_ALLOW_DEMO_RESET=1 のときだけ許す
+    if Rails.env.production? && ENV["ANLAGE_ALLOW_DEMO_RESET"] != "1"
+      abort "demo:reset は production では実行しない（全データを消して入れ直す。実行するなら ANLAGE_ALLOW_DEMO_RESET=1 を与える）"
+    end
 
     ActiveRecord::Base.transaction do
       RM_TABLES_IN_DELETE_ORDER.call.each(&:delete_all)
