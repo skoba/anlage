@@ -1,22 +1,19 @@
-# 評価 v2 のゴールド（aql 種、S2 の経路つき）の案。docs/design/s1-eval-v2-plan.md 8 節。
-# すべて status: draft（人間レビュー前。採点の母数に入らない）。レビュー確定時に status を外し、reviewed_by・reviewed_at を書く。
+# 評価 v2 のゴールド（aql 種、S2 の経路つき）。docs/design/s1-eval-v2-plan.md 8 節。
+# 2026-11-26 に 7 問を確定した（裁定 R-20261126-5。案は R-20261125-6・R-20261125-10、ゲート報告は docs/reports/s2-query-builder-log.md R28）。
+# ゴールド本体（query／reference_aql／expected_rows／notes）は人間の専有領域。変更は人間のレビューを経る。
 #
-# 2026-11-26: サンプルデータ（患者 6 人・65 件。docs/design/sample-data-plan.md 3 節）で、問いを決め直した（R-20261125-6、R-20261125-10）。
-#   旧い案の a007（「疑い」または「確定」）と a008（拡張期 90 未満）は、新しい問いに置き換えた（a009〜a014。番号は使い回さない）。
-#   a006（病名の部分一致）は残した。
+# サンプルデータ（患者 6 人・65 件。docs/design/sample-data-plan.md 3 節）の上の問い。旧い案の a007・a008 は置き換えた（番号は使い回さない）。
 #
-# 形式は aql.yml と同じで、selection（クエリビルダーへの入力）を足したもの（同 8.1・8.4・8.5）:
+# 形式は aql.yml と同じで、selection（クエリビルダーへの入力）を持つ（同 8.1・8.4・8.5）:
 #   selection.columns / selection.conditions（card・operator・value。未記入を含む include_missing、範囲の外 OUTSIDE、どちらかを満たす any）/
 #   selection.composition_name / selection.across_versions（版をまたいで引く。参照は reference_aqls に版ごと）
 # 採点は 2 通り: 参照 AQL が expected_rows を返すか（ゴールドの健全性）、selection からビルダーが組んだ AQL が同じ行を返すか（S2 の経路）。
 #
-# 人間レビューの範囲: 問いの文言が臨床的に自然か、閾値が妥当か、参照 AQL と selection が問いの意図を表しているか、期待行がその意図の正解か。
-# 閾値は、サンプルデータの「判定の目安」（高い = 収縮期 140 以上または拡張期 90 以上、低い = 収縮期 100 未満）をそのまま使った。臨床の確定は人間。
-# アーキタイプ ID と at-code は実物。期待行は demo_initial での実測（docs/reports/s2-query-builder-log.md R28）。
+# 閾値は、サンプルデータの「判定の目安」（docs/design/sample-data-plan.md）を使った: 高い = 収縮期 140 以上または拡張期 90 以上、低い = 収縮期 100 未満。
+# アーキタイプ ID と at-code は実物。期待行は demo_initial での実測。
 
 - id: a006
   kind: aql
-  status: draft
   query: "病名に「糖尿病」を含む記録を、出所の文書名つきで"
   dataset: demo_initial
   reference_aql: |
@@ -35,13 +32,12 @@
         operator: CONTAINS
         value: "糖尿病"
     composition_name: true
-  notes: "病名の部分一致（文字列の包含。AQL の LIKE は glob で、*糖尿病* と書く）。当たるのは 2型糖尿病 3 件（ProblemList 2、紹介状 1）と糖尿病性腎症 1 件。**部分一致はつなぎで、本来はコードで引く**（R-20261125-6）: いまのデータでコードを持つのは DEMO-01 の 2型糖尿病（ICD-11 5A11）だけで、DEMO-05 の 2型糖尿病はコードが無い。字面で引くと、別の病名（糖尿病性腎症）も当たる。【人間に問う】「糖尿病を含む」を、つなぎの問いとして評価に置いてよいか"
-  reviewed_by:
-  reviewed_at:
+  notes: "病名の部分一致（文字列の包含。AQL の LIKE は glob で、*糖尿病* と書く）。当たるのは 2型糖尿病 3 件（ProblemList 2、紹介状 1）と糖尿病性腎症 1 件。**部分一致はつなぎで、本来はコードで引く**（R-20261125-6）: いまのデータでコードを持つのは DEMO-01 の 2型糖尿病（ICD-11 5A11）だけで、DEMO-05 の 2型糖尿病はコードが無い。字面で引くと、別の病名（糖尿病性腎症）も当たる。レビュー（R-20261126-5）: つなぎの問いとして置く"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-26
 
 - id: a009
   kind: aql
-  status: draft
   query: "収縮期血圧が 100 mmHg 未満（低血圧）の記録の、収縮期と拡張期"
   dataset: demo_initial
   reference_aql: |
@@ -61,13 +57,12 @@
       - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
         operator: "<"
         value: 100
-  notes: "低血圧（数値の上限。2 列の射影）。blood_pressure.v2 の 11 件のうち、DEMO-03 の 88/54 と 96/60 の 2 件。104/66 は外れる。v1 の記録は入らない（版をまたぐのは a014）。【人間に問う】低血圧の閾値は収縮期 100 未満でよいか（サンプルデータの目安をそのまま使った）"
-  reviewed_by:
-  reviewed_at:
+  notes: "低血圧（数値の上限。2 列の射影）。blood_pressure.v2 の 11 件のうち、DEMO-03 の 88/54 と 96/60 の 2 件。104/66 は外れる。v1 の記録は入らない（版をまたぐのは a014）。閾値はサンプルデータの「判定の目安」（低い = 収縮期 100 未満）を使った（R-20261126-5）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-26
 
 - id: a010
   kind: aql
-  status: draft
   query: "収縮期血圧が 140 mmHg 以上、または拡張期血圧が 90 mmHg 以上（高血圧）の記録の、収縮期と拡張期"
   dataset: demo_initial
   reference_aql: |
@@ -87,13 +82,12 @@
       - any:
           - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }, operator: ">=", value: 140 }
           - { card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0005 }, operator: ">=", value: 90 }
-  notes: "高血圧（どちらかを満たす。別々の項目の条件を OR でつなぐ）。blood_pressure.v2 の 11 件のうち 4 件: 収縮期だけ高い 148/86、両方高い 152/92、拡張期だけ高い 132/94 と 128/92。条件が効いていないと 11 件、収縮期だけで引くと 2 件、拡張期だけで引くと 3 件になる。a001（収縮期 140 以上）との違いは、拡張期だけ高い 2 件が入ること"
-  reviewed_by:
-  reviewed_at:
+  notes: "高血圧（どちらかを満たす。別々の項目の条件を OR でつなぐ）。blood_pressure.v2 の 11 件のうち 4 件: 収縮期だけ高い 148/86、両方高い 152/92、拡張期だけ高い 132/94 と 128/92。条件が効いていないと 11 件、収縮期だけで引くと 2 件、拡張期だけで引くと 3 件になる。a001（収縮期 140 以上）との違いは、拡張期だけ高い 2 件が入ること。閾値はサンプルデータの「判定の目安」（高い = 収縮期 140 以上または拡張期 90 以上）を使った（R-20261126-5）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-26
 
 - id: a011
   kind: aql
-  status: draft
   query: "収縮期血圧が 100〜139 mmHg の範囲の外（低いか高い）の記録"
   dataset: demo_initial
   reference_aql: |
@@ -110,13 +104,12 @@
       - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
         operator: OUTSIDE
         value: { low: 100, high: 139 }
-  notes: "範囲の外（1 つの項目で、下限より低い、または上限より高い）。血圧は低くても高くても問題なので、両方を 1 回で引く（R-20261125-6）。blood_pressure.v2 の 11 件のうち、低い 88・96 と、高い 148・152 の 4 件。【人間に問う】範囲を 100〜139 と置いてよいか（140 以上を高い、100 未満を低いとした）"
-  reviewed_by:
-  reviewed_at:
+  notes: "範囲の外（1 つの項目で、下限より低い、または上限より高い）。血圧は低くても高くても問題なので、両方を 1 回で引く（R-20261125-6）。blood_pressure.v2 の 11 件のうち、低い 88・96 と、高い 148・152 の 4 件。範囲 100〜139 は、サンプルデータの「判定の目安」（140 以上を高い、100 未満を低い）から置いた（R-20261126-5）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-26
 
 - id: a012
   kind: aql
-  status: draft
   query: "確定の病名（診断確度の記載が無いものを含む）を、出所の文書名つきで"
   dataset: demo_initial
   reference_aql: |
@@ -135,7 +128,6 @@
     - ["ProblemList", "2型糖尿病"]
     - ["ProblemList", "花粉症"]
     - ["jp_referral", "2型糖尿病"]
-    - ["jp_referral", "狭心症"]
   cards:
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0002 }
     - { archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1, at_code: at0073 }
@@ -148,13 +140,12 @@
         value: [at0076]
         include_missing: true
     composition_name: true
-  notes: "確定の病名（未記入を含む。値集合の条件に、その項目が書かれていない記録を OR で足す）。日本語では、病名に「疑い」が付いていなければ確定（小林、2026-11-25）。確度を書かない文書（紹介状）の傷病名も、確定の病名として引く。傷病 15 件のうち 11 件: 確度が「確定」（at0076）の 9 件と、確度の記載が無い紹介状の 2 件。外れるのは「疑い」3 件と「推定」1 件。未記入を含めないと 9 件になる。【人間に問う】紹介状の「狭心症」（確度なし）は、同じ患者の ProblemList では「疑い」。確度を書かない文書の病名を確定として引くと、これが入る。それでよいか"
-  reviewed_by:
-  reviewed_at:
+  notes: "確定の病名（未記入を含む。値集合の条件に、その項目が書かれていない記録を OR で足す）。日本語では、病名に「疑い」が付いていなければ確定（小林、2026-11-25）。確度を書かない文書（紹介状）の傷病名も、確定の病名として引く。傷病 15 件のうち 10 件: 確度が「確定」（at0076）の 9 件と、確度の記載が無い紹介状の 1 件（DEMO-01 の 2型糖尿病）。外れるのは「疑い」4 件と「推定」1 件。未記入を含めないと 9 件になる。レビュー（R-20261126-5）: 問いはそのまま。DEMO-05 の紹介状の「狭心症」は、人物像では「狭心症の疑い」での紹介なので、サンプルデータの側に診断確度「疑い」を足した（案の時点では確度の記載が無く、期待行は 11 行だった）"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-26
 
 - id: a013
   kind: aql
-  status: draft
   query: "発症が 2025 年の病名を、出所の文書名と発症日時つきで"
   dataset: demo_initial
   reference_aql: |
@@ -180,12 +171,11 @@
         value: { from: "2025-01-01", to: "2026-01-01" }
     composition_name: true
   notes: "発症日の範囲（日付の範囲。from 以上、to 未満）。傷病 15 件のうち、発症日時があるのは 11 件、2025 年のものは 3 件（糖尿病性腎症 2025-10-01、狭心症 2025-11-01 が ProblemList と紹介状に 1 件ずつ）。発症日時の無い 4 件（疑い・推定の高血圧症、起立性低血圧、紹介状の 2型糖尿病）は当たらない。日時は保存された形（UTC の 00:00:00）で返る"
-  reviewed_by:
-  reviewed_at:
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-26
 
 - id: a014
   kind: aql
-  status: draft
   query: "アーキタイプの版をまたいで、収縮期血圧が 140 mmHg 以上の記録"
   dataset: demo_initial
   reference_aqls:
@@ -214,6 +204,6 @@
       - card: { archetype_id: openEHR-EHR-OBSERVATION.blood_pressure.v2, at_code: at0004 }
         operator: ">="
         value: 140
-  notes: "版をまたいで引く（R-20261125-10）。blood_pressure の v1（patient_blood_pressure、6 件）と v2（CardiologyEncounter、11 件）の収縮期を、対応の表（config/version_mappings.yml の at0004）で束ねる。140 以上は v1 の 4 件と v2 の 2 件。a001（v2 だけ）は 2 件で、v1 の 4 件を取りこぼす。先頭の列は、行が来たアーキタイプの ID。1 本の AQL では書けない（docs/upstream-candidates.md 29 項）ので、参照も版ごとに持つ"
-  reviewed_by:
-  reviewed_at:
+  notes: "版をまたいで引く（R-20261125-10）。blood_pressure の v1（patient_blood_pressure、6 件）と v2（CardiologyEncounter、11 件）の収縮期を、対応の表（config/version_mappings.yml の at0004）で束ねる。140 以上は v1 の 4 件と v2 の 2 件。a001（v2 だけ）は 2 件で、v1 の 4 件を取りこぼす。先頭の列は、行が来たアーキタイプの ID（版つき。R-20261126-5 でこの形に決めた）。1 本の AQL では書けない（docs/upstream-candidates.md 29 項）ので、参照も版ごとに持つ"
+  reviewed_by: Kobayashi, Shinji
+  reviewed_at: 2026-11-26

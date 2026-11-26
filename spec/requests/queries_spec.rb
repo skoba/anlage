@@ -73,14 +73,14 @@ RSpec.describe "クエリビルダー", type: :request do
     expect(texts("#query_result td")).to match_array(%w[148.0 152.0 138.0 134.0 132.0 128.0 126.0 118.0])
   end
 
-  it "実行: 診断確度のコード at0074（疑い）を選び、文書名も表示すると、ProblemList の 3 行" do
+  it "実行: 診断確度のコード at0074（疑い）を選び、文書名も表示すると、ProblemList の 3 行と紹介状の 1 行" do
     get "/queries/new", params: { columns: [ QB_DIAGNOSIS ], composition_name: "1",
                                   conditions: { "0" => { card: QB_CERTAINTY, values: [ "at0074" ] } }, run: "実行" }
 
     expect(doc.at_css("#query_aql pre").text).to include('value/defining_code/code_string MATCHES {"at0074"}')
     expect(texts("#query_result th")).to eq([ "文書名", "プロブレム・診断名" ])
     expect(doc.css("#query_result tbody tr").map { |row| row.css("td").map { _1.text.strip } })
-      .to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "起立性低血圧" ], [ "ProblemList", "狭心症" ] ])
+      .to match_array([ [ "ProblemList", "高血圧症" ], [ "ProblemList", "起立性低血圧" ], [ "ProblemList", "狭心症" ], [ "jp_referral", "狭心症" ] ])
   end
 
   it "該当が無ければ「該当する記録はありません。」" do
@@ -153,7 +153,7 @@ RSpec.describe "クエリビルダー", type: :request do
       expect(second.at_css("input[name='conditions[1][include_missing]']")).to be_nil
     end
 
-    it "実行: 診断確度「確定」に未記入を含めると、確定の 9 行と、確度の記載が無い紹介状の 2 行" do
+    it "実行: 診断確度「確定」に未記入を含めると、確定の 9 行と、確度の記載が無い紹介状の 1 行" do
       get "/queries/new", params: { columns: [ QB_DIAGNOSIS ], run: "実行",
                                     conditions: { "0" => { card: QB_CERTAINTY, values: [ "at0076" ], include_missing: "1" } } }
 
@@ -161,7 +161,7 @@ RSpec.describe "クエリビルダー", type: :request do
       expect(doc.at_css("#query_aql pre").text.lines.last)
         .to eq(%|WHERE (#{certainty}/defining_code/code_string MATCHES {"at0076"} OR NOT EXISTS #{certainty})|)
       expect(texts("#query_result tbody td"))
-        .to match_array(%w[2型糖尿病 2型糖尿病 2型糖尿病 糖尿病性腎症 高血圧症 高血圧症 鉄欠乏性貧血 脂質異常症 慢性腎臓病 花粉症 狭心症])
+        .to match_array(%w[2型糖尿病 2型糖尿病 2型糖尿病 糖尿病性腎症 高血圧症 高血圧症 鉄欠乏性貧血 脂質異常症 慢性腎臓病 花粉症])
       expect(doc.at_css("input[name='conditions[0][include_missing]']")["checked"]).to be_present
     end
 

@@ -218,16 +218,16 @@ RSpec.describe Evaluation::Runner do
       expect(original.flat_map { |result| result.score.violations }).to be_empty
     end
 
-    it "aql 5 問は参照 AQL が期待行に一致する（a002 はコード値 at0074 の一致）" do
-      expect(run.aql_summary).to eq(questions: 5, match: 5, mismatch: 0, unexecutable: 0)
+    it "aql 12 問は参照 AQL が期待行に一致する（a002 はコード値 at0074 の一致。a014 は版ごとの参照 AQL）" do
+      expect(run.aql_summary).to eq(questions: 12, match: 12, mismatch: 0, unexecutable: 0)
     end
 
     # c033「脈拍」は、期待先のアーキタイプ（heart_rate-pulse.v1）が demo_initial の索引にあるので「保留解除候補」の印が付く。
     # 保留の理由は「日本語訳が済んでいない」で、索引に入ったことでは解けない（印は当てにならない。ログ R18 に書いた）
-    it "保留問は c019・c021・c033 の 3 問。解除候補の印は c033 にだけ付く。draft は案 7 問（母数外）" do
+    it "保留問は c019・c021・c033 の 3 問。解除候補の印は c033 にだけ付く。draft は無い" do
       expect(run.pendings.map(&:id)).to match_array(%w[c019 c021 c033])
       expect(run.releasable_pendings.map(&:id)).to eq(%w[c033])
-      expect(run.drafts.map(&:id)).to match_array(%w[a006 a009 a010 a011 a012 a013 a014])
+      expect(run.drafts).to be_empty
     end
 
     # c034「肥満度」（R-20261125-11 で active）。いまの検索では 1 枚も当たらないので、負例は出ない。card 13 問の集計には入らない
@@ -240,8 +240,8 @@ RSpec.describe Evaluation::Runner do
     end
 
     # 2026-11-26 に、確定した 5 問に selection を足した（R-20261125-6）。クエリビルダーが組んだ AQL が、参照 AQL と同じ期待行を返す
-    it "確定した aql の 5 問は、S2 の経路（selection からビルダーが組んだ AQL）でも 5 問とも一致する" do
-      expect(run.builder_summary).to eq(questions: 5, match: 5, mismatch: 0, unexecutable: 0, unbuildable: 0)
+    it "確定した aql の 12 問は、S2 の経路（selection からビルダーが組んだ AQL）でも 12 問とも一致する" do
+      expect(run.builder_summary).to eq(questions: 12, match: 12, mismatch: 0, unexecutable: 0, unbuildable: 0)
     end
   end
 end

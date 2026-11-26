@@ -47,13 +47,13 @@ RSpec.describe Evaluation::BuilderRoute do
     expect(score.aql.lines.last).to match(%r{\AWHERE \(\(o/.+at0004\]/value/magnitude < 130 OR o/.+at0004\]/value/magnitude > 140\) OR o/.+at0005\]/value/magnitude >= 90\)\z})
   end
 
-  it "未記入を含む（include_missing）の selection: 確定 9 行と、確度の記載が無い紹介状の 2 行" do
+  it "未記入を含む（include_missing）の selection: 確定 9 行と、確度の記載が無い紹介状の 1 行（DEMO-01 の 2型糖尿病）" do
     pd = "openEHR-EHR-EVALUATION.problem_diagnosis.v1"
     selection = { columns: [ { archetype_id: pd, at_code: "at0002" } ],
                   conditions: [ { card: { archetype_id: pd, at_code: "at0073" }, operator: "MATCHES", value: [ "at0076" ], include_missing: true } ] }
 
     expected = [ [ "2型糖尿病" ], [ "2型糖尿病" ], [ "2型糖尿病" ], [ "糖尿病性腎症" ], [ "高血圧症" ], [ "高血圧症" ], [ "鉄欠乏性貧血" ],
-                 [ "脂質異常症" ], [ "慢性腎臓病" ], [ "花粉症" ], [ "狭心症" ] ]
+                 [ "脂質異常症" ], [ "慢性腎臓病" ], [ "花粉症" ] ]
 
     expect(described_class.score(question(selection, expected_rows: expected))).to have_attributes(status: :match)
   end
@@ -73,8 +73,10 @@ RSpec.describe Evaluation::BuilderRoute do
 
   # ゴールドに足す問いの案（spec/fixtures/evaluation/v2/aql_s2.yml、draft）の健全性。案の期待行は実測で、臨床のレビューは人間。
   # ゴールドに追随する spec 側の確認で、案が確定・変更されたら同じコミットで直す
-  it "案（draft）の 7 問は、参照 AQL も、selection からビルダーが組んだ AQL も、期待行に一致する" do
-    drafts = Evaluation::Questions.from_v2.select { |question| question.draft? && question.selection }
+  # 2026-11-26 に確定した（R-20261126-5）。ゴールドに追随する spec 側の確認
+  it "S2 の経路の 7 問（a006、a009〜a014）は、参照 AQL も、selection からビルダーが組んだ AQL も、期待行に一致する" do
+    drafts = Evaluation::Questions.from_v2.select { |question| %w[a006 a009 a010 a011 a012 a013 a014].include?(question.id) }
+    expect(drafts).to all(have_attributes(active?: true, selection: be_present))
 
     expect(drafts.map(&:id)).to match_array(%w[a006 a009 a010 a011 a012 a013 a014])
     drafts.each do |draft|
