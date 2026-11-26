@@ -67,6 +67,30 @@ RSpec.describe "カルテ記録の削除（#140）", type: :request do
     expect(response).to have_http_status(:unprocessable_content)
   end
 
+  # skoba/anlage#177: openehr-rails 0.11.0 で、AQL の既定の scope が論理削除の版を除く（上流候補 28 項。既知の制限 13 を消した）
+  it "削除した記録は、AQL の結果に出ない" do
+    kept = save_problem("高血圧症")
+    removed = save_problem("2型糖尿病")
+    delete "/compositions/#{removed.id}"
+
+    rows = OpenehrRails::Aql::Executor.execute(<<~AQL).rows
+      SELECT ev/data[at0001]/items[at0002]/value/value
+      FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+    AQL
+
+    expect(rows).to eq([ [ "高血圧症" ] ])
+    expect(kept.uid).not_to eq(removed.uid)
+  end
+
+  # 削除は gem の OpenehrRails::Rm::CompositionCommitter.delete で行う（0.11.0。Contribution も「deleted」で残る）
+  it "削除の Contribution は、変更の種類が deleted" do
+    composition = save_problem("高血圧症")
+    delete "/compositions/#{composition.id}"
+
+    version = OpenehrRails::Rm::Version.of_object(composition.uid).last
+    expect(version.contribution.change_type_value).to eq("deleted")
+  end
+
   it "置き換えられた版の画面からは削除できない（422）" do
     first = save_problem("高血圧症")
     patch "/compositions/#{first.id}", params: { values: { "problem_diagnosis_at0002" => "本態性高血圧症" } }
