@@ -9,7 +9,7 @@ Anlage は openEHR の**参照実装**で、診療の現場で使うための製
 |---|---|---|
 | 1 | **認証と認可が無い。** 画面を開ける人は誰でも、全患者・全記録を見て、作り、修正し、削除できる。実在の患者のデータを入れない。環境変数を与えれば全体に Basic 認証をかけられる（README の「任意の Basic 認証」）が、利用者ごとの区別も記録の監査も無い | `app/controllers/` に認証の仕組みが無い。`docs/design/basic-auth-plan.md`（`skoba/anlage#163`） |
 | 2 | 患者は患者 ID（と名前空間 `anlage`）だけを持つ。氏名・生年月日などの患者マスタ（PARTY）は無い | `docs/design/m3-plan.md` 7.2。openehr-rails 0.9.0 に PARTY のモデルが無い |
-| 3 | 患者を選ばずに帳票を保存すると、記録はどの EHR にも属さない（AQL の `FROM EHR e[ehr_id/value=…]` では引けない） | `docs/design/m3-plan.md` 7.5 の問い 4 |
+| 3 | （解消。2026-11-26、`skoba/anlage#161`）患者を選ばないと帳票を保存できない。番号はほかの項目の参照のために残す。#161 より前に保存した、患者に結び付かない記録は、そのまま残る | R-20261126-2 の 5、`docs/design/m3-plan.md` 7.5 の問い 4 |
 | 4 | データベースは SQLite で、1 台で動かす前提。Docker のイメージは TLS の設定（`assume_ssl`・`force_ssl`）を切ってある。外に出すなら TLS を終端するプロキシの後ろに置く | `config/database.yml`、`config/environments/production.rb:28-31` |
 | 5 | 画面の文言は日本語だけ | `docs/demo/ui-vocabulary.md` |
 | 6 | 用語マスター（ICD-10 対応標準病名マスターなど）は同梱しない。用語サービスにもつないでいない | CLAUDE.md 絶対規律 6（コンテンツ防火壁） |

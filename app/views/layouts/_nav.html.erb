@@ -2,6 +2,8 @@
     anlage の URL は main_app.、engine の URL は openehr_rails. を付けて呼ぶ。
     current: いまの画面の項目（:patients／:templates／:compositions／:pathcards／:queries／:aql） %>
 <nav id="app_nav">
+  <%# skoba/anlage#162（R-20261126-2 の 4）: 認証の無い参照実装であることを、どの画面でも最初に見せる %>
+  <p id="reference_warning" role="note">参照実装です。認証がありません。実在の患者のデータを入れないでください。外から届く場所で動かさないでください。</p>
   <%= link_to "患者", main_app.patients_path, aria: { current: (current == :patients ? "page" : nil) } %>
   <%= link_to "テンプレート", main_app.templates_path, aria: { current: (current == :templates ? "page" : nil) } %>
   <%= link_to "カルテ記録一覧", main_app.compositions_path, aria: { current: (current == :compositions ? "page" : nil) } %>

@@ -17,6 +17,11 @@
 <% if marks.any? %>
   <p class="required-legend"><%= safe_join([ ("* 必須" if marks.include?(:always)), ("※ この枠に書くなら必須" if marks.include?(:if_written)) ].compact, "　") %></p>
 <% end %>
+<%# skoba/anlage#161: 新しい記録は、いまの患者の EHR に入る。選んでいなければ保存させない（修正は元の EHR のまま） %>
+<% patient_required = @composition.nil? && current_ehr.nil? %>
+<% if patient_required %>
+  <p class="form-notice" id="patient_required">患者を選んでいません。保存するには、先に<%= link_to "患者", patients_path %>を選んでください。</p>
+<% end %>
 <%# skoba/anlage#138: 修正の帳票（@composition があるとき）は、その記録への PATCH %>
 <% form_url, form_method = @composition ? [ composition_path(@composition), :patch ] : [ template_compositions_path(@template.template_id), :post ] %>
 <%= form_with url: form_url, method: form_method, local: true, data: behavior_data do %>
@@ -24,7 +29,7 @@
     <%= render "forms/root_group", node: node %>
   <% end %>
 
-  <% unless @template.preview_only? %>
+  <% unless @template.preview_only? || patient_required %>
     <button type="submit">保存</button>
   <% end %>
 <% end %>

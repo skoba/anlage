@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Forms and Compositions", type: :request do
+  before { select_patient } # skoba/anlage#161: 記録は、患者を選んでから保存する（spec/support/patient_selection.rb）
+
   let(:opt_xml) { Rails.root.join("spec/fixtures/opt/patient_blood_pressure.opt").read }
   let!(:template) { Template.build_from_opt_xml(opt_xml).tap(&:save!) }
 
