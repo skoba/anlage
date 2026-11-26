@@ -22,11 +22,20 @@ class PatientsController < ApplicationController
     redirect_to patient_path(ehr.ehr_id)
   end
 
+  # 記録は RM の側が権威（計画書 7.2）。EHR の記録（最新の版、削除済みを除く）をすべて、記録日の新しい順に出す。
+  # 原本（compositions）のある記録は記録の画面へ、無い記録（テンプレートが未登録）は閲覧の画面へ（skoba/anlage#182、計画書 8 節）
   def show
     @patient = OpenehrRails::Rm::Ehr.find_by!(ehr_id: params[:id])
-    # 結び付きは RM の側が権威（計画書 7.2）。原本（compositions）は uid で引く
-    uids = OpenehrRails::Rm::Composition.latest.where(ehr: @patient).pluck(:uid) - Composition.deleted_uids
-    @compositions = Composition.latest_versions.includes(:template).where(uid: uids).order(created_at: :desc, id: :desc)
+    @records = OpenehrRails::Rm::Composition.latest.not_deleted.where(ehr: @patient)
+                                            .order(Arel.sql("context_start_time IS NULL"), context_start_time: :desc, id: :desc).to_a
+    @originals = Composition.latest_versions.where(uid: @records.map(&:uid)).index_by(&:uid)
+  end
+
+  # テンプレートが未登録の記録の閲覧（skoba/anlage#182）。その患者の記録で、削除済みでないものだけ
+  def record
+    @patient = OpenehrRails::Rm::Ehr.find_by!(ehr_id: params[:id])
+    @record = OpenehrRails::Rm::Composition.latest.not_deleted.find_by!(ehr: @patient, uid: params[:uid])
+    @canonical = @record.to_canonical_hash
   end
 
   # いまの患者を選ぶ（skoba/anlage#134）。無い EHR は 404

@@ -15,6 +15,8 @@ Rails.application.routes.draw do
   delete "patients/selection", to: "patients#deselect", as: :patient_selection
   resources :patients, only: %i[index create show] do
     post :select, on: :member
+    # テンプレートが未登録の記録の閲覧（skoba/anlage#182、docs/design/m3-plan.md 8.3）。:uid は RM の composition の uid
+    get "records/:uid", to: "patients#record", as: :record, on: :member, format: false, constraints: { uid: /[^\/]+/ }
   end
 
   get  "templates",         to: "templates#index"

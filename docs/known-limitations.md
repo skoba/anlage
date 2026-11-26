@@ -33,8 +33,8 @@ Anlage は openEHR の**参照実装**で、診療の現場で使うための製
 | 12 | 読み戻して組み直すと内容が変わる記録は修正できない。いまは jp_referral（INSTRUCTION、多段の CLUSTER、同じアーキタイプの 2 つめの ENTRY を読み戻せない） | `app/lib/opt/composition_editability.rb`、Issue #30 |
 | 13 | （解消。2026-11-26、`skoba/anlage#177`）openehr-rails 0.11.0 で、削除した記録は AQL の結果と engine の EHR の画面から外れる。番号はほかの項目の参照のために残す。REST の GET で削除済みの記録の本文が返るのは gem の既知の制限（openehr-rails #85） | `docs/upstream-candidates.md` 28 項、`spec/requests/record_delete_spec.rb` |
 | 14 | 削除の取り消し、版の巻き戻し、EHR の削除は無い | `docs/design/m3-plan.md` 7.6 |
-| 12a | 患者の画面の「カルテ記録」の行に出る日時は、行を作った時刻（`created_at`）で、記録日（イベント時刻・context/start_time）ではない。初期データでは、どの行も `demo:reset` を実行した時刻になる | `app/views/patients/show.html.erb`。受け入れの台本 C2・D5 |
-| 12b | テンプレートを登録していない記録（初期データの紹介状 2 通。RM の側にだけ入る）は、患者の画面とカルテ記録一覧に出ない。AQL では引ける | `app/controllers/patients_controller.rb` の `show`（原本の `compositions` から引く）。受け入れの台本 C2 |
+| 12a | （解消。2026-11-26、`skoba/anlage#182`）患者の画面の行は、記録日（context/start_time）の新しい順に並び、記録日を出す。番号は残す | `app/views/patients/show.html.erb` |
+| 12b | テンプレートを登録していない記録（初期データの紹介状。RM の側にだけ入る）は、カルテ記録一覧（`/compositions`）に出ない。患者の画面には出る（閲覧だけ。skoba/anlage#182） | `app/controllers/compositions_controller.rb` の `index`（原本の `compositions` から引く） |
 
 ## AQL と検索
 

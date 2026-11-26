@@ -153,3 +153,45 @@ W1 と W2 は続けて出し、早くマージする。0.9.0 が公開された�
 
 - P1 → P2 → P3 → P4 → P5。P3 のあと、作業列 5（v0.2.0 の準備）と並べて進めてよい
 - 範囲の外: 患者の氏名・生年月日など（PARTY）、EHR の削除、記録の版の巻き戻し、削除の取り消し、AQL の版の指定（VERSION）
+
+## 8. 追記（2026-11-26）: 患者の画面に、テンプレートが未登録の記録も出す（既知の制限 12a・12b）
+
+裁定 ID: R-20261126-7（足す作業）。Issue skoba/anlage#182。状態: **案（push して、そのまま進む。R-20261124-8）**。
+基準点: anlage main `46104c6`（openehr 2.6.1、openehr-rails 0.11.0）。
+
+### 8.1 いまの状態（実測）
+
+- 患者の画面（`PatientsController#show`）は、RM の側の uid のうち、原本（`compositions`）のあるものだけを出す。
+  原本はテンプレートを登録した帳票の保存でだけできるので、RM の側にだけある記録（初期データの紹介状。
+  `app/lib/demo/sample_compositions.rb` の `commit_referral`）は出ない（12b）
+- 行の日時は原本の `created_at`。初期データでは、どの行も `demo:reset` の時刻（12a）
+- RM の側の `openehr_rm_compositions` には `template_id`・`context_start_time`・`name_value` の列がある（`db/schema.rb`）。
+  `Rm::Composition.latest.not_deleted` で、最新の版から削除済みを除ける（openehr-rails 0.11.0 `lib/openehr_rails/rm/composition.rb`）。
+  中身は `to_canonical_hash` で読める
+
+### 8.2 方針
+
+- 一覧の権威は RM の側。`Rm::Composition.latest.not_deleted.where(ehr:)` をすべて出し、記録日（`context_start_time`）の新しい順
+  （同じ記録日は id の新しい順）に並べる
+- 原本のある記録は、これまでどおり記録の画面（`/compositions/:id`）へのリンク
+- 原本の無い記録は、閲覧だけの画面（下の URL）へのリンク。帳票では開けない（テンプレートが無いので、修正・削除も出さない）
+- 行の文字は「<テンプレートの ID> — 記録日 <YYYY-MM-DD>」。テンプレートの ID が無い記録は、COMPOSITION の archetype_node_id。
+  記録日は日本時間の日付（初期データの記録日と同じ。`Demo::SampleCompositions::RECORDED_ZONE`）
+- 閲覧だけの画面の中身: 見出し「カルテ記録: <COMPOSITION の名前>」、テンプレートの ID、記録日、注記
+  「この記録のテンプレートは登録されていません。閲覧だけです。」、項目の一覧（ELEMENT の名前と値を、文書の順に。
+  値の表示は DV の種類ごとに、テキストは value、量は magnitude と units、コードは value）、canonical JSON（折りたたみ）。
+  意味はテンプレートから引けないので、記録に書いてある名前（`name/value`）だけを出す（LLM・推測で補わない）
+- カルテ記録一覧（`/compositions`）は原本の一覧のまま（範囲の外。既知の制限 12b を、そのことに改める）
+
+### 8.3 新しい URL（外から見える契約）
+
+| URL | 中身 |
+|---|---|
+| `GET /patients/:id/records/:uid` | 患者の記録の閲覧（:id は ehr_id、:uid は RM の composition の uid）。その患者の記録でなければ、削除済みなら 404 |
+
+### 8.4 Red から始める spec の見出し
+
+- 「患者の画面に、テンプレートが未登録の記録も出る。テンプレートの ID と記録日を出し、閲覧の画面へリンクする」
+- 「患者の画面の記録は、記録日の新しい順に並び、行に記録日を出す」
+- 「閲覧の画面に、記録の項目の名前と値、テンプレートが未登録である注記を出す。修正・削除は出さない」
+- 「ほかの患者の記録・削除済みの記録の閲覧は 404」
