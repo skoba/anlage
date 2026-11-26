@@ -5,6 +5,9 @@
   <% semantic_entries = Array(pathcard.dig("semantics", "labels")) +
                         Array(pathcard.dig("semantics", "descriptions")) %>
   <h2><%= label&.fetch("text", nil) || identity.fetch("at_code") %></h2>
+  <% if (reason = alias_reason(pathcard)) %>
+    <p class="alias-reason"><%= reason %></p>
+  <% end %>
   <dl>
     <dt>テンプレート</dt>
     <dd><%= identity.fetch("template_id") %></dd>

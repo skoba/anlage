@@ -82,4 +82,47 @@ RSpec.describe "Pathcard search", type: :request do
       expect(archetype_paths).to include([ "プロブレム・診断名", false, nil ])
     end
   end
+  # 別名表（skoba/anlage#152）で出たカードの理由と、「対応させない」行だけに当たったときの案内（R-20261125-11）。
+  # 表はリポジトリの config/search_aliases.yml。文言は docs/demo/ui-vocabulary.md の写し
+  describe "別名で出た理由と、特定できない語の案内" do
+    before do
+      %w[ProblemList LabResultReport bmi_calculation].each do |fixture_name|
+        template = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture_name}.opt").read)
+        template.pathcards = Opt::PathcardExtractor.call(template).cards
+        template.save!
+      end
+    end
+
+    def doc = Nokogiri::HTML(response.body)
+    def reasons = doc.css("#pathcard-results .pathcard").map { |card| card.at_css(".alias-reason")&.text&.strip }
+
+    it "別名で出たカードには「別名「<語>」で一致」と出る（既往 → プロブレム・診断の 6 枚）" do
+      get "/pathcards/search", params: { q: "既往" }
+
+      expect(reasons).to eq([ "別名「既往」で一致" ] * 6)
+    end
+
+    it "字面で当たったカードには出ない。別名のカードと字面のカードが混じるときは、別名のカードにだけ出る（臨床検査）" do
+      get "/pathcards/search", params: { q: "診断" }
+      expect(reasons.compact).to be_empty
+
+      get "/pathcards/search", params: { q: "臨床検査" }
+      expect(reasons).to eq([ "別名「臨床検査」で一致", nil, nil, nil ])
+    end
+
+    it "「対応させない」行だけに当たって 0 件のときは、その語だけでは項目を特定できないと案内する（判定）" do
+      get "/pathcards/search", params: { q: "判定" }
+
+      expect(doc.css("#pathcard-results .pathcard")).to be_empty
+      expect(doc.at_css("#search-guidance").text.strip).to eq("「判定」だけでは、項目を特定できません。ほかの語と組み合わせて探してください。")
+    end
+
+    it "ただ当たらなかっただけの語と、検索の前には、案内を出さない" do
+      get "/pathcards/search", params: { q: "脈拍" }
+      expect(doc.at_css("#search-guidance")).to be_nil
+
+      get "/pathcards/search"
+      expect(doc.at_css("#search-guidance")).to be_nil
+    end
+  end
 end
