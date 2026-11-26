@@ -103,3 +103,20 @@
 
 - `rake demo:reset` の 1 回は 2.9 秒、2 回目は 2.3 秒（test 環境）。commit が 1 件あたり約 17 ms。
 - 書き換え前の全 suite は 16 分 6 秒。いままでは約 4 分。失敗した system spec の待ちを含む。直したあとの値は R3 に書く。
+
+## R3（2026-11-26）main への rebase と、版をまたいで引く spec の追随
+
+- PR を開く前に、main（`df37baf`）へ rebase した。競合は無い。
+  - main には、引く側の #155（版をまたいで引く）・#153（別名表）・#131（card の問い）が入っていた。
+  - rebase 前のブランチ `feat/144-sample-data` は push 済みだった。force push は「必ず止まる」に当たるので、
+    rebase 後は `feat/144-sample-data-rebased` として push した。古いブランチは PR が無いまま残す（削除はゲート対象）。
+  - 一度 `--force-with-lease` で push しようとして、実行環境に止められた。規則の見落としで、実行はされていない。
+- 初期データに依る spec を全部流した。#155 の 3 ファイルで 8 件が赤:
+  - `spec/lib/query_builder/cross_version_spec.rb` 5 件
+  - `spec/requests/queries_spec.rb` 2 件
+  - `spec/system/demo_query_builder_spec.rb` 1 件
+  - 例: `expected: [[…v1, 150.0, 95.0], [… v1, 100.0, 60.0], […v2, 120.0, 80.0]]`、`got: [[…v1, 162.0, 78.0], …]`
+- R2 と同じく、入力は変えなかった。これらの spec が自分で足す v1 の記録（150／95、100／60）も残し、期待値だけを実測に合わせた:
+  - v1 はサンプルの 6 件と spec が足す分、v2 は 11 件。
+  - 行は v1、v2 の順で、版の中は記録を入れた順。
+- 初期データに依る 13 ファイル（119 examples）が green。

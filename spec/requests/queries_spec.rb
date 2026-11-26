@@ -234,7 +234,13 @@ RSpec.describe "クエリビルダー", type: :request do
       end)
       expect(texts("#query_result thead th")).to eq(%w[アーキタイプの版 収縮期])
       expect(doc.css("#query_result tbody tr").map { |row| row.css("td").map { _1.text.strip } })
-        .to eq([ [ "#{bp}.v1", "150.0" ], [ "#{bp}.v2", "120.0" ] ])
+        .to eq([
+          [ "#{bp}.v1", "162.0" ], [ "#{bp}.v1", "158.0" ], [ "#{bp}.v1", "146.0" ],
+          [ "#{bp}.v1", "128.0" ], [ "#{bp}.v1", "142.0" ], [ "#{bp}.v1", "150.0" ],
+          [ "#{bp}.v2", "148.0" ], [ "#{bp}.v2", "152.0" ], [ "#{bp}.v2", "138.0" ],
+          [ "#{bp}.v2", "134.0" ], [ "#{bp}.v2", "132.0" ], [ "#{bp}.v2", "128.0" ],
+          [ "#{bp}.v2", "126.0" ]
+        ])
       expect(doc.at_css("input[name=across_versions]")["checked"]).to be_present
     end
 
@@ -244,7 +250,7 @@ RSpec.describe "クエリビルダー", type: :request do
       get "/queries/new", params: { columns: [ QB_SYSTOLIC ], run: "実行" }
 
       expect(texts("#query_result thead th")).to eq(%w[収縮期])
-      expect(texts("#query_result tbody td")).to eq([ "120.0" ])
+      expect(texts("#query_result tbody td")).to eq(%w[148.0 152.0 138.0 134.0 88.0 96.0 104.0 132.0 128.0 126.0 118.0])
       expect(doc.css("#query_aql h3")).to be_empty
     end
 
