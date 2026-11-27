@@ -40,14 +40,19 @@ RSpec.describe Llm::Settings do
       expect(off.reason).to eq("知らないアダプタの名前です（somewhere）。")
     end
 
-    it "まだ入っていないアダプタ（anthropic、local）はオフ。理由が付く。理由に鍵の値は出ない" do
-      off = settings("ANLAGE_LLM" => "anthropic", "ANTHROPIC_API_KEY" => "sk-ant-not-a-real-key")
+    it "まだ入っていないアダプタ（local）はオフ。理由が付く" do
+      expect(settings("ANLAGE_LLM" => "local").reason).to eq("このアダプタは、まだ使えません（local）。")
+    end
 
+    it "anthropic で、鍵かモデルの名前が無いときはオフ。理由が付く。理由に鍵の値は出ない" do
+      expect(settings("ANLAGE_LLM" => "anthropic", "ANLAGE_LLM_MODEL" => "claude-haiku-5-5").reason)
+        .to eq("API の鍵（ANTHROPIC_API_KEY）がありません。")
+
+      off = settings("ANLAGE_LLM" => "anthropic", "ANTHROPIC_API_KEY" => "sk-ant-not-a-real-key")
       expect(off).not_to be_on
-      expect(off.reason).to eq("このアダプタは、まだ使えません（anthropic）。")
+      expect(off.reason).to eq("モデルの名前（ANLAGE_LLM_MODEL）がありません。")
       expect(off.reason).not_to include("sk-ant")
       expect(off.inspect).not_to include("sk-ant")
-      expect(settings("ANLAGE_LLM" => "local").reason).to eq("このアダプタは、まだ使えません（local）。")
     end
 
     it "recorded で、記録のディレクトリが無いときはオフ。理由が付く" do
@@ -64,6 +69,37 @@ RSpec.describe Llm::Settings do
       expect(on.adapter).to be_a(Llm::Adapters::Recorded)
       expect(on.adapter_name).to eq("recorded")
       expect(on.reason).to be_nil
+    end
+
+    it "anthropic と、鍵と、モデルの名前がそろうと、オン。外に文を送るアダプタ" do
+      on = settings("ANLAGE_LLM" => "anthropic", "ANTHROPIC_API_KEY" => "sk-ant-not-a-real-key", "ANLAGE_LLM_MODEL" => "claude-haiku-5-5")
+
+      expect(on).to be_on
+      expect(on).to be_external
+      expect(on.adapter_name).to eq("anthropic")
+      expect(on.inspect).not_to include("sk-ant")
+    end
+  end
+
+  describe "openai（R-20261127-25）" do
+    it "openai と、OpenAI の鍵と、モデルの名前がそろうと、オン。外に文を送るアダプタ" do
+      on = settings("ANLAGE_LLM" => "openai", "OPENAI_API_KEY" => "sk-not-a-real-key", "ANLAGE_LLM_MODEL" => "the-model")
+
+      expect(on).to be_on
+      expect(on).to be_external
+      expect(on.adapter_name).to eq("openai")
+      expect(on.inspect).not_to include("sk-not-a-real-key")
+    end
+
+    it "鍵だけ、鍵とモデルの名前だけ（ANLAGE_LLM が無い）では、オフ" do
+      expect(settings("OPENAI_API_KEY" => "sk-not-a-real-key")).not_to be_on
+      expect(settings("OPENAI_API_KEY" => "sk-not-a-real-key", "ANLAGE_LLM_MODEL" => "the-model")).not_to be_on
+    end
+
+    it "openai で、鍵かモデルの名前が無いときはオフ。理由が付く" do
+      expect(settings("ANLAGE_LLM" => "openai", "ANLAGE_LLM_MODEL" => "the-model").reason).to eq("API の鍵（OPENAI_API_KEY）がありません。")
+      expect(settings("ANLAGE_LLM" => "openai", "OPENAI_API_KEY" => "sk-not-a-real-key").reason)
+        .to eq("モデルの名前（ANLAGE_LLM_MODEL）がありません。")
     end
   end
 

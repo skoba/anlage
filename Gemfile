@@ -24,6 +24,10 @@ gem "stimulus-rails"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 
+# Claude API の公式の SDK（文で問う。docs/nl-query.md）。既定はオフで、ANLAGE_LLM=anthropic と鍵がそろったときだけ使う。
+# 起動のときには読み込まない（require: false）。使うところ（Llm::Adapters::Anthropic）で読む
+gem "anthropic", require: false
+
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
 

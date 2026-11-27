@@ -38,6 +38,19 @@ RSpec.describe NlQuery::Candidates do
     expect(refs(again)).to eq(refs(first))
   end
 
+  # 紹介状（jp_referral。26 枚）を入れると、初期データの 5 テンプレートと合わせて 44 枚になる
+  it "初期データのテンプレートに紹介状を足した索引（44 枚）でも、すべて候補にする" do
+    %w[jp_referral bmi_calculation patient_blood_pressure].each do |fixture_name|
+      template = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{fixture_name}.opt").read)
+      template.pathcards = Opt::PathcardExtractor.call(template).cards
+      template.save!
+    end
+    all_cards = QueryBuilder::Corpus.active
+
+    expect(all_cards.cards.size).to eq(44)
+    expect(described_class.call("空腹時血糖の値", corpus: all_cards).size).to eq(44)
+  end
+
   context "索引が上限より大きいとき" do
     it "検索で当たったカードと、同じテンプレートのカードに絞り、上限で切る" do
       candidates = described_class.call("診断確度が「疑い」の傷病名", corpus: corpus, limit: 8)

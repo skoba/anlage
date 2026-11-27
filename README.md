@@ -92,6 +92,20 @@ fails at boot). It is sent in clear text, so use it behind TLS. It is a minimal 
 enter real patient data. Without it, the openehr-rails engine (AQL console, FHIR, openEHR REST) returns 403 in production, but
 **Anlage's own screens stay open to anyone** (known limitation 6b).
 
+**Asking in plain language (LLM) is off by default.** The query builder can turn a Japanese question into a selection of items
+and conditions with an LLM; Anlage then builds and checks the AQL itself. It calls an external API only when **all** of these are
+set (a key alone does not turn it on), and every call costs money:
+
+```sh
+  -e ANLAGE_LLM=anthropic -e ANLAGE_LLM_MODEL='<model ID>' -e ANTHROPIC_API_KEY='<your key>' \
+  -e ANLAGE_LLM_DAILY_CALL_LIMIT=100   # optional; calls per day (default 100)
+```
+
+The question text and the names of the candidate items are sent to the API; record contents are not. Anlage's screens have no
+login of their own, so anyone who can reach an instance with this turned on can spend your API budget, up to the daily limit.
+Which company receives the text is decided by `ANLAGE_LLM`: use `ANLAGE_LLM=openai` with `OPENAI_API_KEY` (instead of
+`ANTHROPIC_API_KEY`) to call OpenAI. Details: [`docs/nl-query.md`](docs/nl-query.md).
+
 The user interface is in Japanese only (known limitation 5).
 
 ## Status

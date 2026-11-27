@@ -58,6 +58,11 @@ RSpec.describe NlQuery::Explanation do
       .to include("条件: 「発症日時」が 2025-01-01 以降。")
   end
 
+  it "画面から来た、片方が空の日時の範囲（from や to が空の文字）は、ある側だけを書く" do
+    expect(explain(columns: [ diagnosis ], conditions: [ { card: onset, operator: "BETWEEN", value: { from: "", to: "2026-01-01" } } ]))
+      .to include("条件: 「発症日時」が 2026-01-01 より前。")
+  end
+
   it "どちらかを満たすは、「または」でつなぎ、括弧でくくる" do
     text = explain(columns: [ systolic ], conditions: [
       { any: [ { card: systolic, operator: ">=", value: 140 }, { card: diastolic, operator: ">=", value: 90 } ] }
