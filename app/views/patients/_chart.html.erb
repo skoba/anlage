@@ -33,7 +33,7 @@
             <% series.points.each do |point| %>
               <tr>
                 <td><%= link_to recorded_date(point.at), chart_record_path(patient, point.record, originals) %></td>
-                <td class="number"><%= point.value %></td>
+                <td class="number"><%= point.display %></td>
               </tr>
             <% end %>
           </tbody>
@@ -58,7 +58,7 @@
               <% if row.points.size >= 2 %> <a href="#lab_chart_<%= index %>" class="lab-chart-link" data-turbo="false">グラフ</a><% end %>
             </th>
             <% dates.each do |date| %>
-              <td class="number"><%= safe_join((by_date[date] || []).map { |point| link_to(point.value, chart_record_path(patient, point.record, originals)) }, "／") %></td>
+              <td class="number"><%= safe_join((by_date[date] || []).map { |point| link_to(point.display, chart_record_path(patient, point.record, originals)) }, "／") %></td>
             <% end %>
           </tr>
         <% end %>
