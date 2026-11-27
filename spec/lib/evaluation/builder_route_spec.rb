@@ -107,8 +107,10 @@ RSpec.describe Evaluation::BuilderRoute do
         .to have_attributes(status: :mismatch, extra: [ [ "#{bp}.v2", 152.0 ] ])
     end
 
+    # 実行できない参照の例は composer への到達（aql_scorer_spec と同じ）。c/archetype_node_id は openehr 2.9.0 で届くようになった
+    # （openehr-ruby#96。skoba/anlage#248）
     it "参照のどれかが実行できなければ unexecutable" do
-      broken = cross(selection, expected_rows: expected_rows, aqls: { "#{bp}.v1" => "SELECT c/archetype_node_id FROM EHR e CONTAINS COMPOSITION c" })
+      broken = cross(selection, expected_rows: expected_rows, aqls: { "#{bp}.v1" => "SELECT c/composer/name/value FROM EHR e CONTAINS COMPOSITION c" })
 
       expect(Evaluation::AqlScorer.score(broken)).to have_attributes(status: :unexecutable)
     end
