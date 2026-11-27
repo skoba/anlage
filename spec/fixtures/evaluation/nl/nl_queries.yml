@@ -1,0 +1,106 @@
+# 測定（接地あり・なし）に使う問いの文の【案】。docs/design/s4-nl-aql-plan.md 5.2 節（Q4・Q5）。裁定 R-20261127-14。
+#
+# ★ すべて draft（人間のレビュー前）。案はセッションが書いた。レビューで確定するまで、測定には使わない。
+# ★ 評価 v2 のゴールド（spec/fixtures/evaluation/v2/*.yml）は変えていない。このファイルは、その外に置く
+#   （v2 のディレクトリの *.yml は、評価がそのまま読むため）。
+#
+# 形式:
+#   id        n<元の問いの番号>-<連番>
+#   base      元の aql の問い（v2 の id）。期待行・参照 AQL・selection は、元の問いのものをそのまま使う
+#   style     base（測定用の文。元の query に、出す列を書き足したもの。Q5）／
+#             chart（カルテに書く言葉）／explain（患者や非専門家に説明する言葉）／modeling（アーキタイプやテンプレートの言葉）
+#   nl_query  LLM に渡す問いの文
+#   status    draft
+#   review    レビューで見てほしい点（無ければ書かない）
+#
+# 文を作るときに守ったこと:
+#   - 期待行が、元の問いと同じになること（出す列と、その順も）。列の順は、文に出てくる順
+#   - 値（140、「疑い」、「糖尿病」など）は、元の問いの値をそのまま書く。値の言い換えは、review に印を付けた問いだけ
+
+- { id: n001-1, base: a001, style: base, status: draft,
+    nl_query: "収縮期血圧が 140 mmHg 以上の記録の、収縮期血圧の値",
+    review: "血圧の項目は 2 つのテンプレートにある（CardiologyEncounter の「収縮期」＝ blood_pressure.v2 と、patient_blood_pressure.v1 の「Systolic」＝ blood_pressure.v1）。期待行は v2 だけ（148、152）。文からは、どちらか決まらない。a001・a009・a010・a011 に共通。文にテンプレートを書くか、どちらを選んでも正解にするか、を決めてほしい" }
+- { id: n001-2, base: a001, style: chart, status: draft,
+    nl_query: "SBP 140 以上の記録の、SBP の値",
+    review: "略語（SBP）を使ってよいか" }
+- { id: n001-3, base: a001, style: explain, status: draft,
+    nl_query: "上の血圧が 140 以上だった記録について、上の血圧の値" }
+
+- { id: n002-1, base: a002, style: base, status: draft,
+    nl_query: "診断確度が「疑い」の傷病の、傷病名" }
+- { id: n002-2, base: a002, style: chart, status: draft,
+    nl_query: "疑い病名の一覧" }
+- { id: n002-3, base: a002, style: modeling, status: draft,
+    nl_query: "プロブレム・診断のうち、診断確度が「疑い」のものの、プロブレム・診断名" }
+
+- { id: n003-1, base: a003, style: base, status: draft,
+    nl_query: "病名が「2型糖尿病」または「高血圧症」の記録の、病名。記録の出所（どのテンプレートの記録か）つきで",
+    review: "元の query は「出所の文書名つきで」。出所の列は、文書名ではなくテンプレート（template_id）に変わっている（R-20261126-8）。言い方を「文書」「帳票」「テンプレート」のどれにするか。a003・a006・a012・a013 に共通" }
+- { id: n003-2, base: a003, style: chart, status: draft,
+    nl_query: "2型糖尿病か高血圧症がついている記録を、どの帳票の記録かと一緒に。病名を表示" }
+
+- { id: n004-1, base: a004, style: base, status: draft,
+    nl_query: "分析名が「空腹時血糖」の検査の、分析結果の値" }
+- { id: n004-2, base: a004, style: chart, status: draft,
+    nl_query: "空腹時血糖の結果" }
+- { id: n004-3, base: a004, style: chart, status: draft,
+    nl_query: "FBS の値",
+    review: "値の言い換え（FBS → 空腹時血糖）。記録にある文字は「空腹時血糖」で、LLM に渡すカードの文には、この文字は無い（分析名は、値集合の無い文字列）。LLM は、記録にどう書かれているかを知らずに当てることになる。測定に入れるなら、「値の言い換え」として分けて数えたい" }
+
+- { id: n005-1, base: a005, style: base, status: draft,
+    nl_query: "身長が 170 cm 以上の記録の、身長の値" }
+- { id: n005-2, base: a005, style: explain, status: draft,
+    nl_query: "背の高さが 170 センチ以上の記録について、身長" }
+
+- { id: n006-1, base: a006, style: base, status: draft,
+    nl_query: "病名に「糖尿病」を含む記録の、病名。記録の出所（どのテンプレートの記録か）つきで" }
+- { id: n006-2, base: a006, style: chart, status: draft,
+    nl_query: "糖尿病がつく病名を、どの帳票の記録かと一緒に" }
+- { id: n006-3, base: a006, style: modeling, status: draft,
+    nl_query: "プロブレム・診断名が「糖尿病」を含むものを、テンプレートの ID つきで。プロブレム・診断名を表示" }
+
+- { id: n009-1, base: a009, style: base, status: draft,
+    nl_query: "収縮期血圧が 100 mmHg 未満の記録の、収縮期血圧と拡張期血圧の値" }
+- { id: n009-2, base: a009, style: chart, status: draft,
+    nl_query: "SBP 100 未満の記録の、SBP と DBP" }
+- { id: n009-3, base: a009, style: explain, status: draft,
+    nl_query: "上の血圧が 100 に届かない記録について、上の血圧と下の血圧" }
+
+- { id: n010-1, base: a010, style: base, status: draft,
+    nl_query: "収縮期血圧が 140 mmHg 以上、または拡張期血圧が 90 mmHg 以上の記録の、収縮期血圧と拡張期血圧の値" }
+- { id: n010-2, base: a010, style: chart, status: draft,
+    nl_query: "収縮期 140 以上か拡張期 90 以上の記録の、収縮期と拡張期" }
+- { id: n010-3, base: a010, style: explain, status: draft,
+    nl_query: "上の血圧が 140 以上か、下の血圧が 90 以上の記録について、上の血圧と下の血圧" }
+
+- { id: n011-1, base: a011, style: base, status: draft,
+    nl_query: "収縮期血圧が 100 mmHg より低いか、139 mmHg より高い記録の、収縮期血圧の値" }
+- { id: n011-2, base: a011, style: chart, status: draft,
+    nl_query: "収縮期が 100〜139 を外れている記録の、収縮期の値" }
+
+- { id: n012-1, base: a012, style: base, status: draft,
+    nl_query: "診断確度が「確定」か、診断確度の記載が無い傷病の、傷病名。記録の出所（どのテンプレートの記録か）つきで" }
+- { id: n012-2, base: a012, style: chart, status: draft,
+    nl_query: "確定病名（確度の記載が無いものも含む）を、どの帳票の記録かと一緒に" }
+
+- { id: n013-1, base: a013, style: base, status: draft,
+    nl_query: "発症日時が 2025 年（2025-01-01 から、2026-01-01 の前まで）の傷病の、傷病名と発症日時。記録の出所（どのテンプレートの記録か）つきで" }
+- { id: n013-2, base: a013, style: chart, status: draft,
+    nl_query: "2025 年発症の病名を、発症日と、どの帳票の記録かと一緒に。病名、発症日の順に",
+    review: "年だけを書いた文（範囲の端を書かない）。LLM が 2025-01-01 から 2026-01-01 の前まで、と直せるかを見る問いになる" }
+- { id: n013-3, base: a013, style: explain, status: draft,
+    nl_query: "2025 年のあいだに発症した病気について、病名と、発症した日時。どの帳票の記録かも" }
+
+- { id: n014-1, base: a014, style: base, status: draft,
+    nl_query: "アーキタイプの版をまたいで、収縮期血圧が 140 mmHg 以上の記録の、収縮期血圧の値",
+    review: "版をまたぐ問いは、接地なしの腕と AQL を書く腕の比較から外し、選択を出す腕だけで別に数える（計画書 5.2 節）" }
+- { id: n014-2, base: a014, style: explain, status: draft,
+    nl_query: "血圧の記録の様式の、古い版と新しい版をまたいで、収縮期血圧が 140 以上の記録の、収縮期血圧の値" }
+
+# 指示文の調整に使う問い（測定には使わない。計画書 5.6 節）。期待行は、まだ無い（レビューのあと、実測して足す）
+- { id: t001, base: null, style: tuning, status: draft,
+    nl_query: "拡張期血圧が 90 mmHg 以上の記録の、拡張期血圧の値" }
+- { id: t002, base: null, style: tuning, status: draft,
+    nl_query: "診断確度が「推定」の傷病の、傷病名" }
+- { id: t003, base: null, style: tuning, status: draft,
+    nl_query: "体重が 60 kg 以上の記録の、体重の値" }
