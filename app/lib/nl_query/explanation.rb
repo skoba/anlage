@@ -59,7 +59,7 @@ module NlQuery
           " #{quantity(card, value)} #{COMPARISONS.fetch(operator)}"
         end
       when :code then " #{any_of(Array(value).map { |code| "#{code_label(card, code)}（#{code}）" }, '、')}"
-      when :date then " #{[ ("#{value[:from]} 以降" if value[:from]), ("#{value[:to]} より前" if value[:to]) ].compact.join('、')}"
+      when :date then " #{[ ("#{value[:from]} 以降" if value[:from].present?), ("#{value[:to]} より前" if value[:to].present?) ].compact.join('、')}"
       else text(operator, value)
       end
     end

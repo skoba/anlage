@@ -34,6 +34,8 @@ Rails.application.routes.draw do
   get "pathcards/search", to: "pathcards#search"
   # クエリビルダー（docs/design/s2-query-builder-plan.md 6.4）。状態は URL のパラメータだけ
   get "queries/new", to: "queries#new", as: :new_query
+  # 文で問う（docs/design/s4-nl-aql-plan.md 7 節の段 3）。LLM を呼ぶので POST。うまくいけば、選択を入れた queries/new に移る
+  post "queries/ask", to: "queries#ask", as: :ask_query
 
   get  "forms/:template_id",        to: "forms#show", as: :form,
        format: false, constraints: { template_id: /[^\/]+/ }
