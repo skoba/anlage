@@ -1,0 +1,11 @@
+# 測る前に決めておいたこと（機械が読む側）。説明は preregistration.md。spec/lib/evaluation/grounding/preregistration_spec.rb が、いまのコードと照らす
+registered_at: 2026-11-27
+queries: 37
+queries_sha256: b358fda674c190b6d2eefa9365a2ab98624303340b30930c1217537d7019ec01
+dialect_sha256: adc3fa9f470b60c992ecf2430bad574357341cebf2d57ecbc6295aae06febda7
+selection_instructions_sha256: 3c459ade7d5fd8d39574551c1e1f4977106fb67e764cc7b93a80279f8e892c49
+selection_json_schema_sha256: 6c33b4a9c39764334e118f2a784987cc4282cc8fb5346f20d94b6fead6450d76
+arms: [n0, n1, g_aql, g_selection]
+repeats: 5
+primary_metric: match
+secondary_metric: order_free

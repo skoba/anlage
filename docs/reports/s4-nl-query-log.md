@@ -410,3 +410,78 @@ $ bundle exec rspec spec/lib/nl_query/runner_spec.rb spec/requests/queries_nl_sp
 
 計画書 14.3 節の表。調整用の 3 問で、138 秒（モデルの読み込みを含む）・31 秒・33 秒。2 問は選択ができ、1 問ははねた（値集合の項目に `=`）。
 コンテナは、測ったあとで止めた。
+
+## R7 段 6: 測定の実装と、先に決めておくこと（2026-11-27。`skoba/anlage#249`。R-20261127-32）
+
+外を呼んでいない。手元のモデルも呼んでいない（この節の範囲では）。spec のアダプタは、決まった応答を返す偽物。
+
+### 作ったもの
+
+| 部品 | 役割 |
+|---|---|
+| `Evaluation::Grounding::Queries` | 問いの文を読み、正解の行を決まりどおりに引く（自前／両方の版／v2 のゴールド） |
+| `Evaluation::Grounding::AqlPrompt` | AQL を書かせる 3 つの腕の文。方言の説明は同じ文。入力だけが違う（n0: 問い、n1: ＋アーキタイプの ID、g_aql: ＋カードの文） |
+| `Evaluation::Grounding::Scorer` | 試行の採点。正解／見落とし／不正解／リンタ／実行できない／読めない。副の指標（列の順を見ない一致）、カードの一致 |
+| `Evaluation::Grounding::Run` | 問い × 腕 × くり返し。試行ごとに記録を 1 つ。済んだ試行は飛ばす（続きから回せる）。`run.json` |
+| `Evaluation::Grounding::Report` | 記録から集計（Markdown）。数字と限界を分ける |
+| `Evaluation::Grounding::SearchCoverage` | 検索だけで、必要なカードが候補に入る割合（LLM を呼ばない） |
+| `rake evaluation:grounding`、`rake evaluation:search_coverage` | 回す口。外を呼ぶアダプタは `EXTERNAL=1` のときだけ |
+
+### 自己承認した判断
+
+| # | 判断 | 採った案 | 根拠 |
+|---|---|---|---|
+| G1 | g_aql のカードの文の、パスの出し方 | カードごとに、クエリビルダーが組んだ AQL から「FROM に書く形」と「SELECT に書くパス」を取って渡す | AQL の形（ENTRY の切り方、終端のホップ）を、測定の側に二重に持たない。LLM に渡るのは、クエリビルダーが使うのと同じパス |
+| G2 | g_aql に渡す値集合 | 表示名とコード（「疑い=at0074」）。at-code だけ | AQL を書かせるには、コードが要る。外の用語のコードは渡さない（`NlQuery::Prompt::LOCAL_CODE`） |
+| G3 | AQL の応答の読み方 | `{"aqls": [...]}`、AQL の文字の配列、AQL の文字だけ、のどれでも読む。コードの囲みも外す | 形の読み違いで「読めない」に落とすと、接地の効果と混ざる |
+| G4 | リンタ | どの腕も、リンタの error が 1 本でもあれば、どれも実行しない | 計画書 2.3 節・5.1 節 |
+| G5 | カードの一致 | アーキタイプの版の番号は見ない（blood_pressure の v1 のカードを選んで、版をまたいでも、一致とする） | 両方の版を引く問いで、どちらのカードから始めても、同じ行になる |
+| G6 | 選択を出す腕で「読めない」に入れるもの | 検査ではねた選択、「答えられない」と返した応答 | 選択として使えない、という意味でまとめた。理由は記録に残る |
+| G7 | 先に決めたことの固定 | `preregistration.yml` に sha256 を書き、spec が照らす | 指示文や問いを、気づかずに変えない |
+
+### Red（実行して失敗を確かめた）
+
+```
+$ bundle exec rspec spec/lib/evaluation/grounding
+  uninitialized constant Evaluation::Grounding   （4 つのファイルとも）
+0 examples, 0 failures, 4 errors occurred outside of examples
+
+$ bundle exec rspec spec/lib/evaluation/grounding/search_coverage_spec.rb
+  uninitialized constant Evaluation::Grounding::SearchCoverage
+
+$ bundle exec rspec spec/lib/evaluation/grounding/preregistration_spec.rb
+  No such file or directory … docs/reports/s4-runs/preregistration.yml
+2 examples, 2 failures
+```
+
+spec の側の誤りを 4 つ直した（実装ではなく、spec を直したもの）:
+
+1. `aql_prompt_spec`: n1 の入力に「診断確度」が無いこと、と書いたが、問いの文そのものに「診断確度」がある。問いに無いラベル（プロブレム・診断名）に替えた
+2. `run_spec`: 集計の例の中で、`described_class` が `Report` を指していた。`Run` を名指しした
+3. `search_coverage_spec`: n004-2「空腹時血糖の結果」は、検索で入らない、と見込んだが、入った（実測）。入らない n004-3「FBS の値」に替えた
+4. `preregistration_spec`: YAML の日付を読む指定が無かった
+
+個々の例を、落ちる状態から 1 つずつ確かめてはいない（部品ごとに、無い状態で落ちることを確かめた）。
+
+### Green
+
+```
+$ bundle exec rspec spec/lib/evaluation/grounding
+39 examples, 0 failures
+```
+
+### 実測: 検索だけで、必要なカードが候補に入る割合（R-20261127-25 の 3。demo_initial。LLM は呼んでいない）
+
+| 種類 | 問い | 必要なカードが、すべて検索の結果に入った |
+|---|---|---|
+| base（測定用の文） | 16 | 13/16 |
+| chart（カルテの言葉） | 12 | 3/12 |
+| explain（説明の言葉） | 7 | 5/7 |
+| modeling（モデリングの言葉） | 2 | 2/2 |
+| 計 | 37 | 23/37 |
+
+- 入らなかった 14 文のうち、検索の結果が 0 枚なのは 6 文（n001-2「SBP 140 以上…」、n004-3「FBS の値」、n006-1、n006-2、n009-2、n101-2）
+- 入らないカードで多いのは、プロブレム・診断名（at0002）。文に「病名」「傷病名」はあるが、カードのラベル「プロブレム・診断名」と字面が重ならない
+  （別名表の「病名」は、語の全体が一致したときだけ引ける）
+- 略語（SBP、DBP、FBS、Hb）は、どのカードにも当たらない
+- 測定の「接地あり」の腕は、検索で絞らず、18 枚をすべて渡す（計画書 5.6 節、`preregistration.md`）
