@@ -51,6 +51,12 @@ RSpec.describe Evaluation::Grounding::Queries do
     expect(queries["n102-1"].cards.map { |card| card[:at_code] }).to match_array(%w[at0001 at0024])
   end
 
+  it "行の順を見る問い（n013-2）は、どの列の順かを持つ（3 つめの列 = 発症日時）。ほかの問いは持たない" do
+    expect(queries["n013-2"].sorted_column).to eq(2)
+    expect(queries["n013-1"].sorted_column).to be_nil
+    expect(queries.values.count(&:sorted_column)).to eq(1)
+  end
+
   it "問いのファイルの sha256 を答える（測定の記録に入れる）" do
     expect(described_class.sha256).to eq(Digest::SHA256.file(Rails.root.join(described_class::PATH)).hexdigest)
   end

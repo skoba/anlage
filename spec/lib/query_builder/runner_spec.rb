@@ -145,13 +145,25 @@ RSpec.describe QueryBuilder::Runner do
       expect(run.error).to eq("版をまたいで引くときは、並べ替えは使えない")
     end
 
-    it "日時の項目での並べ替えは実行せず、理由を error に持つ" do
+    it "日時の項目（発症日時）で並べる: 発症が 2025 年の 3 行が、日時の順に並ぶ。リンタの指摘は無い" do
       diagnosis = card("openEHR-EHR-EVALUATION.problem_diagnosis.v1", "at0002")
       onset = card("openEHR-EHR-EVALUATION.problem_diagnosis.v1", "at0077")
-      run = described_class.call(columns: [ diagnosis ], order: { card: onset, direction: :asc })
+      range = { card: onset, operator: "BETWEEN", value: { from: "2025-01-01", to: "2026-01-01" } }
+      ascending = described_class.call(columns: [ diagnosis, onset ], conditions: [ range ], order: { card: onset, direction: :asc })
+      descending = described_class.call(columns: [ diagnosis, onset ], conditions: [ range ], order: { card: onset, direction: :desc })
 
-      expect(run).not_to be_executed
-      expect(run.error).to include("日時の項目での並べ替えは、まだ使えない")
+      expect(ascending.lint.findings.select(&:error?)).to be_empty
+      expect(ascending.rows.map(&:last)).to eq(%w[2025-10-01T00:00:00Z 2025-11-01T00:00:00Z 2025-11-01T00:00:00Z])
+      expect(ascending.rows.first.first).to eq("糖尿病性腎症")
+      expect(descending.rows.map(&:last)).to eq(%w[2025-11-01T00:00:00Z 2025-11-01T00:00:00Z 2025-10-01T00:00:00Z])
+    end
+
+    # 既知の制限 20（openehr 2.6.1 では、月末で順が逆になった）が戻らないことの pin。エンジンは、この比較で並べる
+    it "日時そのものの比較は、月末をまたいでも正しい（1 月 31 日の昼は、2 月 1 日の 0 時より前）" do
+      earlier = OpenEHR::RM::DataTypes::Quantity::DateTime::DvDateTime.new(value: "2026-01-31T12:00:00Z")
+      later = OpenEHR::RM::DataTypes::Quantity::DateTime::DvDateTime.new(value: "2026-02-01T00:00:00Z")
+
+      expect(earlier <=> later).to eq(-1)
     end
   end
 end

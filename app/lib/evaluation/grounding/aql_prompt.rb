@@ -23,7 +23,8 @@ module Evaluation
           値集合（DV_CODED_TEXT）のコードは <項目のパス>/value/defining_code/code_string、表示名は <項目のパス>/value/value
         - 条件: 数値は > >= < <= =、文字列は = と MATCHES {"a", "b"} と LIKE "*含む文字*"、コードは MATCHES {"at0001"}、
           日時は >= "2025-01-01" と < "2026-01-01" の文字の比較。AND、OR、括弧、NOT EXISTS <パス> が使える
-        - 並べ替えは ORDER BY <パス> ASC か DESC。日時の項目では ORDER BY を使わない
+        - 並べ替えは ORDER BY <パス> ASC か DESC。数値と文字列は、SELECT に書くのと同じパス。
+          日時の項目で並べるときは、ORDER BY <項目のパス>/value（日時そのもの。/value/value にしない）
         - 記録の出所（テンプレート）は c/archetype_details/template_id/value
 
         出力の決まり:

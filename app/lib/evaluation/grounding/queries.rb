@@ -11,7 +11,7 @@ module Evaluation
       PATH = "spec/fixtures/evaluation/nl/nl_queries.yml".freeze
 
       Query = Struct.new(:id, :base, :style, :tags, :nl_query, :expected_rows, :partial_rows, :cards,
-                         :both_versions, :overlook_measurable, :selection_only, keyword_init: true) do
+                         :both_versions, :overlook_measurable, :selection_only, :sorted_column, keyword_init: true) do
         def both_versions? = both_versions ? true : false
         # 見落とし（片方の版だけ）を見分けられるか。片方の版に当たる記録が無い問い（a009）は、見分けられない
         def overlook_measurable? = overlook_measurable ? true : false
@@ -32,7 +32,9 @@ module Evaluation
 
       def build(entry, both_versions, gold)
         base = gold[entry["base"]]
-        common = { id: entry["id"], base: entry["base"], style: entry["style"], tags: Array(entry["tags"]), nl_query: entry["nl_query"] }
+        # sorted_column: 行の順を見る問い（n013-2）の、並んでいるはずの列（0 から数える）。向きと、同じ値どうしの順は問わない
+        common = { id: entry["id"], base: entry["base"], style: entry["style"], tags: Array(entry["tags"]), nl_query: entry["nl_query"],
+                   sorted_column: entry["sorted_column"] }
         if entry["expected_rows"]
           Query.new(**common, expected_rows: entry["expected_rows"], cards: cards_of(entry.fetch("selection")))
         elsif (both = both_versions[entry["base"]])

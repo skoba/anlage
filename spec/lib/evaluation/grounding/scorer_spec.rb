@@ -70,6 +70,40 @@ RSpec.describe Evaluation::Grounding::Scorer do
     end
   end
 
+  # n013-2「…発症日の順番に並べてください」（R-20261128-3）。向き（昇順か降順か）と、同じ発症日の行どうしの順は、問わない
+  describe "行の順を見る問い（n013-2）" do
+    ORDERED_ONSET_AQL = <<~AQL.squish.freeze
+      SELECT c/archetype_details/template_id/value, ev/data[at0001]/items[at0002]/value/value, ev/data[at0001]/items[at0077]/value/value
+      FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
+      WHERE ev/data[at0001]/items[at0077]/value/value >= "2025-01-01" AND ev/data[at0001]/items[at0077]/value/value < "2026-01-01"
+    AQL
+
+    it "発症日の順に並んでいれば match。昇順でも降順でもよい" do
+      expect(score("n013-2", :g_aql, aqls: [ "#{ORDERED_ONSET_AQL} ORDER BY ev/data[at0001]/items[at0077]/value ASC" ]).status).to eq(:match)
+      expect(score("n013-2", :g_aql, aqls: [ "#{ORDERED_ONSET_AQL} ORDER BY ev/data[at0001]/items[at0077]/value DESC" ]).status).to eq(:match)
+    end
+
+    # 3 本の AQL を、11 月（紹介状）、10 月、11 月（ProblemList）の順につなぐ。行は正解と同じで、発症日の順には並ばない
+    let(:unsorted) do
+      [ %( AND c/archetype_details/template_id/value = "jp_referral"),
+        %( AND ev/data[at0001]/items[at0002]/value/value = "糖尿病性腎症"),
+        %( AND ev/data[at0001]/items[at0002]/value/value = "狭心症" AND c/archetype_details/template_id/value = "ProblemList") ]
+        .map { |condition| ORDERED_ONSET_AQL + condition }
+    end
+
+    it "行は合っていても、発症日の順に並んでいなければ mismatch。理由が付く。列の順を見ない一致（副）は、行の順を見ない" do
+      result = score("n013-2", :g_aql, aqls: unsorted)
+
+      expect(result.status).to eq(:mismatch)
+      expect(result.reason).to eq("行は合っているが、3 つめの列の順に並んでいない")
+      expect(result.order_free).to be(true)
+    end
+
+    it "同じ問いの、行の順を見ない文（n013-1）は、並んでいなくても match" do
+      expect(score("n013-1", :g_aql, aqls: unsorted).status).to eq(:match)
+    end
+  end
+
   describe "選択を出す腕（G-選択）" do
     let(:candidates) { NlQuery::Candidates.call(queries["n001-1"].nl_query, corpus: corpus) }
 
