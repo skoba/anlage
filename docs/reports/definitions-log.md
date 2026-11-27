@@ -15,7 +15,7 @@
 | YAML の読み方 | `YAML.safe_load(text, permitted_classes: [], aliases: false)`。1 ファイル 64 KiB まで | `YAML.load_file` | 計画書 9 節（別名と任意のクラスを許さない、大きさの上限）。64 KiB は、いまの `config/form_behaviors.yml`（約 1.5 KiB）の 40 倍で、手で書く定義には足りる |
 | D8（出どころとレビュー者が無い） | エラーではなく「案」（severity: draft）。終了コードは 0 | エラーにする | 計画書 2.2 の D8「無ければ『案』。保存には効かない」。案として試せる（2.6） |
 | 部品の名前 | `problem_list`・`time_series`・`lab_table`・`records`・`form`・`table`・`buttons` | U1 の計画書 2 節の 5 つだけ | U1 で実装した部品（`Charts::Rules` の `:problem_list`・`:lab_table`）を定義でも書けるように。`orders` は `records`（`from: { rm_type: INSTRUCTION }`）で書く |
-| D7 の式の検査 | `Opt::Formula.evaluate` に、入力の名前すべてを 1.0 にして評価する。文法の誤りは `Opt::Formula::Error`、入力に無い識別子は `KeyError` | 別の構文解析器を書く | 評価器が正（同じ文法を 2 つ持たない） |
+| D7 の式の検査 | 式の識別子を `Opt::Formula::TOKEN` で拾い、すべてを 1.0 にして `Opt::Formula.evaluate` で評価する（文法の誤りは `Opt::Formula::Error`）。そのあと、識別子が `inputs` に含まれるかを見る | 別の構文解析器を書く | 評価器が正（同じ文法を 2 つ持たない） |
 
 ### 書式（D1 の検査器が持つ）
 
@@ -45,3 +45,6 @@ cases の要素は `when` と `value`、または `else`。
   Green: `Definitions::Loader`（`YAML.safe_load`、`aliases: false`、`permitted_classes: []`、64 KiB）と `Definitions::Problem`。7 examples, 0 failures
 - サイクル 2（D1 書式）: Red `spec/lib/definitions/schema_spec.rb` → `NameError: uninitialized constant Definitions::Schema`（No examples found）。
   Green: `Definitions::Schema`（Ruby の小さな検査器。必須・未知のキー〔候補に使えるキー〕・型・列挙・対の規則）。8 examples, 0 failures
+- サイクル 3（D2〜D8、組のディレクトリ）: Red `spec/lib/definitions/linter_spec.rb` → `NameError: uninitialized constant Definitions::Linter`（No examples found）。
+  Green: `Definitions::Linter`（目録 → 画面・ロジックの読み込み〔D1 を通らないものはほかの検査をしない〕、D2 id の重なり、D3 参照と候補、D4 部品と型、
+  D5 遷移先、D6 到達、D7 対象・入力・式、D8 案）。11 examples, 0 failures。組の fixture は `spec/fixtures/definitions/clinic`（参照は実物の OPT の field と at-code だけ）

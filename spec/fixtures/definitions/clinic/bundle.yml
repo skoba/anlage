@@ -1,0 +1,13 @@
+# 検査器の spec の定義の組（skoba/anlage#257）。参照は spec/fixtures/opt の実物の OPT（LabResultReport、ProblemList、
+# CardiologyEncounter、bmi_calculation）の field と at-code だけ
+bundle: clinic_spec
+version: 0.1.0
+title: 検査器の spec の組
+templates:
+  - { template_id: LabResultReport }
+  - { template_id: ProblemList }
+  - { template_id: CardiologyEncounter }
+  - { template_id: bmi_calculation }
+screens: [ patient_chart, lab_entry ]
+logic: [ bmi_rules ]
+start: { screen: patient_chart }
