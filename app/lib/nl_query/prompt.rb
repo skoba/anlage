@@ -1,5 +1,3 @@
-require "digest"
-
 module NlQuery
   # LLM に渡す文を組む（docs/design/s4-nl-aql-plan.md 4.2・4.3）。アダプタ（Llm::Adapter）には、ここで組んだ
   # instructions（決まった指示文）と input（候補のカードの行と、問い）だけが渡る。
@@ -64,7 +62,7 @@ module NlQuery
 
     # 送る文（指示文と入力）の指紋。測定の記録と、記録した応答の鍵に使う
     def sha256
-      Digest::SHA256.hexdigest("#{instructions}\n#{input}")
+      Llm.fingerprint(instructions: instructions, input: input)
     end
 
     private
