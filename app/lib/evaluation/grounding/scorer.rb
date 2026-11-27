@@ -3,7 +3,7 @@ module Evaluation
     # 試行（1 つの問い・1 つの腕・1 回の応答）の採点（docs/design/s4-nl-aql-plan.md 5.3 節・12 節。R-20261127-32）。
     #   status: :match（行の一致。列の順を見る。主の指標）／:overlooked（見落とし。血圧の片方の版だけの行と一致）／:mismatch／
     #           :lint（リンタかクエリビルダーで落ちた。実行しない）／:unexecutable／:unparseable（決まった形として読めない）
-    #   order_free: 列の順を見ない一致（副の指標。行ごとに、値の多重集合として比べる）
+    #   order_free: 列の順を見ない一致（副の指標。行ごとに、値の多重集合として比べる。行の順も見ない）
     # 行は、順序を見ない多重集合として比べる。どの腕も、リンタの error がある AQL は実行しない。
     class Scorer
       Result = Struct.new(:status, :order_free, :parseable, :lint_ok, :executed, :card_match, :aqls, :rows, :reason, keyword_init: true)
@@ -86,14 +86,23 @@ module Evaluation
         elsif overlooked?(actual) then :overlooked
         else :mismatch
         end
-        Result.new(status: status, order_free: same?(unordered(actual), unordered(expected)), parseable: true, lint_ok: true, executed: true,
-                   card_match: card_match, aqls: aqls, rows: actual)
+        # 行の順を見る問い（n013-2。R-20261128-3）: 行が合っていても、決めた列の順に並んでいなければ不正解
+        unsorted = status == :match && @query.sorted_column && !sorted?(actual.map { |row| row[@query.sorted_column] })
+        Result.new(status: unsorted ? :mismatch : status, order_free: same?(unordered(actual), unordered(expected)), parseable: true, lint_ok: true,
+                   executed: true, card_match: card_match, aqls: aqls, rows: actual,
+                   reason: ("行は合っているが、#{@query.sorted_column + 1} つめの列の順に並んでいない" if unsorted))
       end
 
       def overlooked?(actual)
         return false unless @query.overlook_measurable?
 
         @query.partial_rows.values.any? { |rows| same?(actual, rows.map { |row| normalize(row) }) }
+      end
+
+      # 昇順か降順のどちらかに並んでいるか。同じ値どうしの順は問わない。値の無い行は見ない
+      def sorted?(values)
+        present = values.compact
+        present == present.sort || present == present.sort.reverse
       end
 
       def same?(left, right) = left.tally == right.tally

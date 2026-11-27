@@ -21,7 +21,8 @@ RSpec.describe Evaluation::Grounding::AqlPrompt do
     expect(text).to include("記録の出所（template_id）を出すときは、最初の列に置く。ほかの列は、問いの文に出てくる順")
     expect(text).to include("c/archetype_details/template_id/value")
     expect(text).to include('{"aqls": [')
-    expect(text).to include("日時の項目では ORDER BY を使わない")
+    expect(text).to include("日時の項目で並べるときは、ORDER BY <項目のパス>/value（日時そのもの。/value/value にしない）")
+    expect(text).not_to include("ORDER BY を使わない")
   end
 
   it "N0 の入力は、問いだけ。アーキタイプの ID も、カードの文も入らない" do

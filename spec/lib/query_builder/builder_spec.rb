@@ -266,11 +266,12 @@ RSpec.describe QueryBuilder::Builder do
       end
     end
 
-    # 日時そのものの順（ORDER BY <パス>）は、openehr 2.6.1 では月末で逆になることがある（docs/known-limitations.md 20）。
-    # 直った版が main に入るまで、日時の項目での並べ替えは組まない
-    it "日時の項目での並べ替えは、まだ組まない（理由を出す）" do
-      expect { build(columns: [ diagnosis ], order: { card: onset, direction: :asc }) }
-        .to raise_error(described_class::InvalidSelection, /発症日時.*日時の項目での並べ替えは、まだ使えない/)
+    # 日時の項目は、日時そのものの順で並べる（R-20261127-26・R-20261128-3）: ORDER BY <項目のパス>（終端のホップを付けない）。
+    # openehr 2.9.0 で、日時そのものの順が直った（docs/known-limitations.md 20 は解消）
+    it "日時の項目は、日時そのもので並べる（<パス>。値の文字の /value を付けない）" do
+      aql = build(columns: [ diagnosis ], order: { card: onset, direction: :desc })
+
+      expect(aql.lines.last).to eq("ORDER BY ev/data[at0001]/items[at0077]/value DESC")
     end
   end
 end
