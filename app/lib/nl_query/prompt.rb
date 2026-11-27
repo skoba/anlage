@@ -51,7 +51,19 @@ module NlQuery
       @cards = Array(cards)
     end
 
+    # 選択の形（JSON スキーマ）。出力の形を縛れるアダプタに渡す（Llm の complete の json_schema）。
+    # 縛るのは外側の形だけ。条件の中身（型ごとに違う）は、SelectionParser が検査する
+    JSON_SCHEMA = {
+      type: "object", required: %w[columns conditions],
+      properties: { columns: { type: "array", items: { type: "integer" } },
+                    conditions: { type: "array", items: { type: "object" } },
+                    order: { type: %w[object null] },
+                    template_id: { type: "boolean" }, across_versions: { type: "boolean" },
+                    reason: { type: %w[string null] } }
+    }.freeze
+
     def instructions = INSTRUCTIONS
+    def json_schema = JSON_SCHEMA
 
     def card_lines
       @cards.each_with_index.map { |card, index| card_line(index + 1, card) }

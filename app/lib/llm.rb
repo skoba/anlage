@@ -4,7 +4,8 @@ require "digest"
 # カードも、問い合わせの選択も知らない。問い合わせの側（NlQuery）は、この上に乗る。
 #
 # アダプタの口:
-#   #complete(instructions:, input:) → Llm::Response。落ちるときは Llm::Error
+#   #complete(instructions:, input:, json_schema: nil) → Llm::Response。落ちるときは Llm::Error
+#     json_schema は、出力の形（JSON スキーマ）。省ける。出力の形を縛れるアダプタだけが使う（いまは local）
 #   #name（設定と記録に使う名前）、#external?（外に文を送るか）
 module Llm
   # 通信の失敗、時間切れ、断り、記録が無い、など。message は画面とログに出るので、鍵や応答の中身を入れない

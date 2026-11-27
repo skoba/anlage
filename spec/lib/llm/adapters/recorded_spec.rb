@@ -45,4 +45,10 @@ RSpec.describe Llm::Adapters::Recorded do
     expect(adapter.name).to eq("recorded")
     expect(adapter).not_to be_external
   end
+
+  it "出力の形（json_schema）を渡されても、受ける（記録の鍵は、指示文と入力だけ）" do
+    record(instructions: "指示", input: "問い", response: "{}")
+
+    expect(adapter.complete(instructions: "指示", input: "問い", json_schema: { type: "object" }).text).to eq("{}")
+  end
 end

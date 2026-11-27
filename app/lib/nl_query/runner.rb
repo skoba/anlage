@@ -46,7 +46,7 @@ module NlQuery
 
     # [応答, nil] か [nil, 落ちた理由]。成功も失敗も、1 回に数える。Llm::Error でない例外の文は、鍵などを含みうるので出さない
     def complete(prompt)
-      response = @settings.adapter.complete(instructions: prompt.instructions, input: prompt.input)
+      response = @settings.adapter.complete(instructions: prompt.instructions, input: prompt.input, json_schema: prompt.json_schema)
       @usage.record(response)
       [ response, nil ]
     rescue Llm::Error => e
