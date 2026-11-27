@@ -70,3 +70,23 @@ cases の要素は `when` と `value`、または `else`。
   防火壁の spec は、初期データ（demo_initial）を入れた状態で、bindings・コード・値集合・記録の値・患者と EHR の ID・OPT が材料に出ないことを見る
 - サイクル 2（`rake definitions:context`）: Red `spec/tasks/definitions_spec.rb` → `Don't know how to build task 'definitions:context'`（6 examples, 2 failures）。
   Green: Markdown（既定）と JSON。定義の spec と合わせて 37 examples, 0 failures
+
+## R3（2026-11-27）D-5: 遷移の図（`skoba/anlage#260`。R-20261127-21 の回答 5）
+
+### 自己承認した判断
+
+| 判断 | 採った案 | 捨てた案 | 根拠 |
+|---|---|---|---|
+| 節 | 画面、帳票（`open.form`）、保存した記録（`then: { record: saved }`） | 画面だけ | 帳票を開いて保存したあとに進む先（`then`）は、帳票の節から出る辺で書くと、どこで入力が起きるかが図で分かる（4 節の計測の鍵と同じ単位） |
+| 図を作る条件 | 検査（D1〜D8）でエラーの無い組だけ | エラーがあっても描けるところまで描く | 参照の切れた辺を描かない。`rake definitions:diagram` はエラーを出して終了コード 1 |
+| 画面に置く入口 | 作らない（SVG は helper まで） | 定義の組の画面を足す | 組の登録は D-3（migration。ゲート）。登録の前に画面を足すと、ファイルを読む公開の入口が増える |
+| 配置 | start から辿った段を左から右、同じ段は上から下。戻る辺は破線 | 配置の計算（交差を減らす） | 計画書 3.1「段の順に左から右へ並べる単純な配置から始める」 |
+
+### 進行
+
+- サイクル 1（図の節と辺、Mermaid）: Red `spec/lib/definitions/diagram_spec.rb` → `NameError: uninitialized constant Definitions::Diagram`（No examples found）。
+  Green: `Definitions::Diagram`（`Linter::Report` に、D1 を通った bundle・screens・logics を足した）。4 examples, 0 failures
+- サイクル 2（start だけの組、SVG）: Red → `NameError: uninitialized constant DefinitionsHelper`。start の節に辺が無いときにラベルが引けない誤りも、この例で直した。
+  Green: `DefinitionsHelper#transition_diagram`（サーバで描く SVG、依存なし）と、`components.css` の図の色（変数）。6 examples, 0 failures
+- サイクル 3（`rake definitions:diagram`）: Red `spec/tasks/definitions_spec.rb` → `Don't know how to build task 'definitions:diagram'`（8 examples, 2 failures）。
+  Green: Mermaid のテキスト。エラーのある組は検査の結果だけを出して終了コード 1
