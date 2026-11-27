@@ -1,1 +1,0 @@
-- Eval: 評価 v2 のゴールド 11 問を臨床レビューの結果で確定（card 6 問、aql 5 問。うち 2 問は保留問）。形式に順位（`expected` の `rank`）と許容（`acceptable`）を足し、採点に順位遵守と許容の出現を足した。v1 の q21（draft）は v2 の c021 に移した。`rake evaluation:run` は v1 の 17 問とゴールド v2 を別の報告に出す（Refs R-20261124-15）。semver: patch 相当（開発者向けの評価の fixture と rake の出力。利用者の画面・保存・API は変わらない）

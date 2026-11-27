@@ -1,1 +1,0 @@
-- Feat: 評価 v2 の枠組み（`Evaluation::*`、`rake evaluation:run`）。問いを `card`（期待集合・負例）と `aql`（参照 AQL をデータセット上で実行して期待行と照合）の 2 種に広げ、`draft`／`pending`（保留問、解除候補の検出）を持つ。v1 の 17 問はアダプタで読み、同じ集計を pin にした。`pathcards:eval` は残る（Refs R-20261124-11）。semver: minor（開発者向けの rake タスクと spec の追加。利用者の画面・保存・API は変わらない）

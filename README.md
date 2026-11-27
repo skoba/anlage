@@ -142,21 +142,17 @@ Anlage には利用者の登録とログインが無い。環境変数で利用�
 
 ## Current focus
 
-（2026-10-12 更新。Phase 3 デモ統合 `#47` の plan ゲート承認時）
+（2026-11-27 更新。公開 v0.2.0 のリリースの PR）
 
-- 完了: 保存経路の修復（`#9`／`#10`）、WP2（パスカード抽出）、WP3（索引・
-  検索層、`#12`）、WP4（検索評価ハーネス、`#14`）、FSH エクスポート
-  （`#17`、`rake fsh:export`／`fsh:verify`）、凍結前バッチ（`#32`〜`#39`）、
-  `rake demo:reset` 第一実装（`#47`）
-- 11/5 凍結の受入条件（`bundle exec rspec spec/demo/` green、デモクエリ 4 件を
-  POST 経路の spec で検証済み、実ブラウザ system spec green）は **充足済み**
-- 依存: openehr 2.5.0／openehr-rails 0.9.0、Ruby 4.0.10（2026-11-24 更新）
-- **次**: Phase 3 デモ統合 `#47`（実装 10/14〜10/24、リハ 1 10/25）——
-  共通ナビ・保存後の次アクション → 取り込み画面 → UI 語彙（`docs/demo/ui-vocabulary.md`）
-  → BMI 自動計算（`config/form_behaviors.yml`）→ `demo:reset` 第二実装
-  （[`docs/design/demo-integration-plan.md`](docs/design/demo-integration-plan.md)、
-  [`docs/reports/demo-integration-log.md`](docs/reports/demo-integration-log.md)）。
-  jp_referral の受入 `#23` (4) は rails 0.8.0（#45）待ち
+- **v0.2.0**: 患者（EHR）とカルテ記録の修正・削除・記録の中身、クエリビルダー（版をまたいで引く）、パスカード検索の別名表、
+  任意の Basic 認証、Docker と初期データ（架空の患者 9 人・84 件）、Postman のコレクション。変更の一覧は [`CHANGELOG.md`](CHANGELOG.md)
+- 受け入れ: 台本 [`docs/demo/acceptance-v0.2.0.md`](docs/demo/acceptance-v0.2.0.md) を人間が画面で通した（2026-11-27）。
+  指摘の 3 点（記録の中身、EHR ID を写す、Postman）を入れたあと、変わる行をまっさらな Docker で通し直した
+  （[`docs/reports/acceptance-v0.2.0-log.md`](docs/reports/acceptance-v0.2.0-log.md) R3・R4）
+- 依存: openehr 2.6.1／openehr-rails 0.11.0、Ruby 4.0.10
+- できないこと: [`docs/known-limitations.md`](docs/known-limitations.md)（**認証と認可が無い**。実在の患者のデータを入れない）
+- **次**: good first issue の起票（`docs/reports/v0.2.0-prep-log.md` の候補 G1〜G7）。患者 ID から EHR を引く入口と、
+  問いを入れた AQL の画面（openehr-rails の次の版）が出たら、「この患者の記録を AQL で引く」リンクを足す
 
 ## 進行の追い方
 
