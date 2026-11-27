@@ -50,7 +50,8 @@ RSpec.describe "記録を EHR に結び付ける（#136）", type: :request do
 
     get "/patients/#{patient.ehr_id}"
 
-    expect(document.at_css("h2").text).to eq("カルテ記録")
+    # skoba/anlage#220: 見出し「カルテ記録」は、患者の画面の部品（プロブレムリストなど）のあとに来る
+    expect(document.css("h2").map(&:text)).to include("カルテ記録")
     expect(document.css("ul.patient-records a").map { _1["href"] }).to eq([ "/compositions/#{second.id}", "/compositions/#{first.id}" ])
   end
 
