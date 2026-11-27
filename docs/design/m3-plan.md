@@ -195,3 +195,81 @@ W1 と W2 は続けて出し、早くマージする。0.9.0 が公開された�
 - 「患者の画面の記録は、記録日の新しい順に並び、行に記録日を出す」
 - 「閲覧の画面に、記録の項目の名前と値、テンプレートが未登録である注記を出す。修正・削除は出さない」
 - 「ほかの患者の記録・削除済みの記録の閲覧は 404」
+
+## 9. 追記（2026-11-27）: 人間の受け入れの指摘 3 点
+
+裁定 ID: R-20261127-1。Issue skoba/anlage#191（記録の中身）、#192（EHR ID を写す）、#193（Postman）。
+状態: **案（push して、そのまま進む。R-20261124-8）**。基準点: anlage main `b7266ae`（openehr 2.6.1、openehr-rails 0.11.0）。
+順は #192 → #193 → #191（小さい順。1 Issue = 1 PR）。
+
+### 9.1 記録の画面に、記録の中身を帳票の形で出す（#191）
+
+いまの状態（実測）: `app/views/compositions/show.html.erb` は、見出し・保存日時・次の操作・修正と削除・版の履歴・
+canonical JSON（折りたたみ）だけで、中身は JSON でしか読めない。
+
+方針:
+
+- 帳票の形で出せるかの判定は、修正の判定と同じ往復の比較（`Opt::CompositionEditability.editable?`。読み戻して
+  組み直し、content が原本と同じ）。版が最新か・削除済みかは問わない（古い版も、その版の値で出す）。
+  判定を二重に持たない。往復で値が落ちる記録を帳票の形で出すと、値を黙って隠すことになるため
+- 出せるとき: 値は `Opt::CompositionReader` で読み戻し、並びと入れ子は `Opt::FormLayout`（帳票と同じ）、
+  ラベルは field の label、選択肢は field の code_labels、単位は読み戻した `__units`（無ければ field の units）。
+  意味はすべてテンプレート（web_template）から取り、記録の JSON からは値だけを取る
+- 値の無い項目は出さない。項目が 1 つも無い入れ子も出さない（帳票の空欄を並べると、読む表にならない）
+- 出せないとき: 名前と値の表（`Records::ElementList`。テンプレートが未登録の記録の閲覧と同じ）と、注記
+- 置き場所: 修正・削除の操作の下、版の履歴の上。canonical JSON の折りたたみは、いまのまま最後
+- 文言（`docs/demo/ui-vocabulary.md` に足す）: 見出し「記録の中身」。出せないときの注記
+  「この記録は帳票の形に読み戻せません。項目の名前と値を、記録に書いてあるとおりに出します。」
+- 修正の帳票（`compositions#edit`）は変えない
+
+spec の見出し（Red から）:
+
+- 「記録の画面に、記録の中身を、帳票と同じラベルと入れ子で出す（単位と選択肢の表示はテンプレートから）」
+- 「古い版を開くと、その版の値を出す」
+- 「帳票に読み戻せない記録は、名前と値の表で出す」
+- 実ブラウザ: 「記録を開くと値が見え、修正に進むと同じ値が入った帳票になる」
+
+### 9.2 EHR ID を写しやすくする（#192）
+
+- 患者の画面の EHR ID の横に、ボタン「EHR ID を写す」。押すとクリップボードに EHR ID が入り、ボタンの横に「写しました」
+- Stimulus の controller を 1 つ足す（`app/javascript/controllers/clipboard_controller.js`）。gem は足さない。
+  `navigator.clipboard` が使えない（安全でない接続の）ときは、選択して `document.execCommand("copy")` に落とす
+- 台本の H5 を「EHR ID を写す」を押す操作に直す
+- 「この患者の記録を AQL で引く」リンクは、openehr-rails の側の追加のあと（R-20261127-2）。v0.2.0 の範囲の外
+- spec: 実ブラウザで、押すとクリップボードに EHR ID が入り「写しました」が出る（Chrome の権限を CDP で与えて読む）
+
+### 9.3 API を Postman のコレクションで見せる（#193）
+
+実測（main `b7266ae` のまっさらな Docker、Basic 認証あり、`demo:reset` のあと。11/27）:
+
+| 要求 | 結果 |
+|---|---|
+| `GET /openehr/fhir/metadata` | 200、CapabilityStatement。`rest[0].resource` は空 |
+| `GET /fhir/r5/StructureDefinition/openehr-problemlist-evaluation-problem-diagnosis-v1`（anlage の入口） | 200、StructureDefinition |
+| `GET /openehr/fhir/StructureDefinition/…`（engine の入口） | 404。engine の `ProfileRepository` は gem の `OpenehrTemplate` を引き、anlage の Template を見ない |
+| `GET /openehr/fhir/Observation?subject=Patient/<EHR ID>` | 200、Bundle の `total` が 0。engine の `ResourceRegistry` は scaffold した model（Storable）を引き、anlage には無い（`app/controllers/fhir/profiles_controller.rb` の注釈） |
+| `GET /openehr/fhir/Observation/:id` | id は「<model の id>-<slug>」で、anlage には該当する model が無いので、200 になる id が無い |
+| `GET /openehr/v1/ehr/<EHR ID>` | 200、EHR（記録の一覧は含まない） |
+| `GET /openehr/v1/ehr/<EHR ID>/composition/<uid>` | 200、COMPOSITION（canonical JSON） |
+| `POST /openehr/v1/query/aql`（`q` と `query_parameters` の `ehr_id`） | 200、H5 と同じ 4 行（削除の前なので 134 を含む） |
+
+方針:
+
+- 置き場所: `docs/demo/postman/anlage.postman_collection.json`（v2.1）と `docs/demo/postman/anlage.postman_environment.json`
+  （変数 `base_url`、`username`、`password`（空）、`ehr_id`、`composition_uid`）
+- 認証: コレクションの `auth` に Basic を 1 か所、`{{username}}`・`{{password}}` を引く。各要求は継承
+- 要求（フォルダ「FHIR」と「openEHR REST」）: metadata、StructureDefinition（anlage の入口）、Observation の検索
+  （`subject=Patient/{{ehr_id}}`）、EHR の取得、AQL の実行（H5 の問い。`$ehr_id` を `query_parameters` で渡す）、記録の取得
+- 記録の uid は、どの画面にも出ていない。AQL の要求の問いに `c/uid/value AS uid` の列を足し、応答の 1 行目の uid を
+  `composition_uid` に入れる（Postman の post-response script）。そのあと「記録の取得」を送る
+- Observation の 1 件（`/Observation/:id`）は、anlage では 200 になる id が無いので、コレクションに入れない
+- pin: コレクションのすべての要求のパスが、anlage か engine の routes で解決できることを spec で確かめる
+  （`Rails.application.routes.recognize_path` と `OpenehrRails::Engine.routes.recognize_path`）
+- 台本の I 節と README の「動かし方」の API の箇所を Postman の手順に書き換える（A3・A4 の curl は残す）
+
+**裁定に無い判断（ゲート報告にする。#193 の PR は、統括の回答までマージしない）**:
+
+1. Observation の検索は、anlage では常に 0 件（gem の facade が scaffold の model を前提にするため）。
+   コレクションには入れて、0 件であることを要求の説明と既知の制限に書く。1 件の取得は入れない
+2. StructureDefinition は、engine の入口ではなく anlage の入口（`/fhir/r5/StructureDefinition/:id`）を使う
+3. AQL の問いに uid の列を足し、記録の uid を変数に入れる（H5 の問いそのものではなくなる）
