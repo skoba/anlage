@@ -19,13 +19,16 @@ module Opt
   class CompositionReader
     class InvalidComposition < StandardError; end
 
-    def self.call(template, json)
-      new(template, json).call
+    # display: true のときは、DV_CODED_TEXT を記録の表示の文字（value）で返す（患者の画面、skoba/anlage#219）。
+    # 既定（false）はコード（修正の帳票に入れる値）
+    def self.call(template, json, display: false)
+      new(template, json, display:).call
     end
 
-    def initialize(template, json)
+    def initialize(template, json, display: false)
       @template = template
       @json = json
+      @display = display
     end
 
     def call
@@ -80,7 +83,7 @@ module Opt
       case field["rm_type"]
       when "DV_CODED_TEXT"
         # coded_free は DV_TEXT として保存される（#33 裁定 A）。保存されている値の型で読む（skoba/anlage#82）
-        dv["_type"] == "DV_TEXT" ? dv["value"].to_s : dv.dig("defining_code", "code_string")
+        dv["_type"] == "DV_TEXT" || @display ? dv["value"].to_s : dv.dig("defining_code", "code_string")
       when "DV_QUANTITY", "DV_COUNT"
         dv["magnitude"].to_s
       else

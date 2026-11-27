@@ -36,6 +36,6 @@ RSpec.describe Charts::Rules do
   it "身長・体重・BMI（bmi_calculation）は、数量の field ごとの時系列" do
     labels = components("bmi_calculation").select { _1.kind == :time_series }.map { _1.fields["value"]["label"] }
 
-    expect(labels).to include("身長", "体重", "BMI")
+    expect(labels).to include("身長", "体重", "Body mass index") # ラベルは OPT の表記のまま
   end
 end
