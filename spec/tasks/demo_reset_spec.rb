@@ -134,7 +134,7 @@ RSpec.describe "demo:reset" do
                  [ "外来紹介", "腎障害と高タンパク血症があり、精査をお願いします", "未治療" ] ])
       expect(referrals.map { |r| elements(r.to_canonical_hash["content"]).select { _1.first == "名称" }.map(&:last) })
         .to eq([ %w[Bクリニック X病院 血液内科], %w[C内科医院 X病院 血液内科], %w[Aクリニック X病院 血液内科] ])
-      expect(referrals.map { |r| elements(r.to_canonical_hash["content"]).to_h["発症日時"] }).to eq([ "2026-06-01T00:00:00Z", "2026-06-08T00:00:00Z", nil ])
+      expect(referrals.map { |r| elements(r.to_canonical_hash["content"]).to_h["発症日時"] }).to eq([ "2026-06-01", "2026-06-08", nil ]) # openehr-rails 0.12.0: 入れたときの文字列のまま読み戻す
       synopses = referrals.map { |r| elements(r.to_canonical_hash["content"]).to_h["症状経過及び検査結果"] }
       expect(synopses[0]).to include("白血球数 48,500/μL（芽球 58%）")
       expect(synopses[1]).to include("左頸部に 2〜3 cm")
