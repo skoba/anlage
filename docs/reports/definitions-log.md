@@ -70,3 +70,4 @@ cases の要素は `when` と `value`、または `else`。
   防火壁の spec は、初期データ（demo_initial）を入れた状態で、bindings・コード・値集合・記録の値・患者と EHR の ID・OPT が材料に出ないことを見る
 - サイクル 2（`rake definitions:context`）: Red `spec/tasks/definitions_spec.rb` → `Don't know how to build task 'definitions:context'`（6 examples, 2 failures）。
   Green: Markdown（既定）と JSON。定義の spec と合わせて 37 examples, 0 failures
+- 手元の全 suite: 930 examples, 0 failures, 2 pending
