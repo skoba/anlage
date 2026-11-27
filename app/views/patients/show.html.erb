@@ -4,7 +4,13 @@
 <dl>
   <dt>患者 ID</dt><dd><%= @patient.subject_id %></dd>
   <dt>名前空間</dt><dd><%= @patient.subject_namespace %></dd>
-  <dt>EHR ID</dt><dd><%= @patient.ehr_id %></dd>
+  <%# skoba/anlage#192: EHR ID を写すボタン（AQL に貼るため。文言は docs/demo/ui-vocabulary.md） %>
+  <dt>EHR ID</dt>
+  <dd data-controller="clipboard">
+    <code id="ehr_id" data-clipboard-target="source"><%= @patient.ehr_id %></code>
+    <button type="button" data-action="clipboard#copy">EHR ID を写す</button>
+    <span class="copy-status" data-clipboard-target="status" aria-live="polite"></span>
+  </dd>
 </dl>
 
 <h2>カルテ記録</h2>
