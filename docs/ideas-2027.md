@@ -8,7 +8,9 @@
 - 案: ELEMENT カードの `semantics` に祖先ルートの名前列（`root_names: ["紹介状の詳細情報", "紹介先医療機関", "診療科"]`）を持たせる／またはルート自体を「文脈カード」として 1 枚起こす。`component_terminologies` は archetype_id で束ねるため、同一アーキタイプ複数ルートの at0000 は OPT XML の各 C_ARCHETYPE_ROOT 直下 term_definitions から読む必要がある（`#29` の path 修正と同じ walk で拾える）
 - スコープ規律 8 により未実装。出題化もしない（R6 は観察のみ）
 
-## 帳票のロジック — GDL2 は全面採用しない（2026-11-27、R-20261127-10。もとは 2026-10-12 `#47` 裁定 A の「GDL2 評価器（12 月）」）
+## 帳票のロジック — いまは YAML の軽い定義を優先し、GDL2 が普及した時点で乗り換える（2026-11-27、R-20261127-16。もとは 2026-10-12 `#47` 裁定 A の「GDL2 評価器（12 月）」）
 
 - BMI 自動計算などの帳票の振る舞いは `config/form_behaviors.yml`（template_id → target／inputs／formula／cases／round／on／editable）で宣言し、式は安全サブセット（四則・累乗・round・比較）を `Opt::Formula` で評価する（`docs/design/demo-integration-plan.md` 4 節）
-- 以前は「GDL 評価器を入れる時に、この yml を GDL2 ガイドラインへ差し替える」としていたが、GDL2 は全面採用しない（小林、11/27）。Anlage 独自の軽い定義のまま、テンプレートと一緒に実行時に登録できる形に育てる（`docs/design/u1-patient-chart-plan.md` 4 節。U3）
+- 以前は「GDL 評価器を入れる時に、この yml を GDL2 ガイドラインへ差し替える」としていた。いまは YAML の軽い定義を優先し、テンプレートと一緒に実行時に登録できる形に育てる（`docs/design/u1-patient-chart-plan.md` 4 節。U3）。GDL2 は openEHR の仕様として正式に採用されている（CDS の状態は STABLE）。いま採らない理由は、仕様の状態ではなく普及の見込み（主な実装が採用している様子が無い）（小林、11/27）
+- 乗り換えの条件: 主な実装が GDL2 を採用し、定義を持ち運ぶ相手ができたとき。乗り換えのとき変換を書けるように、軽い定義と GDL2 の概念の対応を、定義の層の計画書に書く
+- 業務の流れ（Task Planning に当たるもの）も同じ: いまは YAML の軽い定義。Task Planning は定着しておらず、公式の状態も最新のリリースで RETIRED、開発版で PAUSED（R-20261127-16）
