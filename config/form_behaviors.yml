@@ -1,5 +1,5 @@
-# 帳票の振る舞い（skoba/anlage#47 変更 4）。rules は GDL2 の rule/when と同型で、12 月の GDL 評価器導入時は
-# この yml を GDL2 ガイドラインへ差し替える（docs/ideas-2027.md）。式は安全サブセットのみ（Opt::Formula、
+# 帳票の振る舞い（skoba/anlage#47 変更 4）。Anlage 独自の軽い定義（GDL2 は全面採用しない。R-20261127-10。
+# テンプレートと一緒に実行時に登録する案は docs/design/u1-patient-chart-plan.md 4 節）。式は安全サブセットのみ（Opt::Formula、
 # plan 4 節）。サーバ（Opt::FormBehaviors）が権威、クライアント（form_behaviors_controller.js）は即時表示。
 bmi_calculation:
   - target: body_mass_index

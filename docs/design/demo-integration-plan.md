@@ -52,6 +52,7 @@
 - 宣言 `config/form_behaviors.yml`（template_id → behaviors）:
 
 ```yaml
+# （2026-11-27 追記: GDL2 への差し替えはしない。R-20261127-10、docs/ideas-2027.md）
 # 帳票の振る舞い（skoba/anlage#47）。rules は GDL2 の rule/when と同型で、12 月の GDL 評価器導入時は
 # この yml を GDL2 ガイドラインへ差し替える（docs/ideas-2027.md）。式は安全サブセットのみ（plan 4 節）
 bmi_calculation:

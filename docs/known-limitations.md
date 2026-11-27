@@ -26,7 +26,7 @@ Anlage は openEHR の**参照実装**で、診療の現場で使うための製
 | 8 | INSTRUCTION の ACTIVITY は `action_archetype_id` が既定値の `/.*/` で、timing を持たない | `app/lib/opt/composition_builder.rb` の `DEFAULT_ACTION_ARCHETYPE_ID`、Issue #30 |
 | 9 | 必須の規則は「入れ物を書くなら必須」。入れ物の下限が 1 以上になる実物の OPT はまだ無く、その場合の判定は合成の spec でだけ確かめた | `docs/design/required-rule.md` |
 | 10 | 登録済みのテンプレートの web_template は登録の時点で固定される。版を上げたあとに新しい規則（必須の規則・入れ物の情報など）を効かせるには `rake templates:rebuild_web_template` が要る | `lib/tasks/templates.rake` |
-| 11 | 帳票の「実行時の振る舞い」（BMI の自動計算など）は `config/form_behaviors.yml` の安全な式だけ。GDL の評価器は無い | `config/form_behaviors.yml`、`docs/ideas-2027.md` |
+| 11 | 帳票の「実行時の振る舞い」（BMI の自動計算など）は `config/form_behaviors.yml` の安全な式だけ（Anlage 独自の軽い定義。GDL2 は全面採用しない。R-20261127-10） | `config/form_behaviors.yml`、`docs/ideas-2027.md` |
 
 ## カルテ記録の修正と削除
 
