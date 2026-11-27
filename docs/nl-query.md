@@ -48,3 +48,20 @@
 3. 「実行」
 
 選択を作れなかったとき（応答が読めない、回数の上限、通信の失敗）は、理由が出る。下の欄で、手で選んで続けられる。
+
+## OpenAI を使う（2026-11-27）
+
+どちらの会社に文が送られるかは、`ANLAGE_LLM` で決まる。`ANLAGE_LLM=openai` のときは OpenAI に送り、Anthropic の鍵は読まない。
+
+| 環境変数 | 意味 | 既定 |
+|---|---|---|
+| `ANLAGE_LLM=openai` | OpenAI のアダプタを使う | — |
+| `ANLAGE_LLM_MODEL` | モデルの ID（OpenAI の文書のモデルの一覧にあるもの）。既定は無い | 無し |
+| `OPENAI_API_KEY` | OpenAI の鍵 | 無し |
+| `ANLAGE_LLM_BASE_URL` | 接続先。OpenAI と同じ形の口（Chat Completions）を持つサーバーに向けるときに変える | `https://api.openai.com/v1` |
+
+- `ANLAGE_LLM=openai`、`ANLAGE_LLM_MODEL`、`OPENAI_API_KEY` の 3 つがそろったときにオンになる。鍵を置いただけでは、オンにならない
+- 接続先が、その機械の中（127.0.0.1、localhost）のときだけ、画面に「外に送られます」の注意を出さず、鍵が無くてもよい。
+  それ以外の接続先は、外に送る扱いで、https だけを受ける
+- 送るもの、回数の上限、鍵の扱いは、上と同じ
+- **実際の OpenAI の API は、まだ 1 回も呼んでいない**（手元に立てた、決まった応答を返すサーバーを相手にした spec だけ）

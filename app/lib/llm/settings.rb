@@ -2,6 +2,9 @@ module Llm
   # LLM のオンとオフ（docs/design/s4-nl-aql-plan.md 10.1 節。R-20261127-14）。運用する人が、環境変数で決める。
   #   ANLAGE_LLM                    アダプタの名前。これがオンの設定。無い・空・off はオフ
   #   ANLAGE_LLM_DAILY_CALL_LIMIT   1 日に呼んでよい回数（既定 100）
+  #   ANLAGE_LLM_MODEL              モデルの名前（openai のとき。既定は無い）
+  #   OPENAI_API_KEY                API の鍵（openai のとき）
+  #   ANLAGE_LLM_BASE_URL           接続先（openai のとき。既定は OpenAI。開発機の中の、同じ形の口を持つサーバーにも向けられる）
   #   ANLAGE_LLM_RECORDINGS         記録した応答のディレクトリ（recorded のとき）
   # オンになるのは、ANLAGE_LLM と、そのアダプタが要るもの（鍵など）の両方がそろったときだけ。鍵だけではオンにならない。
   # 鍵の値は持たない（アダプタを作るところで環境変数から読み、ここには残さない）。reason にも出さない。
@@ -24,6 +27,7 @@ module Llm
     # [アダプタ, nil] か [nil, オフになる理由]
     def self.build(name, env)
       return [ nil, "このアダプタは、まだ使えません（#{name}）。" ] if PLANNED.include?(name)
+      return Adapters::Openai.build(env) if name == "openai"
       return [ nil, "知らないアダプタの名前です（#{name.truncate(40)}）。" ] unless name == "recorded"
 
       dir = env["ANLAGE_LLM_RECORDINGS"].to_s

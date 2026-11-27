@@ -67,6 +67,28 @@ RSpec.describe Llm::Settings do
     end
   end
 
+  describe "openai（R-20261127-25）" do
+    it "openai と、OpenAI の鍵と、モデルの名前がそろうと、オン。外に文を送るアダプタ" do
+      on = settings("ANLAGE_LLM" => "openai", "OPENAI_API_KEY" => "sk-not-a-real-key", "ANLAGE_LLM_MODEL" => "the-model")
+
+      expect(on).to be_on
+      expect(on).to be_external
+      expect(on.adapter_name).to eq("openai")
+      expect(on.inspect).not_to include("sk-not-a-real-key")
+    end
+
+    it "鍵だけ、鍵とモデルの名前だけ（ANLAGE_LLM が無い）では、オフ" do
+      expect(settings("OPENAI_API_KEY" => "sk-not-a-real-key")).not_to be_on
+      expect(settings("OPENAI_API_KEY" => "sk-not-a-real-key", "ANLAGE_LLM_MODEL" => "the-model")).not_to be_on
+    end
+
+    it "openai で、鍵かモデルの名前が無いときはオフ。理由が付く" do
+      expect(settings("ANLAGE_LLM" => "openai", "ANLAGE_LLM_MODEL" => "the-model").reason).to eq("API の鍵（OPENAI_API_KEY）がありません。")
+      expect(settings("ANLAGE_LLM" => "openai", "OPENAI_API_KEY" => "sk-not-a-real-key").reason)
+        .to eq("モデルの名前（ANLAGE_LLM_MODEL）がありません。")
+    end
+  end
+
   describe "回数の上限" do
     it "既定は 1 日 100 回" do
       expect(settings({}).daily_call_limit).to eq(100)
