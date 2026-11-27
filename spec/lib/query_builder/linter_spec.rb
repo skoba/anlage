@@ -51,6 +51,21 @@ RSpec.describe QueryBuilder::Linter do
         expect(lint.ok?).to be(true)
       end
 
+      # 並べ替え（skoba/anlage#242）
+      it "ORDER BY のパスも検査する: 存在する節は ok、存在しない節（items[at0099]）は error（パス）" do
+        base = <<~AQL
+          SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude
+          FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
+        AQL
+
+        ok = lint("#{base}ORDER BY o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude DESC")
+        expect(ok.findings).to be_empty
+
+        bad = lint("#{base}ORDER BY o/data[at0001]/events[at0006]/data[at0003]/items[at0099]/value/magnitude ASC")
+        expect(bad.ok?).to be(false)
+        expect(bad.findings.map { |finding| [ finding.severity, finding.code ] }).to eq([ [ :error, :path ] ])
+      end
+
       it "存在しない節（items[at0099]）は error（パス）で、同じアーキタイプの候補パスを添える" do
         lint = lint(<<~AQL)
           SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0099]/value/magnitude

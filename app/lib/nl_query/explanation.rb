@@ -14,12 +14,14 @@ module NlQuery
       @conditions = Array(selection[:conditions])
       @template_id = selection[:template_id]
       @across_versions = selection[:across_versions]
+      @order = selection[:order]
     end
 
     def build
       sentences = [ "#{container}#{@columns.map { |card| quote(label(card)) }.join}を表示します。" ]
       sentences << "記録のテンプレートも表示します。" if @template_id
       sentences << "条件: #{@conditions.map { |condition| phrase(condition) }.join('、かつ、')}。" if @conditions.any?
+      sentences << "#{quote(label(@order[:card]))}の#{@order[:direction].to_s == 'desc' ? '降順' : '昇順'}に並べます。" if @order
       sentences << "アーキタイプの版をまたいで引きます。" if @across_versions
       sentences << "アーキタイプ: #{identities('archetype_id').join('、')}。テンプレート: #{identities('template_id').join('、')}。"
       sentences.join

@@ -58,4 +58,9 @@ RSpec.describe NlQuery::QueryParams do
       "1" => { card: ref(diagnosis), operator: "=", value: "高血圧症", or: "1" }
     )
   end
+
+  it "並べ替えは、項目の参照と向きになる（skoba/anlage#242）" do
+    expect(params(columns: [ systolic ], order: { card: diastolic, direction: "desc" }))
+      .to eq(columns: [ ref(systolic) ], order: ref(diastolic), order_direction: "desc")
+  end
 end

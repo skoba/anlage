@@ -158,4 +158,26 @@ RSpec.describe NlQuery::SelectionParser do
       expect(result.reason).to eq("候補の項目に、体重がありません。")
     end
   end
+
+  # 並べ替え（docs/design/s4-nl-aql-plan.md 13 節。skoba/anlage#242）
+  describe "並べ替え（order）" do
+    it "番号と向きから、並べ替えを作る。無ければ、選択に order を持たない" do
+      result = parse(columns: [ 1 ], conditions: [], order: { card: 2, direction: "desc" })
+
+      expect(result).to be_ok
+      expect(result.selection[:order]).to eq(card: diastolic, direction: "desc")
+      expect(parse(columns: [ 1 ], conditions: [], order: nil).selection).not_to have_key(:order)
+      expect(parse(columns: [ 1 ], conditions: []).selection).not_to have_key(:order)
+    end
+
+    it "向きが無ければ昇順" do
+      expect(parse(columns: [ 1 ], conditions: [], order: { card: 1 }).selection[:order]).to eq(card: systolic, direction: "asc")
+    end
+
+    it "候補に無い番号、決めた語でない向き、形でないものは、はねる" do
+      expect(parse(columns: [ 1 ], conditions: [], order: { card: 9, direction: "asc" })).to be_rejected
+      expect(parse(columns: [ 1 ], conditions: [], order: { card: 1, direction: "上から" })).to be_rejected
+      expect(parse(columns: [ 1 ], conditions: [], order: "収縮期の順")).to be_rejected
+    end
+  end
 end

@@ -17,10 +17,11 @@ module NlQuery
       番号 | 項目名 | 項目が入っている区分 | 型 | 値集合の値（型が値集合のとき） | 単位 | テンプレート
 
       返す JSON の形:
-      {"columns": [番号, ...], "conditions": [条件, ...], "template_id": false, "across_versions": false, "reason": null}
+      {"columns": [番号, ...], "conditions": [条件, ...], "order": null, "template_id": false, "across_versions": false, "reason": null}
 
       - columns: 表示する項目の番号。問いが求めている項目だけを入れる
       - conditions: 絞り込みの条件。無ければ空の配列。すべての条件を満たす記録が当たる
+      - order: 問いが、並べる順を求めているときだけ {"order": {"card": 番号, "direction": "asc" か "desc"}} の形で書く（asc は小さい順、desc は大きい順）。求めていなければ null
       - template_id: 問いが、記録の出所（どの文書・テンプレートか）も求めているときだけ true
       - across_versions: 問いが、アーキタイプの版をまたいで引くことを求めているときだけ true
       - 項目は、番号だけで指す。一覧に無い番号、項目名、パス、コードを書かない

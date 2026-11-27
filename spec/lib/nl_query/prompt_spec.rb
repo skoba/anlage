@@ -91,6 +91,10 @@ RSpec.describe NlQuery::Prompt do
       expect(other.instructions).to eq(prompt.instructions)
     end
 
+    it "並べ替えの形（order）を説明している（skoba/anlage#242）" do
+      expect(prompt.instructions).to include('"order": {"card": 番号, "direction": "asc" か "desc"}')
+    end
+
     it "使える演算子は、クエリビルダーが持つものと同じ" do
       QueryBuilder::Builder::OPERATORS.values.flatten.uniq.each do |operator|
         expect(prompt.instructions).to include(operator)

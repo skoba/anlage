@@ -87,4 +87,9 @@ RSpec.describe NlQuery::Explanation do
     text = explain(columns: [ diagnosis ], conditions: [ { card: other, operator: "MATCHES", value: [ "at0074" ] } ])
     expect(text).to end_with("テンプレート: ProblemList、jp_referral。")
   end
+
+  it "並べ替えを書く（skoba/anlage#242）" do
+    expect(explain(columns: [ systolic ], order: { card: diastolic, direction: "desc" })).to include("「拡張期」の降順に並べます。")
+    expect(explain(columns: [ systolic ], order: { card: systolic, direction: "asc" })).to include("「収縮期」の昇順に並べます。")
+  end
 end

@@ -65,7 +65,7 @@ module NlQuery
       selection = parsed.selection
       run = QueryBuilder::Runner.call(columns: selection[:columns], conditions: selection[:conditions],
                                       template_id: selection[:template_id], across_versions: selection[:across_versions],
-                                      execute: @execute, corpus: @corpus)
+                                      order: selection[:order], execute: @execute, corpus: @corpus)
       return result(:rejected, reason: run.error, **common) if run.queries.empty?
       return result(:rejected, reason: run.lint.findings.select(&:error?).map(&:message).join("／"), **common) unless run.lint.ok?
 
