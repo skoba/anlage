@@ -258,18 +258,18 @@ spec の見出し（Red から）:
 - 置き場所: `docs/demo/postman/anlage.postman_collection.json`（v2.1）と `docs/demo/postman/anlage.postman_environment.json`
   （変数 `base_url`、`username`、`password`（空）、`ehr_id`、`composition_uid`）
 - 認証: コレクションの `auth` に Basic を 1 か所、`{{username}}`・`{{password}}` を引く。各要求は継承
-- 要求（フォルダ「FHIR」と「openEHR REST」）: metadata、StructureDefinition（anlage の入口）、Observation の検索
-  （`subject=Patient/{{ehr_id}}`）、EHR の取得、AQL の実行（H5 の問い。`$ehr_id` を `query_parameters` で渡す）、記録の取得
+- 要求（フォルダ「FHIR」と「openEHR REST」）: metadata、StructureDefinition（anlage の入口）、EHR の取得、AQL の実行（H5 の問い。`$ehr_id` を `query_parameters` で渡す）、記録の取得
 - 記録の uid は、どの画面にも出ていない。AQL の要求の問いに `c/uid/value AS uid` の列を足し、応答の 1 行目の uid を
   `composition_uid` に入れる（Postman の post-response script）。そのあと「記録の取得」を送る
-- Observation の 1 件（`/Observation/:id`）は、anlage では 200 になる id が無いので、コレクションに入れない
+- Observation は、検索（いつも 0 件）も 1 件の取得（200 になる id が無い）も、コレクションに入れない（R-20261127-5 の 1）
 - pin: コレクションのすべての要求のパスが、anlage か engine の routes で解決できることを spec で確かめる
   （`Rails.application.routes.recognize_path` と `OpenehrRails::Engine.routes.recognize_path`）
 - 台本の I 節と README の「動かし方」の API の箇所を Postman の手順に書き換える（A3・A4 の curl は残す）
 
-**裁定に無い判断（ゲート報告にする。#193 の PR は、統括の回答までマージしない）**:
+**裁定に無い判断（ゲート報告にした。回答は R-20261127-5: 1 は入れない、2・3 は案のとおり）**:
 
 1. Observation の検索は、anlage では常に 0 件（gem の facade が scaffold の model を前提にするため）。
-   コレクションには入れて、0 件であることを要求の説明と既知の制限に書く。1 件の取得は入れない
+   案はコレクションに入れて 0 件と説明するものだったが、回答で入れないことになった（データが無いように見えるため）。
+   既知の制限 19 と上流候補 31 項は残す
 2. StructureDefinition は、engine の入口ではなく anlage の入口（`/fhir/r5/StructureDefinition/:id`）を使う
 3. AQL の問いに uid の列を足し、記録の uid を変数に入れる（H5 の問いそのものではなくなる）

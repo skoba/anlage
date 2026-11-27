@@ -1,0 +1,191 @@
+{
+  "info": {
+    "name": "Anlage（参照実装）の API",
+    "description": "Anlage の FHIR と openEHR REST の入口（skoba/anlage#193、docs/design/m3-plan.md 9.3）。値は合成で、患者は架空。実在の患者のデータを入れない。\n\n使い方: 環境 anlage.postman_environment.json を取り込み、password に起動時の ANLAGE_BASIC_AUTH_PASSWORD を、ehr_id に患者の画面の EHR ID（「EHR ID を写す」）を入れる。「AQL の実行」を送ると、composition_uid が入る。そのあと「記録の取得」を送る。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      {
+        "key": "username",
+        "value": "{{username}}",
+        "type": "string"
+      },
+      {
+        "key": "password",
+        "value": "{{password}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "FHIR",
+      "item": [
+        {
+          "name": "CapabilityStatement（metadata）",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/openehr/fhir/metadata",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "openehr",
+                "fhir",
+                "metadata"
+              ]
+            },
+            "description": "openehr-rails の FHIR R5 facade の CapabilityStatement。"
+          }
+        },
+        {
+          "name": "StructureDefinition（ProblemList の問題・診断）",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/fhir/r5/StructureDefinition/openehr-problemlist-evaluation-problem-diagnosis-v1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "fhir",
+                "r5",
+                "StructureDefinition",
+                "openehr-problemlist-evaluation-problem-diagnosis-v1"
+              ]
+            },
+            "description": "登録したテンプレートの OPT から作る StructureDefinition（anlage の入口。テンプレートの詳細の「FHIR プロファイル」と同じ）。"
+          }
+        }
+      ]
+    },
+    {
+      "name": "openEHR REST",
+      "item": [
+        {
+          "name": "EHR の取得",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/openehr/v1/ehr/{{ehr_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "openehr",
+                "v1",
+                "ehr",
+                "{{ehr_id}}"
+              ]
+            },
+            "description": "EHR と EHR_STATUS（subject は患者 ID と名前空間 anlage）。"
+          }
+        },
+        {
+          "name": "AQL の実行",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 応答の 1 行目の uid を composition_uid に入れる（次の「記録の取得」で使う）",
+                  "pm.test(\"200 が返る\", () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json().rows || [];",
+                  "if (rows.length > 0) {",
+                  "  const uid = rows[0][0];",
+                  "  // 環境を選んでいれば環境の変数に、選んでいなければコレクションの変数に入れる（環境の変数が先に引かれるため）",
+                  "  if (pm.environment.name) { pm.environment.set(\"composition_uid\", uid); } else { pm.collectionVariables.set(\"composition_uid\", uid); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"q\": \"SELECT c/uid/value AS uid, o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude AS systolic FROM EHR e[ehr_id/value=$ehr_id] CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]\",\n  \"query_parameters\": {\n    \"ehr_id\": \"{{ehr_id}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/openehr/v1/query/aql",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "openehr",
+                "v1",
+                "query",
+                "aql"
+              ]
+            },
+            "description": "受け入れの台本 H5 の問い（その患者の収縮期）に、記録の uid の列を足したもの。EHR ID は query_parameters の $ehr_id で渡す。"
+          }
+        },
+        {
+          "name": "記録の取得",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/openehr/v1/ehr/{{ehr_id}}/composition/{{composition_uid}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "openehr",
+                "v1",
+                "ehr",
+                "{{ehr_id}}",
+                "composition",
+                "{{composition_uid}}"
+              ]
+            },
+            "description": "COMPOSITION（canonical JSON）。composition_uid は「AQL の実行」で入る。"
+          }
+        }
+      ]
+    }
+  ]
+}
