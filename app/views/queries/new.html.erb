@@ -1,7 +1,43 @@
 <%# 文言は docs/demo/ui-vocabulary.md（正典）。状態は 1 つの GET フォームに持つ（docs/design/s2-query-builder-plan.md 6.4） %>
 <h1>クエリビルダー</h1>
 
+<%# 文で問う（LLM）。オンとオフは、運用する人の設定（docs/design/s4-nl-aql-plan.md 10 節）。手で選ぶ欄は、下にそのまま残る %>
+<section id="nl_query">
+  <h2>文で問う</h2>
+  <% if @llm.on? %>
+    <p>文で問う（LLM）は、オンです（<%= @llm.adapter_name %>）。</p>
+    <% if @llm.external? %>
+      <p class="nl-warning">問いの文は、外の API に送られます。患者の情報を書かないでください。呼び出すたびに、費用がかかります。</p>
+    <% end %>
+    <p>きょうの呼び出し: <%= @llm_usage[:calls] %>／<%= @llm.daily_call_limit %> 回（入力 <%= @llm_usage[:input_tokens] %>・出力 <%= @llm_usage[:output_tokens] %> トークン）</p>
+    <%= form_with url: ask_query_path, method: :post, id: "nl_query_form" do |form| %>
+      <%= form.label :nl, "問い" %>
+      <%= form.text_field :nl, value: @nl_question, size: 60 %>
+      <%= form.submit "選択を作る", name: nil %>
+    <% end %>
+  <% else %>
+    <p>文で問う（LLM）は、オフです。オンにする方法は docs/nl-query.md にあります（環境変数 ANLAGE_LLM を設定して、起動し直します）。</p>
+    <% if @llm.reason %>
+      <p><%= @llm.reason %></p>
+    <% end %>
+  <% end %>
+  <% if @nl_reason %>
+    <p id="nl_reason">選択を作れませんでした: <%= @nl_reason %>下で、手で選んでください。</p>
+  <% end %>
+</section>
+
+<% if @explanation %>
+  <section id="nl_explanation">
+    <h2>説明</h2>
+    <p>問い: <%= @nl_question %></p>
+    <p><%= @explanation %></p>
+    <p>この選択は、文で問う（LLM）から始めました。表示する項目と条件を確かめてから、実行してください。</p>
+  </section>
+<% end %>
+
 <%= form_with url: new_query_path, method: :get, id: "query_builder" do |form| %>
+  <%# 文で問うから移ってきた選択だけが、問いを持ち回る（説明を出し続けるため）。選択を作れなかったときは持ち回らない %>
+  <% if @nl_started %><%= hidden_field_tag "nl", @nl_question, id: nil %><% end %>
   <section id="query_search">
     <%= form.label :q, "探したい項目" %>
     <%= form.search_field :q, value: @query %>

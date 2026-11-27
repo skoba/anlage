@@ -139,3 +139,83 @@ $ bundle exec rubocop app/lib/llm.rb app/lib/llm app/lib/nl_query spec/lib/llm s
 ```
 
 a002 の問いは、記録した応答（手で書いた選択）から、参照 AQL と同じ形の AQL になり、実行すると期待行の 7 行が返る（`runner_spec`）。
+
+## R3 段 3: クエリビルダーの画面に「文で問う」を足す（2026-11-27。`skoba/anlage#231`）
+
+gem を足していない。外を呼んでいない。
+
+### 自己承認した判断
+
+| # | 判断 | 採った案 | 捨てた案 | 根拠 |
+|---|---|---|---|---|
+| U1 | 文で問う口（**URL を 1 つ足した**） | `POST /queries/ask`。選択ができたら、選択を URL のパラメータに直して `GET /queries/new` に移る（303） | `GET /queries/new?nl=…` の中で LLM を呼ぶ | GET で呼ぶと、読み込み直しや先読みのたびに LLM を呼ぶ（費用）。選択ができたあとの状態は、これまでどおり URL に持つ（共有できる。読み込み直しても LLM を呼ばない。request spec で固定） |
+| U2 | 選択を作れなかったときの返し方 | 同じ画面を 422 で返す | 200 で返す／flash を付けて移る | 200 では、Turbo がフォームの POST の結果を画面に出さない（下の実測）。flash は、状態をサーバーに持つことになる |
+| U3 | 選択を作れなかったときに出す候補 | `NlQuery::Candidates` の候補（初期データでは、索引の 18 枚すべて） | 問いの文で検索した結果だけ | R2 の実測（問いの文の全体では、検索に当たらない問いがある） |
+| U4 | 説明を、いつ出すか | 文で問うから移ってきた選択（URL に `nl` がある）のあいだ出す。利用者が条件を直すと、説明も、いまの選択に合わせて変わる | 最初の選択の説明を固定して出す | 説明は「何をどう引いたか」。実行する AQL と食い違わないのが正しい。文言は「この選択は、文で問う（LLM）から始めました」（直したあとも偽にならない言い方） |
+| U5 | 文字列の「いずれか」（MATCHES）の入れ方 | 一致の条件を「または」でつないだ形にする | 画面に、文字列の「いずれか」の入力を足す | 画面に入力が無い。組まれる AQL は、`MATCHES {a, b}` ではなく `(= a OR = b)` になる。実測: a003 の形（2型糖尿病、高血圧症。テンプレートつき）で、どちらも 7 行で、行は同じ |
+| U6 | オンにする方法の案内 | `docs/nl-query.md` を足し、画面から名前で指す | README に節を足す | README は、書く側が英語を主にした構成に直している最中（PR #216）。README への記載は、外を呼ぶアダプタが入る段 4 で行う（計画書 10.4 節） |
+
+### Red（実行して失敗を確かめた）
+
+```
+$ bundle exec rspec spec/lib/nl_query/query_params_spec.rb
+NameError:
+  uninitialized constant NlQuery::QueryParams
+
+$ bundle exec rspec spec/requests/queries_nl_spec.rb
+  1) … オフであることと、オンにする方法への案内が出る …
+       expected: ["文で問う"]
+            got: []
+  4) … 文で問う口に直接送っても、LLM は呼ばれず、理由が出る
+       expected the response to have status code :ok (200) but it was :not_found (404)
+  6) … 問いを入れると、表示する項目と条件が入った状態（URL）に移る。実行はまだ
+       expected the response to have status code :see_other (303) but it was :not_found (404)
+```
+
+実装のあとで、穴を 2 つ見つけ、テストを足して Red を取ってから直した。
+
+1. 選択を作れなかったあと、手で選んだ選択にも「LLM から始めました」の説明が付く（問いを、隠しの入力で持ち回っていた）
+2. 画面から来た、片方が空の日時の範囲で、説明が「 以降、2026-01-01 より前」になる
+
+```
+  2) … 選択を作れなかったあと、手で選んだ選択には、「文で問うから始めました」の説明を付けない
+       expected: nil
+            got: #<Nokogiri::XML::Element name="input" … name="nl" value="診断確度が「疑い」の傷病名">
+  3) NlQuery::Explanation 画面から来た、片方が空の日時の範囲 …
+       expected "…条件: 「発症日時」が  以降、2026-01-01 より前。…" to include "条件: 「発症日時」が 2026-01-01 より前。"
+23 examples, 3 failures
+```
+
+### 実ブラウザの spec で分かったこと
+
+request spec は 200 で通っていたが、実ブラウザでは、選択を作れなかったときの画面が出なかった。
+
+```
+$ bundle exec rspec spec/system/demo_nl_query_spec.rb
+  1) … 選択を作れなかったときは、理由が出て、候補のカードから手で選んで続けられる
+       expected to find css "#nl_reason" but there were no matches
+3 examples, 1 failure
+```
+
+Turbo は、フォームの POST への 200 の HTML を画面に出さない（`app/javascript/application.js:2` が `@hotwired/turbo-rails` を読む）。
+request spec を 422 に直して Red を取り（`expected the response to have status code 422 but it was 200`）、実装を合わせた。
+
+### Green
+
+```
+$ bundle exec rspec spec/system/demo_nl_query_spec.rb spec/requests/queries_nl_spec.rb
+18 examples, 0 failures
+$ bundle exec rspec spec/requests/queries_nl_spec.rb spec/lib/nl_query/explanation_spec.rb spec/requests/queries_spec.rb
+48 examples, 0 failures
+```
+
+### 追記: 候補の上限を 40 枚から 100 枚に直した（R2 の C2 の訂正）
+
+R2 で、上限を「初期データの 18 枚と、紹介状を入れた 44 枚のあいだ」の 40 に置いた。これは誤りだった。
+紹介状のテンプレート（jp_referral。26 枚）を登録した索引は、ふつうにある（手元の開発用の DB が、その状態だった）。
+40 だと、その索引では「検索で当たったカードと、同じテンプレートのカード」に絞る側に入り、R2 の実測のとおり、候補が足りなくなる。
+
+- Red: fixture の 6 つの OPT を入れた索引（44 枚）で、「空腹時血糖の値」の候補が 0 枚（`expected: 44 got: 0`）
+- 直し: 上限を 100 に。Green（`candidates_spec` 7 examples, 0 failures）
+- 実測: 44 枚をすべて送ったときの入力は 2,616 文字（18 枚の 4〜5 倍。まだ小さい）
+- 100 の根拠も弱い（見込み）。100 枚を超える索引での候補の取り方は、ここでは決めていない（検索の段 C・E は保留）
