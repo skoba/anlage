@@ -48,3 +48,6 @@ cases の要素は `when` と `value`、または `else`。
 - サイクル 3（D2〜D8、組のディレクトリ）: Red `spec/lib/definitions/linter_spec.rb` → `NameError: uninitialized constant Definitions::Linter`（No examples found）。
   Green: `Definitions::Linter`（目録 → 画面・ロジックの読み込み〔D1 を通らないものはほかの検査をしない〕、D2 id の重なり、D3 参照と候補、D4 部品と型、
   D5 遷移先、D6 到達、D7 対象・入力・式、D8 案）。11 examples, 0 failures。組の fixture は `spec/fixtures/definitions/clinic`（参照は実物の OPT の field と at-code だけ）
+- サイクル 4（`rake definitions:lint`）: Red `spec/tasks/definitions_spec.rb` → `RuntimeError: Don't know how to build task 'definitions:lint'`（4 examples, 4 failures）。
+  Green: `lib/tasks/definitions.rake`（`DIR=`、`FORMAT=json`、エラーがあれば終了コード 1、案だけなら 0）。4 examples, 0 failures
+- 手元の全 suite: 884 examples, 0 failures, 2 pending
