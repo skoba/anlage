@@ -276,6 +276,7 @@ steps:
 | D-8 | 計測（表。migration。ゲート） | 「計測の出来事に、患者 ID・EHR ID・記録の値が入らない」「画面の滞在の時間が、画面の id と版ごとに集計される」 |
 
 - D-1・D-2・D-5 は migration も依存も要らない。先に進められる
+- D-3・D-4 は 1 つの計画にまとめた: `docs/design/definition-registration-plan.md`（R-20261128-1。`skoba/anlage#265`。ゲート報告は `docs/reports/definitions-log.md` R5）
 - 範囲の外: 定義の組の配布（パッケージ）、GDL2・Task Planning の読み込みと変換、利用者ごとの画面
 
 ## 6. 問い（ゲート）
