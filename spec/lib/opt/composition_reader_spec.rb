@@ -74,3 +74,27 @@ RSpec.describe Opt::CompositionReader, "#80 SECTION 配下の ENTRY" do
     expect(described_class.call(template, json)).to eq(values)
   end
 end
+
+# 患者の画面（U1、skoba/anlage#219）: 外部の用語のコードで書いた傷病名（DV_CODED_TEXT。初期データの ICD-11）は、
+# 表示の文字（記録の value）で読みたい。display: true のときだけ、DV_CODED_TEXT を記録の value で返す（修正の帳票は従来どおりコード）
+RSpec.describe Opt::CompositionReader, "display: true" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/ProblemList.opt").read) }
+
+  def composition_with_coded_diagnosis
+    canonical = JSON.parse(OpenEHR::Serializer::RMJSONSerializer.new(
+      Opt::CompositionBuilder.new(template, { "problem_diagnosis_at0002" => "仮", "problem_diagnosis_at0073" => "at0076" }).build
+    ).serialize)
+    element = canonical["content"][0]["data"]["items"].find { _1["archetype_node_id"] == "at0002" }
+    element["value"] = { "_type" => "DV_CODED_TEXT", "value" => "2型糖尿病",
+                         "defining_code" => { "_type" => "CODE_PHRASE", "code_string" => "5A11",
+                                              "terminology_id" => { "_type" => "TERMINOLOGY_ID", "value" => "http://id.who.int/icd/release/11/mms" } } }
+    JSON.generate(canonical)
+  end
+
+  it "DV_CODED_TEXT の傷病名を、表示の文字で返す（既定はコード）" do
+    json = composition_with_coded_diagnosis
+
+    expect(described_class.call(template, json)["problem_diagnosis_at0002"]).to eq("5A11")
+    expect(described_class.call(template, json, display: true)["problem_diagnosis_at0002"]).to eq("2型糖尿病")
+  end
+end

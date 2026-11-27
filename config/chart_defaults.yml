@@ -1,0 +1,15 @@
+# 患者の画面（U1）の既定の部品の対応（skoba/anlage#219、docs/design/u1-patient-chart-plan.md 1.2・1.5、R-20261127-13）。
+# OPT から引けない「部品と項目の対応」だけを置く。ラベル・単位・選択肢の表示はテンプレートから引く。
+# at-code は CKM の公開アーキタイプのもの（spec/fixtures/opt/ の OPT で確かめる。spec/lib/charts/rules_spec.rb）。
+# 画面の定義（U2）の既定値になる
+problem_list:
+  archetype_id: openEHR-EHR-EVALUATION.problem_diagnosis.v1
+  columns:
+    diagnosis: at0002
+    certainty: at0073
+    onset: at0077
+lab_table:
+  # 系列の鍵は、同じ CLUSTER の分析名（name）の値。文字列が完全に同じものだけを 1 つの行にする（既知の制限 21）
+  archetype_id: openEHR-EHR-CLUSTER.laboratory_test_analyte.v1
+  name: at0024
+  value: at0001

@@ -1,0 +1,1 @@
+- Feat: 患者の画面（U1）の部品を決める規則（`Charts::Rules`、`config/chart_defaults.yml`）と、患者の記録を部品に配る `Charts::PatientChart` を足した（プロブレムリスト、数量の時系列、検査結果の時系列表、依頼と紹介状）。`Opt::CompositionReader` に `display: true`（コード化された値を記録の表示の文字で返す）を足した（Refs #219、Refs R-20261127-13）。利用者に見える変更ではない（画面は U1-3〜U1-5 で出す）
