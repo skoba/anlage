@@ -56,3 +56,36 @@ RSpec.describe "definitions:lint" do
     $stdout = original
   end
 end
+
+# rake definitions:context（AI に渡す材料。skoba/anlage#259）。Markdown（既定）と JSON（FORMAT=json）
+RSpec.describe "definitions:context" do
+  before do
+    %w[LabResultReport ProblemList].each do |name|
+      Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{name}.opt").read).save!
+    end
+  end
+
+  after { ENV.delete("FORMAT") }
+
+  def run_task(format: nil)
+    format ? ENV["FORMAT"] = format : ENV.delete("FORMAT")
+    Rake::Task["definitions:context"].reenable
+    Rake::Task["definitions:context"].invoke
+  end
+
+  it "Markdown: テンプレートの項目の表、部品、検査の一覧、スキーマと例の見出し" do
+    expect { run_task }.to output(
+      /# 定義を書くための材料.*## テンプレート.*\| laboratory_test_analyte_at0024 \| 分析名 \| DV_TEXT \|.*## 部品.*## 検査.*D3.*## スキーマ.*## 例.*bundle\.yml/m
+    ).to_stdout
+  end
+
+  it "JSON: Definitions::Context と同じ中身" do
+    out = StringIO.new
+    original = $stdout
+    $stdout = out
+    run_task(format: "json")
+    $stdout = original
+
+    expect(JSON.parse(out.string).keys).to eq(%w[templates components schemas checks examples])
+  end
+end
