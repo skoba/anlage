@@ -64,6 +64,8 @@ RSpec.describe "患者の画面の部品", type: :request do
 
     expect(card("orders").at_css("h2").text).to eq("依頼と紹介状")
     expect(card("orders").css("tbody tr").map { |tr| tr.css("td").map(&:text) }).to eq([ [ "2026-06-18", "jp_referral" ] ])
+    # 紹介状の傷病名（jp_referral の problem_diagnosis）は、プロブレムリストにも入る（計画書 1.4。台本 J7）
+    expect(card("problem_list").css("tbody tr").map { |tr| tr.css("td").map(&:text).first(2) }).to eq([ [ "白血病", "疑い" ] ])
   end
 
   it "部品の並びは、プロブレムリスト → 時系列 → 検査結果 → 依頼と紹介状 → カルテ記録" do

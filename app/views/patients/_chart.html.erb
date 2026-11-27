@@ -55,7 +55,7 @@
           <tr>
             <th scope="row">
               <%= "#{row.name}（#{row.units}）" %>
-              <% if row.points.size >= 2 %> <a href="#lab_chart_<%= index %>" class="lab-chart-link">グラフ</a><% end %>
+              <% if row.points.size >= 2 %> <a href="#lab_chart_<%= index %>" class="lab-chart-link" data-turbo="false">グラフ</a><% end %>
             </th>
             <% dates.each do |date| %>
               <td class="number"><%= safe_join((by_date[date] || []).map { |point| link_to(point.value, chart_record_path(patient, point.record, originals)) }, "／") %></td>
