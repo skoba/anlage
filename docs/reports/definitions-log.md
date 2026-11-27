@@ -43,3 +43,5 @@ cases の要素は `when` と `value`、または `else`。
 
 - サイクル 1（読み方）: Red `spec/lib/definitions/loader_spec.rb` → `NameError: uninitialized constant Definitions`（No examples found）。
   Green: `Definitions::Loader`（`YAML.safe_load`、`aliases: false`、`permitted_classes: []`、64 KiB）と `Definitions::Problem`。7 examples, 0 failures
+- サイクル 2（D1 書式）: Red `spec/lib/definitions/schema_spec.rb` → `NameError: uninitialized constant Definitions::Schema`（No examples found）。
+  Green: `Definitions::Schema`（Ruby の小さな検査器。必須・未知のキー〔候補に使えるキー〕・型・列挙・対の規則）。8 examples, 0 failures
