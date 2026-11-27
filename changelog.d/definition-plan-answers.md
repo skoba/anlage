@@ -1,0 +1,1 @@
+- Docs: 定義の層の計画（`docs/design/definition-layer-plan.md`）に、承認の回答と足したことを入れた（Refs R-20261127-21）。利用者に見える変更: なし（計画書のみ）。
