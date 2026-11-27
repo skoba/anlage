@@ -680,3 +680,22 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
 - 汎用の価値: 「OPT を置けば FHIR facade が動く」を、scaffold の無い実行時の経路でも成り立たせるには、facade が RM グラフを
   引く口（または、ホストのアプリがテンプレートと記録を渡す口）が要る。再現手順は上の 3 つの GET（Basic 認証つき、`demo:reset` のあと）
 - 状態: 観察。起票は根拠が揃ってから（起票と上流への投稿は人間）
+
+## 31 項の追記（2026-11-27）: 届かない段の表と、広げる形（案 B。R-20261127-10 の 2）
+
+- 出どころ: `docs/design/fhir-read-plan.md` 2 節・4 節（openehr-rails 0.11.0・0.12.0 の読み取り）。起票は要らない
+  （統括が openehr-rails のセッションに伝えた。R-20261127-11）
+
+| 段 | gem のコード | 前提にしているもの |
+|---|---|---|
+| どのリソースがあるか | `lib/openehr_rails/fhir/resource_registry.rb` の `discover_from_templates`・`entries_for` | gem の `OpenehrTemplate.operational` と、scaffold した model の `FIELD_MAP` |
+| 記録を集める | `app/controllers/openehr_rails/fhir_controller.rb` の `scoped_records` | scaffold した model の表（1 記録 = 1 行） |
+| 記録をリソースにする | `lib/openehr_rails/fhir/serializer.rb` の `Serializer.new(record).observations` | `record.public_send(field[:name])`、`id`・`ehr_id`・`composed_at` |
+| 1 件を引く | `fhir_controller.rb` の `resolve`（id は「<model の id>-<slug>」） | model の主キー |
+| プロファイル | `lib/openehr_rails/fhir/profile_repository.rb` の `from_registry` | `::OpenehrTemplate` |
+
+- 広げる形（案 B）: `Serializer` を、Storable の record ではなく「field の一覧と値と、患者・時刻」を受ける形に分け、
+  `ResourceRegistry` に、ホストのアプリがテンプレートと記録を渡す口（source）を足す。
+  対応（`Fhir::TypeMap`、`ProfileGenerator`）は今のまま共有する。scaffold の経路と実行時の経路が、同じ入口（検索・1 件・CapabilityStatement）を使う
+- anlage の側の続き: 先方の版が公開されたら、source を 1 つ登録する PR（依存を変えるので、マージは人間）と、
+  Postman のコレクションに Observation の検索を戻す（R-20261127-10 の 2）。それまで既知の制限 19 のまま
