@@ -7,7 +7,8 @@ module Definitions
     QUANTITY_TYPES = %w[DV_QUANTITY DV_COUNT].freeze
     PROBLEM_ARCHETYPE = "openEHR-EHR-EVALUATION.problem_diagnosis.v1".freeze
     Definition = Data.define(:kind, :id, :path, :data)
-    Report = Data.define(:problems) do
+    # bundle・screens・logics は、読めて D1 を通った定義（遷移の図 Definitions::Diagram が使う）
+    Report = Data.define(:problems, :bundle, :screens, :logics) do
       def ok? = problems.none?(&:error?)
       def errors = problems.select(&:error?)
     end
@@ -24,7 +25,7 @@ module Definitions
 
     def call
       bundle = load("bundle", @root.join(BUNDLE))
-      return Report.new(problems: @problems) unless bundle
+      return Report.new(problems: @problems, bundle: nil, screens: [], logics: []) unless bundle
 
       screens = load_listed(bundle, "screens", "screen")
       logics = load_listed(bundle, "logic", "logic")
@@ -33,7 +34,7 @@ module Definitions
       screens.each { check_screen(_1, screens) }
       check_reachable(bundle, screens)
       logics.each { check_logic(_1) }
-      Report.new(problems: @problems)
+      Report.new(problems: @problems, bundle:, screens:, logics:)
     end
 
     private

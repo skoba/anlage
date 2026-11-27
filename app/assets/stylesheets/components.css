@@ -29,3 +29,13 @@ figure.series figcaption, figure.lab-chart figcaption { font-weight: bold; margi
 /* 検査結果のグラフは、表の行の「グラフ」を押したとき（:target）だけ出す */
 figure.lab-chart { display: none; margin: var(--space-4) 0 0; }
 figure.lab-chart:target { display: block; }
+
+/* 遷移の図（skoba/anlage#260、DefinitionsHelper#transition_diagram）。色は変数（docs/design/visual-guidelines.md） */
+svg.transition-diagram { display: block; width: 100%; height: auto; font-size: 13px; }
+svg.transition-diagram .diagram-node rect { fill: var(--color-surface); stroke: var(--color-border); }
+svg.transition-diagram .diagram-form rect { stroke: var(--color-accent); }
+svg.transition-diagram .diagram-node text { fill: var(--color-text); }
+svg.transition-diagram .diagram-edge line { stroke: var(--color-muted); }
+svg.transition-diagram .diagram-back line { stroke-dasharray: 4 3; }
+svg.transition-diagram .diagram-label { fill: var(--color-muted); font-size: 11px; }
+svg.transition-diagram marker path { fill: var(--color-muted); }

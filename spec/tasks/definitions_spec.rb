@@ -89,3 +89,34 @@ RSpec.describe "definitions:context" do
     expect(JSON.parse(out.string).keys).to eq(%w[templates components schemas checks examples])
   end
 end
+
+# rake definitions:diagram（遷移の図の Mermaid のテキスト。skoba/anlage#260）
+RSpec.describe "definitions:diagram" do
+  before do
+    %w[LabResultReport ProblemList CardiologyEncounter bmi_calculation].each do |name|
+      Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{name}.opt").read).save!
+    end
+  end
+
+  after { ENV.delete("DIR") }
+
+  def run_task(dir)
+    ENV["DIR"] = dir.to_s
+    Rake::Task["definitions:diagram"].reenable
+    Rake::Task["definitions:diagram"].invoke
+  end
+
+  it "検査を通る組は、Mermaid のテキストを出す" do
+    expect { run_task(Rails.root.join("spec/fixtures/definitions/clinic")) }
+      .to output(/\Aflowchart LR\n  screen_patient_chart\["患者の画面"\]\n/).to_stdout
+  end
+
+  it "エラーのある組は、検査の結果を出して終了コード 1（図は出さない）" do
+    dir = Pathname(Dir.mktmpdir)
+    dir.join("bundle.yml").write("bundle: [\n")
+
+    expect { run_task(dir) }.to output(/\[D1\]/).to_stdout.and raise_error(SystemExit) { expect(_1.status).to eq(1) }
+  ensure
+    FileUtils.remove_entry(dir)
+  end
+end

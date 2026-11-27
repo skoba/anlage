@@ -60,4 +60,18 @@ namespace :definitions do
       puts "```yaml", text.chomp, "```"
     end
   end
+
+  desc "Print the transition diagram of a definition bundle as Mermaid text (DIR=path). Lints first; exits 1 without a diagram when there are errors"
+  task diagram: :environment do
+    dir = ENV["DIR"].to_s
+    abort "使い方: bin/rails definitions:diagram DIR=<定義の組のディレクトリ>" if dir.empty?
+
+    report = Definitions::Linter.call(dir)
+    unless report.ok?
+      puts "定義の組 #{dir}: エラー #{report.errors.size} 件。図は出さない"
+      report.errors.each { puts _1 }
+      exit 1
+    end
+    print Definitions::Diagram.from(report).to_mermaid
+  end
 end
