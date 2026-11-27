@@ -1,0 +1,1 @@
+- Docs: 記録を FHIR で読み出す道の計画 `docs/design/fhir-read-plan.md`（engine の入口が実行時の記録を見ない理由、対応を引く先、案 A〜C と推す案）を足した（Refs R-20261127-9）。利用者に見える変更ではない（計画書）
