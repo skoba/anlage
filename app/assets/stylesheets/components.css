@@ -1,0 +1,19 @@
+/* 部品の基準（skoba/anlage#218、docs/design/visual-guidelines.md の「表」「カード」「ボタン」）。
+ * 部品のクラスを付けたものだけに効かせる（既存の画面の要素には効かせない）。色は tokens.css の変数 */
+
+/* 表: 罫線は横線だけ、見出しの行は地の色、数値は右寄せ */
+table.data-table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+table.data-table th,
+table.data-table td { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-border); text-align: left; }
+table.data-table thead th { background: var(--color-surface); }
+table.data-table td.number,
+table.data-table th.number { text-align: right; }
+
+/* カード: 部品 1 つを 1 枚に。見出しはカードの中の h2 */
+.card { margin: 0 0 var(--space-6); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); }
+.card > h2:first-child { margin-top: 0; font-size: 1.25rem; }
+
+/* ボタン: 主ボタンは塗り、ほかは枠だけ */
+.button { display: inline-flex; align-items: center; height: 2.25rem; padding: 0 var(--space-4); border: 1px solid var(--color-accent);
+          border-radius: var(--radius); background: #fff; color: var(--color-accent); font: inherit; text-decoration: none; cursor: pointer; }
+.button.primary { background: var(--color-accent); color: #fff; }
