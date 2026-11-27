@@ -4,6 +4,8 @@ module QueryBuilder
   #
   # across_versions: 版をまたいで引く（docs/design/s2-cross-version-plan.md 4 節）。対応のある版ごとに AQL を組んで実行し、
   # 行をつなぐ。行の先頭に、その行が来たアーキタイプの ID（版つき）を足す。どれかの AQL にリンタの error があれば、どれも実行しない
+  #
+  # order: 並べ替え { card:, direction: }（Builder と同じ。skoba/anlage#242）。版をまたいで引くときは使えない
   class Runner
     # 版ごとの 1 本（版をまたがないときは 1 本だけで、archetype_id は nil）
     Query = Struct.new(:archetype_id, :aql, :lint, keyword_init: true)
@@ -17,11 +19,12 @@ module QueryBuilder
     end
 
     def self.call(columns:, conditions: [], template_id: false, execute: true, across_versions: false,
-                  mappings: VersionMappings.default, corpus: nil)
-      new(columns, conditions, template_id, execute, across_versions, mappings, corpus).call
+                  mappings: VersionMappings.default, corpus: nil, order: nil)
+      new(columns, conditions, template_id, execute, across_versions, mappings, corpus, order).call
     end
 
-    def initialize(columns, conditions, template_id, execute, across_versions, mappings, corpus)
+    def initialize(columns, conditions, template_id, execute, across_versions, mappings, corpus, order = nil)
+      @order = order
       @columns = columns
       @conditions = conditions
       @template_id = template_id
@@ -32,8 +35,11 @@ module QueryBuilder
     end
 
     def call
+      # 版ごとの AQL の行をつなぐので、並べ替えても全体の順にならない（skoba/anlage#242）
+      raise Builder::InvalidSelection, "版をまたいで引くときは、並べ替えは使えない" if @order && @across_versions
+
       queries = selections.map do |selection|
-        aql = Builder.build(columns: selection.columns, conditions: selection.conditions, template_id: @template_id)
+        aql = Builder.build(columns: selection.columns, conditions: selection.conditions, template_id: @template_id, order: @order)
         Query.new(archetype_id: selection.archetype_id, aql: aql, lint: Linter.lint(aql))
       end
       lint = Linter::Lint.new(queries.flat_map { |query| query.lint.findings })
