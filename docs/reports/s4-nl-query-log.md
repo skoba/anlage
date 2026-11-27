@@ -220,6 +220,77 @@ R2 で、上限を「初期データの 18 枚と、紹介状を入れた 44 枚
 - 実測: 44 枚をすべて送ったときの入力は 2,616 文字（18 枚の 4〜5 倍。まだ小さい）
 - 100 の根拠も弱い（見込み）。100 枚を超える索引での候補の取り方は、ここでは決めていない（検索の段 C・E は保留）
 
+## R4 段 4: Claude API のアダプタ（2026-11-27。`skoba/anlage#234`）
+
+**`Gemfile` を変える。PR は人間がマージする**（R-20261127-14）。外は呼んでいない。鍵は扱っていない（spec の鍵は、形だけの文字 `sk-ant-not-a-real-key`）。
+
+### SDK の呼び方の確かめ（No API guessing。gem anthropic 2.14.0 のソース）
+
+| 使うもの | 確かめた場所 | 中身 |
+|---|---|---|
+| クライアント | `lib/anthropic/client.rb:231-239` | `Anthropic::Client.new(api_key: nil, …, max_retries: DEFAULT_MAX_RETRIES, timeout: nil)`。既定は `DEFAULT_MAX_RETRIES = 2`、`DEFAULT_TIMEOUT_IN_SECONDS = 600.0`（同 29・32 行） |
+| 問い合わせ | `lib/anthropic/resources/messages.rb:105`、`models/message_create_params.rb:197` | `client.messages.create(max_tokens:, messages:, model:, system_:, output_config:, …)`。**system は `system_`**（`optional :system_, …, api_name: :system`） |
+| 応答 | `models/message.rb:60・88・125・162`、`models/text_block.rb:23・36`、`models/usage.rb:34・40` | `content`（部分の並び。`type` が `:text` の部分に `text`）、`model`、`stop_reason`、`usage.input_tokens`・`output_tokens` |
+| 断り | `models/stop_reason.rb:13` | `REFUSAL = :refusal` |
+| 例外 | `lib/anthropic/errors.rb:50・89・120・143・247・283` | `APIError` ＞ `APIConnectionError` ＞ `APITimeoutError`、`APIStatusError`（`status`）＞ `AuthenticationError`・`RateLimitError` |
+| 出力の形を縛る | `models/output_config.rb:20`、`models/json_output_format.rb:10・15` | `output_config: { format: { type: :json_schema, schema: … } }`（属性の名前は `format_`、API の名前は `format`） |
+
+セッションの見込みと違っていた点: system の引数の名前（`system` ではなく `system_`）。ソースを読まずに書いていたら、指示文が送られなかった。
+
+### 公式の文書で確かめ直したこと（2026-11-27）
+
+- モデルの ID: `claude-sonnet-5-5`、`claude-haiku-5-5`、`claude-opus-5-5`（platform.claude.com の models/overview）
+- 値段（100 万トークンあたり、入力／出力）: Sonnet 5.5 は 2／10 ドル、Haiku 5.5 は 0.10／0.50 ドル（入力が 10 万トークンまでの問い合わせ）、
+  Opus 5.5 は 4／20 ドル（同 pricing）。計画書 3.3 節の表と同じ
+- 考える分のトークンが出力として数えられるかは、その 2 つのページには書かれていなかった（**未確認**）
+- トークンの数は、まだ測っていない（数える口 `messages.count_tokens` も API を呼ぶので、鍵が渡ってから）。費用の表（計画書 6.3 節）は、見込みのまま
+
+### 自己承認した判断
+
+| # | 判断 | 採った案 | 捨てた案 | 根拠 |
+|---|---|---|---|---|
+| A1 | gem の入れ方 | `gem "anthropic", require: false`（入れるが、起動のときには読み込まない。アダプタを作るところで読む） | optional の group に分ける（計画書 6.1 節の案） | optional の group は、使う人が `BUNDLE_WITH` を設定して入れ直す手間が要る。Docker の像を作り直すことになる。入れておいて読み込まない形なら、環境変数だけでオンにできる（R-20261127-14: コードを変えずに切り替えられる）。読めないときは「gem anthropic が入っていません」でオフ |
+| A2 | 既定のモデル | 置かない。`ANLAGE_LLM_MODEL` が無ければオフ | Haiku 5.5 か Sonnet 5.5 を既定にする | 計画書 3.2 節: 設定したときにどのモデルを推すかは、測定の結果で決める |
+| A3 | 待ち時間とやり直し | 30 秒、やり直し 1 回 | SDK の既定（600 秒、2 回） | 画面の 1 回の問い合わせで、10 分待たせない。30 秒の根拠は弱い（実際の応答の時間を、まだ測っていない） |
+| A4 | 出力の上限 | 2,000 トークン | — | 計画書 6.3 節の見込み（考える分を含めて 2,000 ほど）。足りないと `max_tokens` で切れ、「応答が、出力の上限で途中で切れました」になる。実測して直す |
+| A5 | 出力の形を縛る機能（`output_config.format`） | **まだ使わない**。応答は `SelectionParser` で検査する | 段 4 で使う（計画書 2.2 節） | 選択の形（条件の入れ子、型ごとに違う値）が、API の側の JSON の形の制限に収まるかを、実際の API で確かめられていない。確かめずに入れると、最初の呼び出しが 400 になりうる。鍵が渡ったときに試して決める。アダプタは汎用（文を送って文を受け取る）なので、足すなら `complete` に形を渡す引数を足す |
+| A6 | 考える深さなどの設定 | 送らない（モデルの既定） | `thinking`・`output_config.effort` を送る | モデルごとに受け付ける値が違う（同梱の資料）。送らなければ、どのモデルでも 400 にならない。測定の記録には「既定」と書く |
+| A7 | 例外の理由 | 状態の番号と、決まった文だけ | SDK の例外の文を出す | `APIStatusError` の文は、URL と本文を含む（`errors.rb:227`）。鍵・ヘッダ・本文を、画面とログに出さない |
+
+### `Gemfile.lock` の差分について
+
+`bundle install`（Bundler 4.0.18）で、`anthropic` と、その依存（`opentelemetry-api`、`standardwebhooks`）が足された。
+同時に、プラットフォームの指定の無い `nokogiri (1.19.7)`・`sqlite3 (2.10.2)` と `mini_portile2` の行が消えた。
+`PLATFORMS` の節は変わっていない（`ruby` は、もともと無い）。`Gemfile` を変えずに `bundle lock` を回したときは、差分は出なかった（実測）。
+消えた行が、どの環境でも要らないものかは、確かめていない。**合否は CI で決める。マージの前に、人間に見てほしい点**。
+
+### Red（実行して失敗を確かめた）
+
+```
+$ bundle exec rspec spec/lib/llm
+NameError:
+  uninitialized constant Llm::Adapters::Anthropic
+0 examples, 0 failures, 1 error occurred outside of examples
+```
+
+`settings_spec` の、anthropic の 2 例と、`queries_nl_spec` の理由の文の直しは、この実行では読み込みの失敗で走っていない。
+**個別の Red は取っていない**（実装のあと、Green だけを確かめた）。手順の乱れとして書く。
+
+### Green
+
+```
+$ bundle exec rspec spec/lib/llm
+40 examples, 0 failures
+$ bundle exec rspec spec/requests/queries_nl_spec.rb -e "オフのとき"
+4 examples, 0 failures
+```
+
+### 確かめていないこと
+
+- **実際の API は、1 回も呼んでいない**。偽のクライアントは、ソースで確かめた口（`messages.create` の引数、応答の項目）を写したもの。
+  実際の応答の形が、読んだソースのとおりかは、鍵が渡ったときに 1 回呼んで確かめる
+- どのモデルで、どのくらい正しく選択を作れるか（段 6 の測定）
+
 ## R5 OpenAI のアダプタ（2026-11-27。`skoba/anlage#238`。R-20261127-25 の 2）
 
 gem を足していない。外を呼んでいない。鍵は扱っていない（spec の鍵は、形だけの文字 `sk-not-a-real-key`）。
@@ -250,7 +321,7 @@ platform.openai.com/docs の各ページは、developers.openai.com/api に移�
 | O4 | 指示文の役 | `system` | `developer` | 文書は、新しいモデルには `developer` を勧める。`system` も一覧にある。同じ形の口を持つ道具が知っているのは `system`、という見込み（未確認）。実際のモデルで通るかは、鍵が渡ったときに確かめる |
 | O5 | エラーの本文 | 読まない（状態の番号だけ） | 本文の `error.message` を理由に出す | 本文の形を確かめられていない。本文に、鍵の一部が入りうる（「Incorrect API key provided: …」） |
 | O6 | spec の相手 | 開発機の中（127.0.0.1）に立てた、決まった応答を返すだけの TCP のサーバー | HTTP を横取りする gem／偽のクライアント | gem を足さない（計画書 6.1 節）。`Net::HTTP` で実際に送る本文とヘッダを確かめられる。外は呼ばない |
-| O7 | README | **この PR では直さない** | この PR で足す | README の「文で問う」の節は、PR #235（人間のマージ待ち）が足す。同じ場所に 2 つの PR が書くと競合する。PR #235 が入ったあと、docs のみの PR で、OpenAI の行を足す。それまでは `docs/nl-query.md` の節 |
+| O7 | README | この PR で足す（PR #235 が先に main に入ったので、main を取り込んでから、OpenAI の 1 文を足した） | PR #235 のマージを待って、別の PR で足す | はじめは、PR #235 と同じ場所で競合するので別の PR にするつもりだった。PR を開いたあと、PR #235 が人間のマージで入った（main `0779311`） |
 
 ### Red（実行して失敗を確かめた）
 

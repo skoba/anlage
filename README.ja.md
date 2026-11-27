@@ -111,6 +111,19 @@ docker exec -e ANLAGE_ALLOW_DEMO_RESET=1 anlage bin/rails demo:reset
 http://localhost:8080/ を開き（利用者名 `demo` とパスワードを入れる）、テンプレートの画面に OPT を取り込む。試しの OPT は
 [`spec/fixtures/opt/`](spec/fixtures/opt/)（出所は [`docs/demo/opt-catalog.md`](docs/demo/opt-catalog.md)）。
 
+**文で問う（LLM）は、既定でオフ。** クエリビルダーは、日本語の問いから、LLM で「表示する項目」と「条件」を選べる
+（AQL を組んで検査するのは Anlage）。外の API を呼ぶのは、次が**すべて**そろったときだけで（鍵だけではオンにならない）、
+呼び出すたびに費用がかかる:
+
+```sh
+  -e ANLAGE_LLM=anthropic -e ANLAGE_LLM_MODEL='<モデルの ID>' -e ANTHROPIC_API_KEY='<鍵>' \
+  -e ANLAGE_LLM_DAILY_CALL_LIMIT=100   # 任意。1 日に呼んでよい回数（既定 100）
+```
+
+API に送るのは、問いの文と、候補の項目の名前。記録の中身は送らない。anlage の画面には認証が無いので、オンにした Anlage に
+届く人は、だれでも、1 日の上限まで API を呼べる。どちらの会社に文が送られるかは `ANLAGE_LLM` で決まる: OpenAI を使うときは
+`ANLAGE_LLM=openai` と `OPENAI_API_KEY`（`ANTHROPIC_API_KEY` の代わり）。詳しくは [`docs/nl-query.md`](docs/nl-query.md)。
+
 #### API を Postman で試す
 
 [`docs/demo/postman/`](docs/demo/postman/) に、Postman のコレクション（v2.1）と環境の雛形がある。
