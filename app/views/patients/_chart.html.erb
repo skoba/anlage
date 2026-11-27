@@ -1,0 +1,92 @@
+<%# skoba/anlage#220: 患者の画面の部品（docs/design/u1-patient-chart-plan.md 1.3〜1.5。文言は docs/demo/ui-vocabulary.md）。
+    並びはプロブレムリスト → 経過 → 検査結果 → 依頼と紹介状。部品の無いものは出さない %>
+<% if chart.problems.any? %>
+  <% labels = problem_list_labels(chart.problems.first) %>
+  <section id="problem_list" class="card">
+    <h2>プロブレムリスト</h2>
+    <table class="data-table">
+      <thead><tr><% (labels + [ "記録日" ]).each do |label| %><th><%= label %></th><% end %></tr></thead>
+      <tbody>
+        <% chart.problems.each do |problem| %>
+          <tr>
+            <td><%= link_to problem.diagnosis, chart_record_path(patient, problem.record, originals) %></td>
+            <td><%= problem.certainty %></td>
+            <td><%= problem.onset %></td>
+            <td><%= recorded_date(problem.at) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% end %>
+
+<% if chart.series.any? %>
+  <section id="time_series" class="card">
+    <h2>経過</h2>
+    <% chart.series.each do |series| %>
+      <figure class="series">
+        <figcaption><%= "#{series.label}（#{series.template_id}、#{series.units}）" %></figcaption>
+        <%= series_chart(series.points, units: series.units, label: series.label) %>
+        <table class="data-table">
+          <thead><tr><th>記録日</th><th class="number">値</th></tr></thead>
+          <tbody>
+            <% series.points.each do |point| %>
+              <tr>
+                <td><%= link_to recorded_date(point.at), chart_record_path(patient, point.record, originals) %></td>
+                <td class="number"><%= point.value %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </figure>
+    <% end %>
+  </section>
+<% end %>
+
+<% if chart.lab_rows.any? %>
+  <% dates = chart.lab_rows.flat_map { |row| row.points.map { recorded_date(_1.at) } }.uniq.sort %>
+  <section id="lab_table" class="card">
+    <h2>検査結果</h2>
+    <table class="data-table">
+      <thead><tr><th>項目</th><% dates.each do |date| %><th class="number"><%= date %></th><% end %></tr></thead>
+      <tbody>
+        <% chart.lab_rows.each_with_index do |row, index| %>
+          <% by_date = row.points.group_by { recorded_date(_1.at) } %>
+          <tr>
+            <th scope="row">
+              <%= "#{row.name}（#{row.units}）" %>
+              <% if row.points.size >= 2 %> <a href="#lab_chart_<%= index %>" class="lab-chart-link">グラフ</a><% end %>
+            </th>
+            <% dates.each do |date| %>
+              <td class="number"><%= safe_join((by_date[date] || []).map { |point| link_to(point.value, chart_record_path(patient, point.record, originals)) }, "／") %></td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <% chart.lab_rows.each_with_index do |row, index| %>
+      <% next if row.points.size < 2 %>
+      <figure class="lab-chart" id="lab_chart_<%= index %>">
+        <figcaption><%= "#{row.name}（#{row.units}）" %></figcaption>
+        <%= series_chart(row.points, units: row.units, label: row.name) %>
+      </figure>
+    <% end %>
+  </section>
+<% end %>
+
+<% if chart.orders.any? %>
+  <section id="orders" class="card">
+    <h2>依頼と紹介状</h2>
+    <table class="data-table">
+      <thead><tr><th>記録日</th><th>テンプレート</th></tr></thead>
+      <tbody>
+        <% chart.orders.each do |order| %>
+          <tr>
+            <td><%= link_to recorded_date(order.at), chart_record_path(patient, order.record, originals) %></td>
+            <td><%= order.template_id %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </section>
+<% end %>

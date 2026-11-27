@@ -17,3 +17,15 @@ table.data-table th.number { text-align: right; }
 .button { display: inline-flex; align-items: center; height: 2.25rem; padding: 0 var(--space-4); border: 1px solid var(--color-accent);
           border-radius: var(--radius); background: #fff; color: var(--color-accent); font: inherit; text-decoration: none; cursor: pointer; }
 .button.primary { background: var(--color-accent); color: #fff; }
+
+/* 時系列の折れ線（skoba/anlage#220、ChartsHelper#series_chart） */
+svg.series-chart { display: block; width: 100%; max-width: 560px; height: auto; }
+svg.series-chart .series-axis { stroke: var(--color-border); }
+svg.series-chart .series-line { fill: none; stroke: var(--color-accent); stroke-width: 2; }
+svg.series-chart .series-point { fill: var(--color-accent); }
+svg.series-chart .series-label { fill: var(--color-muted); font-size: 11px; }
+figure.series { margin: 0 0 var(--space-6); }
+figure.series figcaption, figure.lab-chart figcaption { font-weight: bold; margin-bottom: var(--space-2); }
+/* 検査結果のグラフは、表の行の「グラフ」を押したとき（:target）だけ出す */
+figure.lab-chart { display: none; margin: var(--space-4) 0 0; }
+figure.lab-chart:target { display: block; }
