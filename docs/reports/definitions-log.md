@@ -51,3 +51,23 @@ cases の要素は `when` と `value`、または `else`。
 - サイクル 4（`rake definitions:lint`）: Red `spec/tasks/definitions_spec.rb` → `RuntimeError: Don't know how to build task 'definitions:lint'`（4 examples, 4 failures）。
   Green: `lib/tasks/definitions.rake`（`DIR=`、`FORMAT=json`、エラーがあれば終了コード 1、案だけなら 0）。4 examples, 0 failures
 - 手元の全 suite: 884 examples, 0 failures, 2 pending
+
+## R2（2026-11-27）D-2: `rake definitions:context`（`skoba/anlage#259`。R-20261127-21 の回答 3）
+
+### 自己承認した判断
+
+| 判断 | 採った案 | 捨てた案 | 根拠 |
+|---|---|---|---|
+| 項目のどのキーを写すか | allowlist: `name`・`label`・`rm_type`・`archetype_id`・`node_id`・`units` | 外すキーを並べる（denylist） | web_template の field には `code_bindings`・`code_list`・`code_labels`・`value_set_uri`・`terminology_id` がある（実測）。新しいキーが足されても漏れない |
+| アーキタイプの ID と at-code | 入れる | 入れない | 定義が参照するのはこれ（D3。`columns: [ at0002 ]`）。CKM の公開のモデルの識別子で、用語のコードでも記録でもない。裁定の「項目の名前」（`problem_diagnosis_at0002`）にも含まれている |
+| 選択肢の表示（`code_labels`） | 入れない | 入れる | 裁定の「入れてよいもの」に無い。値集合の中身に近い |
+| 例 | `docs/definitions/example/`（spec の組の写し。bundle と logic の注釈だけ直した）。例が検査を通ることを spec で確かめる | spec の fixture をそのまま材料にする | 材料が spec の置き場を指すのは不自然。例が古くなったら spec が落ちる |
+
+### 進行
+
+- サイクル 1（材料）: Red `spec/lib/definitions/context_spec.rb` → `NameError: uninitialized constant Definitions::Context`（No examples found）。
+  Green: `Definitions::Context`、`Definitions::Schema.to_json_schema`（検査器から書き出す写し）、`docs/definitions/example/`。5 examples, 0 failures。
+  防火壁の spec は、初期データ（demo_initial）を入れた状態で、bindings・コード・値集合・記録の値・患者と EHR の ID・OPT が材料に出ないことを見る
+- サイクル 2（`rake definitions:context`）: Red `spec/tasks/definitions_spec.rb` → `Don't know how to build task 'definitions:context'`（6 examples, 2 failures）。
+  Green: Markdown（既定）と JSON。定義の spec と合わせて 37 examples, 0 failures
+- 手元の全 suite: 930 examples, 0 failures, 2 pending

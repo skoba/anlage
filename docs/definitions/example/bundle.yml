@@ -1,0 +1,13 @@
+# 定義の組の例（docs/design/definition-layer-plan.md、skoba/anlage#259）。rake definitions:context が AI に渡す材料の「例」。
+# 参照は、初期データのテンプレート（LabResultReport、ProblemList、CardiologyEncounter、bmi_calculation）の field と at-code だけ
+bundle: clinic_example
+version: 0.1.0
+title: 定義の組の例
+templates:
+  - { template_id: LabResultReport }
+  - { template_id: ProblemList }
+  - { template_id: CardiologyEncounter }
+  - { template_id: bmi_calculation }
+screens: [ patient_chart, lab_entry ]
+logic: [ bmi_rules ]
+start: { screen: patient_chart }
