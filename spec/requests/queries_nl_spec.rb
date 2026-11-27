@@ -72,7 +72,7 @@ RSpec.describe "クエリビルダーの「文で問う」", type: :request do
       env.merge!("ANLAGE_LLM" => "anthropic", "ANTHROPIC_API_KEY" => "sk-ant-not-a-real-key")
 
       get "/queries/new"
-      expect(texts("#nl_query p")).to include("このアダプタは、まだ使えません（anthropic）。")
+      expect(texts("#nl_query p")).to include("モデルの名前（ANLAGE_LLM_MODEL）がありません。")
       expect(doc.at_css("#nl_query form")).to be_nil
       expect(response.body).not_to include("sk-ant")
     end
