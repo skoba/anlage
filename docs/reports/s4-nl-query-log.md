@@ -290,3 +290,20 @@ $ bundle exec rspec spec/requests/queries_nl_spec.rb -e "オフのとき"
 - **実際の API は、1 回も呼んでいない**。偽のクライアントは、ソースで確かめた口（`messages.create` の引数、応答の項目）を写したもの。
   実際の応答の形が、読んだソースのとおりかは、鍵が渡ったときに 1 回呼んで確かめる
 - どのモデルで、どのくらい正しく選択を作れるか（段 6 の測定）
+
+### 追記: 取っていなかった Red を、あとから確かめた（R-20261127-25 の 1）
+
+`app/lib/llm/settings.rb` から、anthropic をつなぐ 1 行を外し、`PLANNED` に anthropic を戻して、3 例が落ちることを確かめた。
+確かめたあと、実装を戻した（差分なし）。
+
+```
+$ bundle exec rspec spec/lib/llm/settings_spec.rb spec/requests/queries_nl_spec.rb -e "anthropic" -e "オンの設定があっても使えない"
+  1) Llm::Settings オフ anthropic で、鍵かモデルの名前が無いときはオフ。理由が付く。理由に鍵の値は出ない
+       expected: "API の鍵（ANTHROPIC_API_KEY）がありません。"
+            got: "このアダプタは、まだ使えません（anthropic）。"
+  2) Llm::Settings オン anthropic と、鍵と、モデルの名前がそろうと、オン。外に文を送るアダプタ
+       expected `#<Llm::Settings … @adapter=nil, @adapter_name="anthropic", @reason="このアダプタは、まだ使えません（anthropic）。", …>.on?` to be truthy, got false
+  3) クエリビルダーの「文で問う」 オフのとき（既定） オンの設定があっても使えないときは、オフで、理由が出る。鍵の値は出ない
+       expected [..., "このアダプタは、まだ使えません（anthropic）。"] to include "モデルの名前（ANLAGE_LLM_MODEL）がありません。"
+3 examples, 3 failures
+```
