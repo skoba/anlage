@@ -1,0 +1,20 @@
+<%# skoba/anlage#191: 記録の中身の入れ子（帳票の forms/_root_group と同じ並び）。値の無い項目と、項目の無い入れ子は出さない %>
+<% if record_group_filled?(node, values) %>
+  <fieldset class="root-group record-group">
+    <legend><%= node.label %></legend>
+    <% node.items.chunk_while { |a, b| !a.is_a?(Opt::FormLayout::Node) && !b.is_a?(Opt::FormLayout::Node) }.each do |run| %>
+      <% if run.first.is_a?(Opt::FormLayout::Node) %>
+        <% run.each do |child| %><%= render "compositions/record_group", node: child, values: values %><% end %>
+      <% else %>
+        <% shown = run.filter_map { |field| (value = record_field_value(field, values)) && [ field, value ] } %>
+        <% if shown.any? %>
+          <dl class="record-fields">
+            <% shown.each do |field, value| %>
+              <dt><%= field["label"] %></dt><dd><%= value %></dd>
+            <% end %>
+          </dl>
+        <% end %>
+      <% end %>
+    <% end %>
+  </fieldset>
+<% end %>
