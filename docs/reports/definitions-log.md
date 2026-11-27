@@ -92,3 +92,19 @@ cases の要素は `when` と `value`、または `else`。
 - サイクル 3（`rake definitions:diagram`）: Red `spec/tasks/definitions_spec.rb` → `Don't know how to build task 'definitions:diagram'`（8 examples, 2 failures）。
   Green: Mermaid のテキスト。エラーのある組は検査の結果だけを出して終了コード 1
 - 手元の全 suite（D-2 の上）: 938 examples, 0 failures, 2 pending
+
+## R4（2026-11-28）競合の印の regression pin（`skoba/anlage#263`。R-20261128-1 の「小さいこと」）
+
+- R3 の作業中に、終わっていないマージをコミットして（`5ccf342`）、この進行記録に競合の印が残った。`7518ca4` で消した
+- `spec/docs/conflict_markers_spec.rb`: `git grep -nIE '^(<<<<<<<|>>>>>>>)( |$)'` の結果が空であること。
+  `=======` は Markdown の見出しの下線と区別できないので見ない（自己承認: 裁定の文言も `<<<<<<<`・`>>>>>>>` の 2 つ）
+- Red: `5ccf342` を detached の worktree に出して、同じ spec を走らせた（1 example, 1 failure）
+
+  ```
+  競合の印が残っている:
+  docs/reports/definitions-log.md:73:<<<<<<< HEAD
+  docs/reports/definitions-log.md:96:>>>>>>> feat/259-definitions-context
+  ```
+
+  Red に使った worktree は、spec の写しを除いてから外した（`5ccf342` は origin/main の祖先）
+- Green: main（`1c25de1`）の上で `bundle exec rspec spec/docs/` → 4 examples, 0 failures
