@@ -290,3 +290,69 @@ $ bundle exec rspec spec/requests/queries_nl_spec.rb -e "オフのとき"
 - **実際の API は、1 回も呼んでいない**。偽のクライアントは、ソースで確かめた口（`messages.create` の引数、応答の項目）を写したもの。
   実際の応答の形が、読んだソースのとおりかは、鍵が渡ったときに 1 回呼んで確かめる
 - どのモデルで、どのくらい正しく選択を作れるか（段 6 の測定）
+
+## R5 OpenAI のアダプタ（2026-11-27。`skoba/anlage#238`。R-20261127-25 の 2）
+
+gem を足していない。外を呼んでいない。鍵は扱っていない（spec の鍵は、形だけの文字 `sk-not-a-real-key`）。
+
+### 確かめたこと（公式の文書。2026-11-27 に読んだ）
+
+platform.openai.com/docs の各ページは、developers.openai.com/api に移っていた。読んだのは移った先。
+
+| 何 | 出どころ | 中身 |
+|---|---|---|
+| 口 | developers.openai.com/api/reference/resources/chat | `post /chat/completions`。例は `https://api.openai.com/v1/chat/completions`、`Authorization: Bearer $OPENAI_API_KEY` |
+| 本文 | 同じ | `model`、`messages`（`system` と `developer` の役がある。「o1 とそれより新しいモデルでは、この目的には developer を使う」）、`max_tokens` は deprecated で `max_completion_tokens`（考える分を含む上限） |
+| 応答 | 同じ | `choices[0].message.content`（文字か null）、`message.refusal`、`finish_reason`（stop／length／tool_calls／content_filter）、`model`、`usage.prompt_tokens`・`completion_tokens` |
+| 状態 | developers.openai.com/api/docs/guides/error-codes | 401、429、500、503。**エラーの本文の形は、このページには無かった** |
+| モデルと値段 | developers.openai.com/api/docs/models、/pricing | 計画書 11.4 節の表 |
+| 公式の SDK | github.com/openai/openai-ruby の README、RubyGems | gem `openai` 1.3.0（作者 OpenAI）。`OpenAI::Client.new(api_key:)`、`openai.chat.completions.create(…)`、`base_url:` |
+
+- 文書を読んだのは、Web を取ってくる補助のエージェント。セッションは、その報告（引用つき）を読んだ。ページそのものは見ていない
+- SDK の gem は、入れていない。ソースは読んでいない（使わない案を採ったため）
+
+### 自己承認した判断
+
+| # | 判断 | 採った案 | 捨てた案 | 根拠 |
+|---|---|---|---|---|
+| O1 | 作り方 | 標準の HTTP（`Net::HTTP`）で Chat Completions を呼ぶ | 公式の SDK（gem `openai`） | 計画書 11.2 節の表。使う口が 1 つで小さい。gem を足さない。接続先を変えるだけで、同じ形の口を持つ手元のサーバーに届く |
+| O2 | 接続先を変える設定 | 入れる（`ANLAGE_LLM_BASE_URL`） | 段 5 まで入れない | R-20261127-25 の 2（5 と合わせて決めてよい）。段 5 の、アダプタを 1 つにする案の材料になる。手元の道具の公式の文書は、まだ読んでいない（段 5 で読む） |
+| O3 | 接続先の扱い | 開発機の中（127.0.0.1、localhost、::1）だけ「外に送らない」。それ以外は https だけを受ける | http の外の接続先も受ける | R-20261127-25 の 5（接続先が開発機の中のときだけ、外に送らないと表示する）。https の条件は裁定に無い（足した）: 鍵と問いの文を、平文で送らないため |
+| O4 | 指示文の役 | `system` | `developer` | 文書は、新しいモデルには `developer` を勧める。`system` も一覧にある。同じ形の口を持つ道具が知っているのは `system`、という見込み（未確認）。実際のモデルで通るかは、鍵が渡ったときに確かめる |
+| O5 | エラーの本文 | 読まない（状態の番号だけ） | 本文の `error.message` を理由に出す | 本文の形を確かめられていない。本文に、鍵の一部が入りうる（「Incorrect API key provided: …」） |
+| O6 | spec の相手 | 開発機の中（127.0.0.1）に立てた、決まった応答を返すだけの TCP のサーバー | HTTP を横取りする gem／偽のクライアント | gem を足さない（計画書 6.1 節）。`Net::HTTP` で実際に送る本文とヘッダを確かめられる。外は呼ばない |
+| O7 | README | この PR で足す（PR #235 が先に main に入ったので、main を取り込んでから、OpenAI の 1 文を足した） | PR #235 のマージを待って、別の PR で足す | はじめは、PR #235 と同じ場所で競合するので別の PR にするつもりだった。PR を開いたあと、PR #235 が人間のマージで入った（main `0779311`） |
+
+### Red（実行して失敗を確かめた）
+
+```
+$ bundle exec rspec spec/lib/llm
+NameError:
+  uninitialized constant Llm::Adapters::Openai
+0 examples, 0 failures, 1 error occurred outside of examples
+```
+
+アダプタを書いたあと、設定（`Llm::Settings`）につなぐ前に:
+
+```
+  1) Llm::Settings openai（R-20261127-25） openai と、OpenAI の鍵と、モデルの名前がそろうと、オン。外に文を送るアダプタ
+       expected `#<Llm::Settings … @adapter=nil, @adapter_name="openai", @reason="知らないアダプタの名前です（openai）。", …>.on?` to be truthy, got false
+  2) Llm::Settings openai（R-20261127-25） openai で、鍵かモデルの名前が無いときはオフ。理由が付く
+       expected: "API の鍵（OPENAI_API_KEY）がありません。"
+            got: "知らないアダプタの名前です（openai）。"
+42 examples, 2 failures
+```
+
+アダプタの spec（17 例）は、実装の 1 回めで通った。個々の例を、落ちる状態から確かめてはいない。
+
+### Green
+
+```
+$ bundle exec rspec spec/lib/llm
+42 examples, 0 failures
+```
+
+### 確かめていないこと
+
+- **実際の OpenAI の API は、1 回も呼んでいない**。応答の形は、文書の記述を写したもの
+- `system` の役が、いまのモデルで通るか。`max_completion_tokens` を、同じ形の口を持つ手元の道具が知っているか

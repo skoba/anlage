@@ -121,7 +121,8 @@ http://localhost:8080/ を開き（利用者名 `demo` とパスワードを入�
 ```
 
 API に送るのは、問いの文と、候補の項目の名前。記録の中身は送らない。anlage の画面には認証が無いので、オンにした Anlage に
-届く人は、だれでも、1 日の上限まで API を呼べる。詳しくは [`docs/nl-query.md`](docs/nl-query.md)。
+届く人は、だれでも、1 日の上限まで API を呼べる。どちらの会社に文が送られるかは `ANLAGE_LLM` で決まる: OpenAI を使うときは
+`ANLAGE_LLM=openai` と `OPENAI_API_KEY`（`ANTHROPIC_API_KEY` の代わり）。詳しくは [`docs/nl-query.md`](docs/nl-query.md)。
 
 #### API を Postman で試す
 
