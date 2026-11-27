@@ -71,6 +71,18 @@ RSpec.describe NlQuery::Prompt do
     end
   end
 
+  describe "#json_schema（選択の形。出力の形を縛れるアダプタに渡す）" do
+    it "columns と conditions が要る、JSON のオブジェクト。問いやカードによらず同じ" do
+      schema = prompt.json_schema
+
+      expect(schema[:type]).to eq("object")
+      expect(schema[:required]).to eq(%w[columns conditions])
+      expect(schema[:properties].keys).to eq(%i[columns conditions order template_id across_versions reason])
+      expect(schema[:properties][:columns]).to eq(type: "array", items: { type: "integer" })
+      expect(described_class.new(question: "別の問い", cards: [ systolic ]).json_schema).to eq(schema)
+    end
+  end
+
   describe "#sha256" do
     it "同じ入力から、いつも同じ文ができる" do
       again = described_class.new(question: "診断確度が「疑い」の傷病名", cards: candidates)

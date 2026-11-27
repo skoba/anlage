@@ -58,7 +58,8 @@ module Llm
       def external? = !self.class.local?(@uri)
       def inspect = "#<#{self.class.name} model=#{@model.inspect} base_url=#{@base_url.inspect}>"
 
-      def complete(instructions:, input:)
+      # json_schema（出力の形）は受けるだけで、まだ使わない（response_format で縛れるかは、鍵が渡ったときに確かめる。R-20261127-29）
+      def complete(instructions:, input:, json_schema: nil)
         status, body = post(model: @model, max_completion_tokens: MAX_TOKENS,
                             messages: [ { role: "system", content: instructions }, { role: "user", content: input } ])
         raise Error, status_failure(status) unless status == 200

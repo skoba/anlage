@@ -14,7 +14,8 @@ module Llm
       def name = "recorded"
       def external? = false
 
-      def complete(instructions:, input:)
+      # json_schema（出力の形）は受けるだけで、使わない。記録の鍵は、指示文と入力
+      def complete(instructions:, input:, json_schema: nil)
         sha256 = Llm.fingerprint(instructions: instructions, input: input)
         path = @dir.join("#{sha256}.json")
         raise Error, "記録が無い（#{sha256[0, 12]}）" unless path.file?
