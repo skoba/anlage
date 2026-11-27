@@ -1,7 +1,7 @@
 module Opt
   # config/form_behaviors.yml の式の評価器（skoba/anlage#47 変更 4）。安全サブセット（四則・累乗・round・比較）だけを
-  # 再帰下降で読む（eval しない。トークン集合は閉じている）。GDL2 は全面採用しない（R-20261127-10）。Anlage 独自の
-  # 軽い定義のまま育てる（docs/design/u1-patient-chart-plan.md 4 節）。クライアント側の写しは app/javascript/controllers/form_behaviors_controller.js。
+  # 再帰下降で読む（eval しない。トークン集合は閉じている）。いまは YAML の軽い定義を優先し、GDL2 が普及した時点で
+  # 乗り換える（R-20261127-16。条件は docs/ideas-2027.md）。クライアント側の写しは app/javascript/controllers/form_behaviors_controller.js。
   #
   #   comparison := additive (("<" | "<=" | ">" | ">=" | "==" | "!=") additive)?
   #   additive   := term (("+" | "-") term)*

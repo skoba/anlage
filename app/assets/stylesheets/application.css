@@ -6,7 +6,8 @@
  * cascading order, meaning styles declared later in the document or manifest will override earlier ones,
  * depending on specificity.
  *
- * Consider organizing styles into separate files for maintainability.
+ * 色と余白は tokens.css の変数、表・カード・ボタンは components.css（skoba/anlage#218、docs/design/visual-guidelines.md）。
+ * このファイルは画面ごとの配置
  */
 
 /* skoba/anlage#47 変更 2: 取り込み画面の最低限のスタイル（デザインはしない） */
@@ -34,7 +35,7 @@
 }
 
 .template-card {
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   padding: 0.5rem 1rem;
   margin: 0.5rem 0;
 }
@@ -42,7 +43,7 @@
 
 /* skoba/anlage#64: アーキタイプパスは等幅、長ければ折り返す（1280×720 で横スクロールを出さない） */
 .pathcard code.archetype-path {
-  font-family: monospace;
+  font-family: var(--font-mono);
   overflow-wrap: anywhere;
 }
 
@@ -51,8 +52,8 @@ body {
   display: flex;
   align-items: flex-start;
   margin: 0;
-  font-family: system-ui, sans-serif;
-  color: #222;
+  font-family: var(--font-body);
+  color: var(--color-text);
 }
 
 #app_nav {
@@ -60,15 +61,15 @@ body {
   box-sizing: border-box;
   min-height: 100vh;
   padding: 1rem 0.75rem;
-  border-right: 1px solid #ccc;
-  background: #f3f4f6;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 /* skoba/anlage#162: 参照実装の警告。ナビの先頭に、地の色を変えて出す */
 #reference_warning {
   margin: 0 0 1rem;
   padding: 0.5rem;
-  border: 1px solid #b45309;
+  border: 1px solid var(--color-warning);
   background: #fef3c7;
   color: #7c2d12;
   font-size: 0.8rem;
@@ -85,7 +86,7 @@ body {
 #app_nav a[aria-current="page"] {
   font-weight: bold;
   background: #fff;
-  border-left: 3px solid #2563eb;
+  border-left: 3px solid var(--color-accent);
 }
 
 #workspace {
@@ -98,15 +99,15 @@ body {
 /* engine の画面（AQL 照会など）が前提にするスタイル。openehr-rails 0.8.0 の layout から写した */
 .openehr-engine h1 { font-size: 1.4rem; }
 .openehr-engine table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
-.openehr-engine th, .openehr-engine td { border: 1px solid #ccc; padding: .5rem .75rem; text-align: left; }
-.openehr-engine th { background: #f3f4f6; }
+.openehr-engine th, .openehr-engine td { border: 1px solid var(--color-border); padding: .5rem .75rem; text-align: left; }
+.openehr-engine th { background: var(--color-surface); }
 .openehr-engine .notice { background: #ecfdf5; border: 1px solid #34d399; padding: .5rem .75rem; border-radius: 4px; }
 .openehr-engine .alert { background: #fef2f2; border: 1px solid #f87171; padding: .5rem .75rem; border-radius: 4px; }
 .openehr-engine details pre { background: #f8f9fa; padding: .75rem; overflow-x: auto; font-size: .85rem; }
 
 /* skoba/anlage#100: 版差分の path は等幅、長ければ折り返す（1280×720 で横スクロールを出さない） */
 code.archetype-path {
-  font-family: monospace;
+  font-family: var(--font-mono);
   overflow-wrap: anywhere;
 }
 
@@ -115,7 +116,7 @@ fieldset.root-group {
   min-width: 0;
   margin: 0.5rem 0;
   padding: 0.25rem 0.75rem 0.5rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
 }
 
 fieldset.root-group fieldset.root-group {
@@ -135,24 +136,24 @@ fieldset.root-group select {
 
 /* クエリビルダー（docs/design/s2-query-builder-plan.md 6.4）: AQL は等幅で折り返す。結果は罫線つきの表。配置まで */
 #query_aql pre {
-  font-family: monospace;
+  font-family: var(--font-mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   background: #f8f9fa;
   padding: 0.75rem;
 }
 #query_result table { border-collapse: collapse; }
-#query_result th, #query_result td { border: 1px solid #ccc; padding: 0.4rem 0.75rem; text-align: left; }
-#query_result th { background: #f3f4f6; }
-.query-error, .lint-error { color: #b91c1c; }
+#query_result th, #query_result td { border: 1px solid var(--color-border); padding: 0.4rem 0.75rem; text-align: left; }
+#query_result th { background: var(--color-surface); }
+.query-error, .lint-error { color: var(--color-danger); }
 .alias-reason { margin: 0.25rem 0; font-size: 0.875rem; color: #1d4ed8; }
 #query_conditions .connector { display: inline-block; margin-right: 0.5rem; font-weight: 600; }
-#query_candidates .pathcard { border: 1px solid #ccc; padding: 0.25rem 1rem 0.75rem; margin: 0.5rem 0; overflow-wrap: anywhere; }
+#query_candidates .pathcard { border: 1px solid var(--color-border); padding: 0.25rem 1rem 0.75rem; margin: 0.5rem 0; overflow-wrap: anywhere; }
 
 /* skoba/anlage#134: ナビの下のいまの患者 */
 #current_patient {
   margin-top: 1rem;
   padding-top: 0.75rem;
-  border-top: 1px solid #ccc;
+  border-top: 1px solid var(--color-border);
   font-size: 0.9rem;
 }

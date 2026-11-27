@@ -1,0 +1,21 @@
+/* 見た目の基準の変数（skoba/anlage#218、docs/design/visual-guidelines.md）。色・余白・文字はここだけで決める。
+ * 明るい配色だけ（暗い配色は範囲の外）。部品のファイルは、色を直に書かず、この変数を使う */
+:root {
+  --color-text: #222;
+  --color-muted: #6b7280;
+  --color-border: #ccc;
+  --color-surface: #f3f4f6;
+  --color-accent: #2563eb;
+  --color-danger: #b91c1c;
+  --color-warning: #b45309;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+
+  --radius: 6px;
+  --font-body: system-ui, sans-serif;
+  --font-mono: monospace;
+}

@@ -1,1 +1,1 @@
-- Docs: 「GDL2 に差し替える」記述を、GDL2 は全面採用せず Anlage 独自の軽い定義で進める方針に直した（`docs/ideas-2027.md`、既知の制限 11、`config/form_behaviors.yml` と `app/lib/opt/formula.rb` の注釈）（Refs R-20261127-10）。利用者に見える変更ではない（文書と注釈だけ）
+- Docs: 帳票のロジックの方針を文書と注釈に書いた: いまは YAML の軽い定義を優先し、GDL2 が普及した時点で乗り換える（乗り換えの条件: 主な実装が採用し、定義を持ち運ぶ相手ができたとき）。以前の「GDL2 に差し替える」記述を改めた（`docs/ideas-2027.md`、既知の制限 11、`config/form_behaviors.yml` と `app/lib/opt/formula.rb` の注釈）（Refs R-20261127-10、Refs R-20261127-16）。利用者に見える変更ではない（文書と注釈だけ）
