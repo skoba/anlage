@@ -5,7 +5,7 @@ Anlage は openEHR の参照実装である。値は合成で、患者は架空�
 ## v0.2.0（2026-11-27）
 
 前の版はタグ `v0.1.0-jcmi46`（2026-11-18、医療情報学連合大会のチュートリアルで動いた版）。
-この節は、`changelog.d/` の断片（PR ごとの変更履歴）をまとめたもの。依存は openehr 2.6.1、openehr-rails 0.11.0、Ruby 4.0.10。
+この節は、`changelog.d/` の断片（PR ごとの変更履歴）と、断片の運用の前に入った変更（#65、#73）をまとめたもの。依存は openehr 2.6.1、openehr-rails 0.11.0、Ruby 4.0.10。
 
 ### 利用者に見える変更
 
@@ -67,12 +67,16 @@ Anlage は openEHR の参照実装である。値は合成で、患者は架空�
 
 - openehr 2.4.3 → 2.6.1、openehr-rails 0.8.0 → 0.11.0（#90、#111、#146、#177）、Ruby 4.0.7 → 4.0.10。AQL でコード値・イベント時刻・name 述語・
   template_id に届き、削除した記録が AQL から外れる（既知の制限 13・18 の解消）
+- セキュリティの勧告（bundler-audit。15 gem・60 件）を解消するため、依存を更新した: addressable、bootsnap、crass、loofah、msgpack、net-ssh、
+  nokogiri、puma、rack、rails、rails-html-sanitizer、rspec-rails、selenium-webdriver、solid_queue、sqlite3（#65。記録は `docs/reports/security-updates-log.md`）
 
 ### 開発者向けの変更（画面・保存・API は変わらない）
 
 - 評価 v2（`rake evaluation:run`。card と aql の 2 種の問い、レビュー済みのゴールド、S2 の経路、版をまたぐ問い、負例だけの問い）。
   まとめは `docs/evaluation-summary.md`
 - AQL のリンタ `QueryBuilder::Linter`
+- 実ブラウザの spec が Chrome 158 で落ちる件（Capybara 3.40.0 の後始末が origin `*` を送る）のつなぎ: `spec/support/capybara_chrome_storage_reset.rb`。
+  CI に Chrome と chromedriver の版を出す（#73。つなぎを消す条件は #74）
 - テンプレートの用語を openehr 2.5.0 の `CArchetypeRoot#term_definitions` から取り、XML の読み直し（`Opt::TemplateTerms`）を撤去した（#104）
 
 ### 文書
