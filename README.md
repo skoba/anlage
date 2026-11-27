@@ -97,7 +97,7 @@ The user interface is in Japanese only (known limitation 5).
 ## Status
 
 - Released: [v0.2.0](https://github.com/skoba/anlage/releases/tag/v0.2.0) (2026-11-27). Changes: [`CHANGELOG.md`](CHANGELOG.md)
-- Dependencies: openehr 2.6.1, openehr-rails 0.11.0, Ruby 4.0.10
+- Dependencies: openehr 2.6.1, openehr-rails 0.12.0, Ruby 4.0.10
 - Good first issues: [label `good first issue`](https://github.com/skoba/anlage/labels/good%20first%20issue)
 - Progress logs and design documents (in Japanese): [`docs/reports/`](docs/reports/), [`docs/design/`](docs/design/)
 

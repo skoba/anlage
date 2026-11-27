@@ -146,7 +146,7 @@ Anlage には利用者の登録とログインが無い。環境変数で利用�
 - 受け入れ: 台本 [`docs/demo/acceptance-v0.2.0.md`](docs/demo/acceptance-v0.2.0.md) を人間が画面で通した（2026-11-27）。
   指摘の 3 点（記録の中身、EHR ID を写す、Postman）を入れたあと、変わる行をまっさらな Docker で通し直した
   （[`docs/reports/acceptance-v0.2.0-log.md`](docs/reports/acceptance-v0.2.0-log.md) R3・R4）
-- 依存: openehr 2.6.1／openehr-rails 0.11.0、Ruby 4.0.10
+- 依存: openehr 2.6.1／openehr-rails 0.12.0、Ruby 4.0.10
 - できないこと: [`docs/known-limitations.md`](docs/known-limitations.md)（**認証と認可が無い**。実在の患者のデータを入れない）
 - **次**: good first issue の起票（`docs/reports/v0.2.0-prep-log.md` の候補 G1〜G7）。患者 ID から EHR を引く入口と、
   問いを入れた AQL の画面（openehr-rails の次の版）が出たら、「この患者の記録を AQL で引く」リンクを足す

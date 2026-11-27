@@ -188,7 +188,8 @@ class Template < ApplicationRecord
   #   units_list: 数量でない field は空（gem は nil）
   def self.serialize_entry(entry, instance_terms = {}, terms = {}, element_roots = nil)
     fields = (entry[:fields] || []).map do |field|
-      field = field.stringify_keys
+      # openehr-rails 0.12.0 の field の root_chain・root_label（gem の形）は持ち込まない。anlage の形で下で組む（R-20261127-9）
+      field = field.stringify_keys.except("root_chain", "root_label")
       element = element_roots&.fetch(field["path"], nil)&.at(field["instance_index"].to_i)
       instance_label = instance_terms.dig(field["node_id"], "text") if field["archetype_id"] == entry[:archetype_id]
       field["label"] = instance_label if instance_label.present?

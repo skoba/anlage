@@ -222,7 +222,7 @@ GEM
       rdoc
       treetop
       xml-simple
-    openehr-rails (0.11.0)
+    openehr-rails (0.12.0)
       nokogiri (>= 1.10)
       openehr (~> 2.6, >= 2.6.1)
       rails (>= 7.0, < 9.0)
@@ -542,7 +542,7 @@ CHECKSUMS
   nokogiri (1.19.7-x86_64-linux-gnu) sha256=25865ccb462f714e712fdf8906fde07849cb6704a808e3d629d75baa5af5dd3b
   nokogiri (1.19.7-x86_64-linux-musl) sha256=464d1f3dfb0d53cf54c0c6a7e23e8e91cf68ec3cafc2b27dc4a7682f2d9bf546
   openehr (2.6.1) sha256=6e081ff2360b87acfbcfdd2a54fdd4f7fd592784fc2906132889ed80a1e194fe
-  openehr-rails (0.11.0) sha256=da575cb146a1a3c658d75353652fe8abe5815ac8910bb58d8d45fd869eb9506e
+  openehr-rails (0.12.0) sha256=86cda1aea7d0acd0bcab4b6ac6de00318f844cbabfd6ffbd1ebdcda46afac372
   ostruct (0.6.3) sha256=95a2ed4a4bd1d190784e666b47b2d3f078e4a9efda2fccf18f84ddc6538ed912
   parallel (2.1.0) sha256=b35258865c2e31134c5ecb708beaaf6772adf9d5efae28e93e99260877b09356
   parser (3.3.12.0) sha256=21a6d7f755d5a24dfbdc6e6b772e4e879a52e7631a88bc5a3a134606052c9828

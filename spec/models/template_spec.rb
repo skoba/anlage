@@ -284,3 +284,25 @@ RSpec.describe Template, "R-20261125-1 field の入れ物" do
       .not_to eq(containers_of("jp_referral.opt", "organisation_at0001_2").last)
   end
 end
+
+# openehr-rails 0.12.0 の FieldExtractor は、field に root_chain（[[root_path, 出現順], ...]）と root_label を出す（gem の #61・#69）。
+# anlage の web_template の root_chain は、anlage が組む形（{"archetype_id","index","label"} の並び。entry より奥の
+# 埋め込みルートだけ）で、帳票の入れ子（Opt::FormLayout）と builder が使う。gem の同名の鍵は持ち込まない（R-20261127-9 の作業列 3）
+RSpec.describe Template, "root_chain は anlage の形（gem の同名の鍵を持ち込まない）" do
+  def fields_of(name) = Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{name}").read).fields
+
+  it "埋め込みルートの無い field（CardiologyEncounter の収縮期）は root_chain と root_label を持たない" do
+    field = fields_of("CardiologyEncounter.opt").find { _1["name"] == "blood_pressure_at0004" }
+
+    expect(field).not_to have_key("root_chain")
+    expect(field).not_to have_key("root_label")
+  end
+
+  it "埋め込みルートの下の field（紹介先医療機関の名称）は、anlage の形の root_chain を持つ" do
+    field = fields_of("jp_referral.opt").find { _1["name"] == "organisation_at0001_2" }
+
+    expect(field["root_chain"]).to all(be_a(Hash))
+    expect(field["root_chain"].map { _1["label"] }).to eq([ "紹介先医療機関" ])
+    expect(field["root_label"]).to eq("紹介先医療機関")
+  end
+end
