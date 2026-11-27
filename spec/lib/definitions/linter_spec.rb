@@ -3,15 +3,13 @@ require "rails_helper"
 # 定義の組（ディレクトリ）の検査（docs/design/definition-layer-plan.md 2.2・5 節の D-1、skoba/anlage#257）。
 # 知識源は登録済みのテンプレートだけ（実物の OPT: spec/fixtures/opt）。組は spec/fixtures/definitions/clinic を写して一部を書き換える
 RSpec.describe Definitions::Linter do
-  FIXTURE = Rails.root.join("spec/fixtures/definitions/clinic")
-
   before do
     %w[LabResultReport ProblemList CardiologyEncounter bmi_calculation].each do |name|
       Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/#{name}.opt").read).save!
     end
   end
 
-  let(:dir) { Pathname(Dir.mktmpdir).join("clinic").tap { FileUtils.cp_r(FIXTURE, _1) } }
+  let(:dir) { Pathname(Dir.mktmpdir).join("clinic").tap { FileUtils.cp_r(Rails.root.join("spec/fixtures/definitions/clinic"), _1) } }
 
   after { FileUtils.remove_entry(dir.dirname) }
 
