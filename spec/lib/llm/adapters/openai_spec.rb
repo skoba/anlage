@@ -1,5 +1,5 @@
 require "rails_helper"
-require "socket"
+require "support/canned_http_server"
 
 # OpenAI の Chat Completions の口のアダプタ（docs/design/s4-nl-aql-plan.md 11 節。R-20261127-25）。文を送って、文を受け取るだけ。
 # gem を足さず、標準の Net::HTTP で呼ぶ。spec は、外を呼ばない: 開発機の中（127.0.0.1）に立てた、決まった応答を返すだけの
@@ -7,29 +7,10 @@ require "socket"
 RSpec.describe Llm::Adapters::Openai do
   KEY = "sk-not-a-real-key".freeze
 
-  # 1 回の要求を受けて、決まった応答を返す。受けた要求（最初の行、ヘッダ、本文）を requests にためる
-  def serve(status: 200, body: "{}", delay: 0)
-    server = TCPServer.new("127.0.0.1", 0)
-    requests = []
-    thread = Thread.new do
-      client = server.accept
-      head = +""
-      head << client.readpartial(4096) until head.include?("\r\n\r\n")
-      header, rest = head.split("\r\n\r\n", 2)
-      length = header[/content-length: (\d+)/i, 1].to_i
-      rest << client.readpartial(4096) while rest.bytesize < length
-      requests << { line: header.lines.first.strip, header: header, body: JSON.parse(rest.force_encoding("UTF-8")) }
-      sleep delay
-      client.write("HTTP/1.1 #{status} X\r\nContent-Type: application/json\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
-      client.close
-    rescue IOError, SystemCallError
-      nil
-    end
-    yield "http://127.0.0.1:#{server.addr[1]}/v1", requests
-  ensure
-    thread&.join(2)
-    server&.close
-  end
+  include CannedHttpServer
+
+  # OpenAI の口は、接続先の下の /v1 に置く
+  def serve(**options, &block) = super(path: "/v1", **options, &block)
 
   def adapter(base_url, **options)
     described_class.new(model: "the-model", api_key: KEY, base_url: base_url, **options)
@@ -105,9 +86,7 @@ RSpec.describe Llm::Adapters::Openai do
       end
 
       it "つながらない（接続先に、だれもいない）" do
-        port = TCPServer.open("127.0.0.1", 0) { |server| server.addr[1] }
-
-        expect(failure("http://127.0.0.1:#{port}/v1")).to eq("API に、つながりませんでした。")
+        expect(failure("http://127.0.0.1:#{closed_port}/v1")).to eq("API に、つながりませんでした。")
       end
     end
   end
