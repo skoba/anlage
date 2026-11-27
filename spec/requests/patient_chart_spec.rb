@@ -26,7 +26,7 @@ RSpec.describe "患者の画面の部品", type: :request do
     series = card("time_series").css("figure.series").find { _1.at_css("figcaption").text.start_with?("収縮期") }
     expect(series.at_css("figcaption").text).to eq("収縮期（CardiologyEncounter、mm[Hg]）")
     expect(series.css("svg.series-chart circle").size).to eq(4)
-    expect(series.css("table tbody td.number").map(&:text)).to eq(%w[148.0 152.0 138.0 134.0])
+    expect(series.css("table tbody td.number").map(&:text)).to eq(%w[148 152 138 134])
   end
 
   it "時系列: 1 点だけの系列は表だけ（SVG を描かない）" do
@@ -46,6 +46,67 @@ RSpec.describe "患者の画面の部品", type: :request do
     expect(rows["HbA1c（%）"]).to eq(%w[8.1 7.6 7.2])
     expect(rows["クレアチニン（mg/dL）"]).to eq([ "1.32", "", "1.45" ])
     expect(card("lab_table").css(".lab-chart svg.series-chart").size).to eq(3)
+  end
+
+  describe "日付と数値（skoba/anlage#250、R-20261127-20）" do
+    let(:ehr) { OpenehrRails::Rm::Ehr.find_by!(subject_id: "DEMO-02") }
+    let(:lab) { Template.active.find_by!(template_id: "LabResultReport") }
+
+    def save_lab(name, value, units, at)
+      Opt::RmCompositionCommitter.call(lab, { "laboratory_test_result_at0005" => "血液検査", "laboratory_test_analyte_at0024" => name,
+                                              "laboratory_test_analyte_at0001" => value, "laboratory_test_analyte_at0001__units" => units },
+                                       ehr:, recorded_at: at)
+    end
+
+    def lab_cells(name)
+      table = card("lab_table").at_css("table.data-table")
+      dates = table.css("thead th").map(&:text).drop(1)
+      row = table.css("tbody tr").find { _1.at_css("th").text.sub("グラフ", "").strip == name }
+      dates.zip(row.css("td").map(&:text)).to_h.reject { |_date, text| text.empty? } # DEMO-02 のほかの日付の列は空
+    end
+
+    it "日本時間の朝 9 時より前（UTC では前の日）の検査は、日本時間のその日の列に出る（regression pin。既知の制限 5b）" do
+      save_lab("試験項目甲", "5.5", "mmol/L", Time.utc(2026, 3, 1, 23, 30))
+
+      show("DEMO-02")
+
+      expect(lab_cells("試験項目甲（mmol/L）")).to eq("2026-03-02" => "5.5")
+    end
+
+    it "同じ日に 2 件あると、1 つの欄に、時刻の順で「／」で並ぶ（保存の順ではない）" do
+      save_lab("試験項目乙", "6.5", "mmol/L", Time.utc(2026, 3, 2, 6, 0))
+      save_lab("試験項目乙", "4.5", "mmol/L", Time.utc(2026, 3, 2, 1, 0))
+
+      show("DEMO-02")
+
+      expect(lab_cells("試験項目乙（mmol/L）")).to eq("2026-03-02" => "4.5／6.5")
+    end
+
+    # 裁定の前提（Opt::RecordedTime が nil を返し、記録の開始時刻に置き換わる）は、openehr-rails 0.12.0 では成り立たない（実測）:
+    # 日までの値は、保存のときに gem が 00:00Z を補う。月までの値は、保存で例外（openehr-rails#109）。既知の制限 23
+    it "イベントの時刻が日までの値の記録は、gem が 00:00Z を補って保存し、その日の列に出る（既知の制限 23）" do
+      Opt::RmCompositionCommitter.call(lab, { "laboratory_test_result_at0005" => "血液検査", "laboratory_test_analyte_at0024" => "試験項目丁",
+                                              "laboratory_test_analyte_at0001" => "3.5", "laboratory_test_analyte_at0001__units" => "mmol/L" },
+                                       ehr:, recorded_at: Time.utc(2026, 3, 9, 1, 0)) do |canonical|
+        canonical["content"].first["data"]["events"].first["time"]["value"] = "2026-03-01"
+      end
+
+      show("DEMO-02")
+
+      expect(response).to have_http_status(:ok)
+      expect(lab_cells("試験項目丁（mmol/L）")).to eq("2026-03-01" => "3.5")
+    end
+
+    it "整数の値に小数点を付けない。グラフの軸の文字も同じ" do
+      save_lab("試験項目丙", "120", "mg/dL", Time.utc(2026, 3, 2, 1, 0))
+      save_lab("試験項目丙", "130", "mg/dL", Time.utc(2026, 3, 9, 1, 0))
+
+      show("DEMO-02")
+
+      expect(lab_cells("試験項目丙（mg/dL）").values).to eq(%w[120 130])
+      figure = card("lab_table").css("figure.lab-chart").find { _1.at_css("figcaption").text == "試験項目丙（mg/dL）" }
+      expect(figure.css("text.series-label").map(&:text).first(2)).to eq(%w[130 120])
+    end
   end
 
   it "検査結果の時系列表: DEMO-07 は 5 行、各 1 点なのでグラフは無い" do

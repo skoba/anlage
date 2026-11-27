@@ -20,7 +20,8 @@ module Opt
     class InvalidComposition < StandardError; end
 
     # display: true のときは、DV_CODED_TEXT を記録の表示の文字（value）で返す（患者の画面、skoba/anlage#219）。
-    # 既定（false）はコード（修正の帳票に入れる値）
+    # 数量は精度を作らない表示の文字（Opt::QuantityDisplay、skoba/anlage#250）。
+    # 既定（false）はコードと magnitude の文字（修正の帳票に入れる値）
     def self.call(template, json, display: false)
       new(template, json, display:).call
     end
@@ -85,7 +86,8 @@ module Opt
         # coded_free は DV_TEXT として保存される（#33 裁定 A）。保存されている値の型で読む（skoba/anlage#82）
         dv["_type"] == "DV_TEXT" || @display ? dv["value"].to_s : dv.dig("defining_code", "code_string")
       when "DV_QUANTITY", "DV_COUNT"
-        dv["magnitude"].to_s
+        # display: true は精度を作らない表示（skoba/anlage#250）。既定は修正の帳票に入れる magnitude の文字
+        @display ? Opt::QuantityDisplay.format(dv["magnitude"], dv["precision"]) : dv["magnitude"].to_s
       else
         dv["value"].to_s
       end

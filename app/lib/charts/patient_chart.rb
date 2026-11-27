@@ -5,7 +5,8 @@ module Charts
   # テンプレートが未登録・読み戻せない・部品の無い記録は others（記録の一覧）に入れる。
   class PatientChart
     Result = Struct.new(:problems, :series, :lab_rows, :orders, :others, keyword_init: true)
-    Point = Struct.new(:at, :value, :units, :record, keyword_init: true)
+    # value は数（グラフの座標）、display は表示の文字（精度を作らない。Opt::QuantityDisplay、skoba/anlage#250）
+    Point = Struct.new(:at, :value, :display, :units, :record, keyword_init: true)
     Series = Struct.new(:template_id, :field_name, :label, :units, :points, keyword_init: true)
     LabRow = Struct.new(:template_id, :name, :units, :points, keyword_init: true)
     Problem = Struct.new(:record, :at, :template_id, :diagnosis, :certainty, :onset, keyword_init: true)
@@ -81,7 +82,7 @@ module Charts
           units = reading.values["#{field['name']}__units"].presence || field["units"]
           key = [ component.template_id, field["name"], units ]
           groups[key] ||= Series.new(template_id: component.template_id, field_name: field["name"], label: field["label"], units:, points: [])
-          groups[key].points << Point.new(at: reading.at, value: value.to_f, units:, record: reading.record)
+          groups[key].points << Point.new(at: reading.at, value: value.to_f, display: reading.displays[field["name"]], units:, record: reading.record)
         end
       end
       groups.values.sort_by { |series| [ template_order(series.template_id), field_order(series), series.units.to_s ] }
@@ -100,7 +101,8 @@ module Charts
           units = reading.values["#{value_field['name']}__units"].presence || value_field["units"]
           key = [ component.template_id, name, units ]
           rows[key] ||= LabRow.new(template_id: component.template_id, name:, units:, points: [])
-          rows[key].points << Point.new(at: reading.at, value: value.to_f, units:, record: reading.record)
+          rows[key].points << Point.new(at: reading.at, value: value.to_f, display: reading.displays[value_field["name"]], units:,
+                                        record: reading.record)
         end
       end
       rows.values.sort_by { |row| [ template_order(row.template_id), row.points.first.at || Time.at(0), row.points.first.record.id ] }

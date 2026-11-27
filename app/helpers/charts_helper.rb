@@ -20,8 +20,8 @@ module ChartsHelper
         axis_lines,
         content_tag(:polyline, nil, points: coords.map { _1.join(",") }.join(" "), class: "series-line"),
         safe_join(coords.map { |cx, cy| content_tag(:circle, nil, cx:, cy:, r: 3, class: "series-point") }),
-        axis_label(values.max, CHART_PAD[:left] - 6, CHART_PAD[:top] + 4, "end"),
-        axis_label(values.min, CHART_PAD[:left] - 6, CHART_HEIGHT - CHART_PAD[:bottom], "end"),
+        axis_label(Opt::QuantityDisplay.format(values.max), CHART_PAD[:left] - 6, CHART_PAD[:top] + 4, "end"),
+        axis_label(Opt::QuantityDisplay.format(values.min), CHART_PAD[:left] - 6, CHART_HEIGHT - CHART_PAD[:bottom], "end"),
         axis_label(recorded_date(points.first.at), CHART_PAD[:left], CHART_HEIGHT - 8, "start"),
         axis_label(recorded_date(points.last.at), CHART_WIDTH - CHART_PAD[:right], CHART_HEIGHT - 8, "end")
       ])
