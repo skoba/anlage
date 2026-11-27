@@ -129,3 +129,29 @@ A1 はビルドの成功（`naming to docker.io/library/anlage:latest`）。
 
 - 後片付け: 実行に使ったコンテナ `anlage` と volume `anlage-storage` は、この記録のあとに消した
 - 次: 人間が、同じ台本を画面で通す（ゲート報告）
+
+## R3（2026-11-27）人間の受け入れの指摘 3 点のあとに、変わる行（H 節）を通し直した（R-20261127-1 の受け入れの残り 1）
+
+- 対象: anlage main `57b16e6`（#191 記録の中身、#192 EHR ID を写す が入った状態）。まっさらな Docker（新しい volume、Basic 認証あり）で
+  `demo:reset`（`templates=5 compositions=79 rm_compositions=84`）のあと、C2 と H 節だけを実ブラウザ（headless Chrome、道具はこれまでと同じ）で通した
+- I 節（Postman）は、#193 の PR #196 がゲート報告で待っているので、入ってから通す
+- 台本の H1・H2 に、記録の中身（#191）の確かめを足した。H5 は #192 の PR で、ボタンで写す操作に直してある
+
+```
+C2	PASS	records=18 first=CardiologyEncounter — 記録日 2026-10-15
+H1a 記録の中身	PASS	legend=["血圧"] [["収縮期", "134.0 mm[Hg]"], ["拡張期", "82.0 mm[Hg]"]]
+H1	PASS	収縮期=134.0 拡張期=82.0
+H2	PASS	flash ok versions=["版 1（2026-11-27 04:20:38 UTC）", "版 2（2026-11-27 04:20:42 UTC）（この版）"] 版2=133.0 mm[Hg] 版1=134.0 mm[Hg] 版1の注記=この版は置き換えられています。最新の版を見る
+H3	PASS	flash=削除しました path=/compositions (修正前の記録 /compositions/7)
+H4	FAIL	records=17
+H5a 写す	PASS	copied=cb707684-…（画面の EHR ID と同じ） status=写しました
+H5	PASS	[["148"], ["152"], ["138"]]
+```
+
+- H4 の 17 件は、台本どおりの結果: この回は D 節（紹介状を 1 件保存して 19 件）を通していないので、18 − 1 = 17。台本を頭から通すと 18 件
+- H5 のクリップボードは、道具が Chrome の権限（CDP の `Browser.grantPermissions`）を与えて `navigator.clipboard.readText()` で読んだ値を、AQL の `<EHR ID>` に入れた
+- 道具の誤り 2 つ（製品の不具合ではない）: (1) 版 1 を開いた直後に前の画面の要素を読んだ（待ち方の誤り。版 1 の注記を待つように直した）、
+  (2) 版 2 に `visit` で戻ると、道具が URL に入れた Basic 認証の情報のために Turbo の `history.replaceState` が例外を出し、削除の確認が出なかった
+  （ブラウザのコンソール: `Failed to execute 'replaceState' on 'History'`）。画面の「最新の版を見る」で戻るように直した。人が画面で操作するときは起きない
+  （認証はブラウザの dialog で入れ、URL に入らない）
+- 後片付け済み（`docker rm -f anlage`、`docker volume rm anlage-storage`）
