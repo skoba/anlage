@@ -668,3 +668,15 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   - anlage の削除は、gem の `CompositionCommitter.delete` を使うようにした。Contribution の変更の種類も `deleted` になる。
   - spec は `spec/requests/record_delete_spec.rb`。
 - 残る観察: 0.11.0 でも、COMPOSITION の `composer`・`language`・`territory`・`feeder_audit`、EVENT_CONTEXT の `health_care_facility` に AQL は届かない（実測: `unsupported path attribute`）。いまの anlage の画面と評価は使っていない。
+
+## 31. FHIR facade の Observation と StructureDefinition が、実行時に登録したテンプレートを見ない（openehr-rails 0.11.0）
+
+- 観察（2026-11-27、`skoba/anlage#193`、`docs/design/m3-plan.md` 9.3 の実測）: anlage（RM グラフへ `CompositionCommitter` で入れる経路）では、
+  `GET /openehr/fhir/Observation` が常に `total: 0`、`/Observation/:id` は 200 になる id が無い。
+  `GET /openehr/fhir/StructureDefinition/:id` は、anlage の Template から作れる id でも 404
+- 根拠: `app/controllers/openehr_rails/fhir_controller.rb` の `search`・`resolve` は `Fhir::ResourceRegistry`（`Storable` を include した model）を引く。
+  `lib/openehr_rails/fhir/profile_repository.rb` の `from_registry` は `::OpenehrTemplate` を引く。RM グラフ（`Rm::Composition`）と、
+  ホストのアプリが持つテンプレートの表は見ない
+- 汎用の価値: 「OPT を置けば FHIR facade が動く」を、scaffold の無い実行時の経路でも成り立たせるには、facade が RM グラフを
+  引く口（または、ホストのアプリがテンプレートと記録を渡す口）が要る。再現手順は上の 3 つの GET（Basic 認証つき、`demo:reset` のあと）
+- 状態: 観察。起票は根拠が揃ってから（起票と上流への投稿は人間）
