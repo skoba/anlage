@@ -104,7 +104,7 @@ set (a key alone does not turn it on), and every call costs money:
 The question text and the names of the candidate items are sent to the API; record contents are not. Anlage's screens have no
 login of their own, so anyone who can reach an instance with this turned on can spend your API budget, up to the daily limit.
 Which company receives the text is decided by `ANLAGE_LLM`: use `ANLAGE_LLM=openai` with `OPENAI_API_KEY` (instead of
-`ANTHROPIC_API_KEY`) to call OpenAI. Details: [`docs/nl-query.md`](docs/nl-query.md) (Japanese).
+`ANTHROPIC_API_KEY`) to call OpenAI. Details: [`docs/nl-query.md`](docs/nl-query.md).
 
 The user interface is in Japanese only (known limitation 5).
 
