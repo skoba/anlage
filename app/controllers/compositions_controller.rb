@@ -7,7 +7,10 @@ class CompositionsController < ApplicationController
 
   def show
     @composition = Composition.find(params[:id])
-    @editable = @composition.latest_version? && !@composition.deleted? && Opt::CompositionEditability.editable?(@composition.template, @composition.rm_composition)
+    # skoba/anlage#191: 帳票の形で読めるか（往復で値が落ちないか）は、修正の判定と同じ。版が最新か・削除済みかは問わない
+    @readable = Opt::CompositionEditability.editable?(@composition.template, @composition.rm_composition)
+    @values = Opt::CompositionReader.call(@composition.template, JSON.generate(@composition.rm_composition)) if @readable
+    @editable = @composition.latest_version? && !@composition.deleted? && @readable
   end
 
   # 修正の帳票（skoba/anlage#138）。前の版の値を読み戻して入れる。置き換えられた版と、読み戻せない形の記録は 422

@@ -29,6 +29,26 @@
   <p class="form-notice">この版は置き換えられています。<%= link_to "最新の版を見る", composition_path(versions.last), id: "latest_version" %></p>
 <% end %>
 
+<%# skoba/anlage#191: 記録の中身（読むだけ）。並び・ラベル・単位・選択肢の表示はテンプレートから。文言は docs/demo/ui-vocabulary.md %>
+<section id="record_contents">
+  <h2>記録の中身</h2>
+  <% if @readable %>
+    <% Opt::FormLayout.call(template).each do |node| %>
+      <%= render "compositions/record_group", node: node, values: @values %>
+    <% end %>
+  <% else %>
+    <p class="form-notice">この記録は帳票の形に読み戻せません。項目の名前と値を、記録に書いてあるとおりに出します。</p>
+    <table class="record-items">
+      <thead><tr><th>名前</th><th>値</th></tr></thead>
+      <tbody>
+        <% Records::ElementList.call(@composition.rm_composition["content"]).each do |name, value| %>
+          <tr><td><%= name %></td><td><%= value %></td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</section>
+
 <h2 id="version_history">版の履歴</h2>
 <ol class="versions">
   <% versions.each.with_index(1) do |version, number| %>
