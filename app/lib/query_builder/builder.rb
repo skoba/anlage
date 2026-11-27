@@ -7,6 +7,8 @@ module QueryBuilder
   #                       範囲の外         { card:, operator: "OUTSIDE", value: { low:, high: } }（数値だけ）
   #                       どちらかを満たす { any: [条件, 条件, …] }（2 つ以上。入れ子にしない）
   #   template_id:      真なら先頭に c/archetype_details/template_id/value（出所のテンプレート。skoba/anlage#183）
+  #   order:            並べ替え { card:, direction: :asc／:desc }（skoba/anlage#242）。数値は magnitude、文字列は value の順。
+  #                     日時の項目は、まだ組まない（openehr 2.6.1 は、日時そのものの順が月末で逆になることがある。既知の制限 20）
   class Builder
     class InvalidSelection < StandardError; end
 
@@ -27,8 +29,10 @@ module QueryBuilder
       def variable = ENTRY_VARIABLES.fetch(rm_type)
     end
 
-    def self.build(columns:, conditions: [], template_id: false)
-      new(columns, conditions, template_id).build
+    DIRECTIONS = { "asc" => "ASC", "desc" => "DESC" }.freeze
+
+    def self.build(columns:, conditions: [], template_id: false, order: nil)
+      new(columns, conditions, template_id, order).build
     end
 
     # カードの型 → 条件の種類（:number／:code／:date／:text）
@@ -45,16 +49,19 @@ module QueryBuilder
       Array(card.dig("constraints", "value", "code_list"))
     end
 
-    def initialize(columns, conditions, template_id)
+    def initialize(columns, conditions, template_id, order = nil)
       @columns = Array(columns)
       @conditions = Array(conditions)
       @template_id = template_id
+      @order = order
     end
 
     def build
       raise InvalidSelection, "表示する項目が 1 つも無い" if @columns.empty?
 
-      entries = (@columns + @conditions.flat_map { |condition| cards_of(condition) }).map { |card| entry_of(card) }
+      raise InvalidSelection, "並べ替える項目が無い" if @order && @order[:card].nil?
+
+      entries = (@columns + @conditions.flat_map { |condition| cards_of(condition) } + [ @order&.fetch(:card) ].compact).map { |card| entry_of(card) }
       archetype_ids = entries.map(&:archetype_id).uniq
       unless archetype_ids.size == 1
         raise InvalidSelection, "1 つのクエリで使える ENTRY のアーキタイプは 1 つ（#{archetype_ids.join('、')}）"
@@ -67,6 +74,7 @@ module QueryBuilder
                 "FROM EHR e CONTAINS COMPOSITION c CONTAINS #{entry.rm_type} #{entry.variable}[#{entry.archetype_id}]" ]
       where = @conditions.flat_map { |condition| group?(condition) ? [ any(condition) ] : clauses(condition) }
       lines << "WHERE #{where.join(' AND ')}" if where.any?
+      lines << order_by if @order
       lines.join("\n")
     end
 
@@ -90,6 +98,18 @@ module QueryBuilder
 
     def projection(card)
       "#{value_path(card)}/#{self.class.kind(card) == :number ? 'magnitude' : 'value'}"
+    end
+
+    # 並べ替え: 数値は magnitude、文字列（値集合の表示名を含む）は value の順
+    def order_by
+      card = @order.fetch(:card)
+      direction = DIRECTIONS[@order[:direction].to_s.downcase]
+      raise InvalidSelection, "並べ替えの向きは asc か desc（#{@order[:direction].inspect}）" unless direction
+      if self.class.kind(card) == :date
+        raise InvalidSelection, "#{label(card)}: 日時の項目での並べ替えは、まだ使えない（openehr の版上げを待つ。既知の制限 20）"
+      end
+
+      "ORDER BY #{projection(card)} #{direction}"
     end
 
     def group?(condition) = condition.key?(:any)
