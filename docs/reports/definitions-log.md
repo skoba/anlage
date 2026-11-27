@@ -70,6 +70,7 @@ cases の要素は `when` と `value`、または `else`。
   防火壁の spec は、初期データ（demo_initial）を入れた状態で、bindings・コード・値集合・記録の値・患者と EHR の ID・OPT が材料に出ないことを見る
 - サイクル 2（`rake definitions:context`）: Red `spec/tasks/definitions_spec.rb` → `Don't know how to build task 'definitions:context'`（6 examples, 2 failures）。
   Green: Markdown（既定）と JSON。定義の spec と合わせて 37 examples, 0 failures
+<<<<<<< HEAD
 
 ## R3（2026-11-27）D-5: 遷移の図（`skoba/anlage#260`。R-20261127-21 の回答 5）
 
@@ -90,3 +91,7 @@ cases の要素は `when` と `value`、または `else`。
   Green: `DefinitionsHelper#transition_diagram`（サーバで描く SVG、依存なし）と、`components.css` の図の色（変数）。6 examples, 0 failures
 - サイクル 3（`rake definitions:diagram`）: Red `spec/tasks/definitions_spec.rb` → `Don't know how to build task 'definitions:diagram'`（8 examples, 2 failures）。
   Green: Mermaid のテキスト。エラーのある組は検査の結果だけを出して終了コード 1
+=======
+- 手元の全 suite: 930 examples, 0 failures, 2 pending
+>>>>>>> feat/259-definitions-context
+- 手元の全 suite（D-2 の上）: 938 examples, 0 failures, 2 pending
