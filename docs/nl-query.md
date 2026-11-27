@@ -1,73 +1,70 @@
-# 文で問う（自然言語から AQL）
+# Asking in plain language (natural language to AQL)
 
-クエリビルダーに、日本語の文で問いを入れると、LLM が「表示する項目」と「条件」を選び、クエリビルダーが AQL を組む。
-**既定はオフ**で、オフのとき、クエリビルダーはこれまでどおり手で選んで使える。設計は `docs/design/s4-nl-aql-plan.md`。
+Japanese version (supplementary): [`nl-query.ja.md`](nl-query.ja.md). If the two differ, this English version is authoritative.
 
-## いまの状態（2026-11-27）
+In the query builder, you can type a question as a Japanese sentence. An LLM picks the items to show and the conditions, and
+the query builder builds the AQL. **It is off by default**; when off, the query builder works as before, by picking items by
+hand. The design is in [`docs/design/s4-nl-aql-plan.md`](design/s4-nl-aql-plan.md) (Japanese).
 
-- 画面と、問い合わせの流れ、Claude API のアダプタ（`anthropic`）が入っている
-- **Claude API のアダプタは、偽のクライアントの spec だけで確かめてある。実際の API は、まだ 1 回も呼んでいない**
-  （呼ぶのは、鍵が渡ったとき）。どのモデルで、どのくらい正しく選べるかは、まだ測っていない
-- 手元のモデルのアダプタ（`local`）は、まだ入っていない
+## Current state (2026-11-27)
 
-## オンにする方法
+- The screen, the query flow, the Claude API adapter (`anthropic`) and the OpenAI adapter (`openai`) are in place
+- **Both adapters have only been checked with specs that do not call out. The real APIs have not been called even once**
+  (that happens when a key is provided). How correctly each model picks items has not been measured yet
+- The adapter for a locally run model (`local`) is not in place yet
 
-運用する人が、環境変数を設定して、起動し直す。画面からは切り替えられない。
+## Turning it on
 
-| 環境変数 | 意味 | 既定 |
+The operator sets environment variables and restarts. It cannot be switched from the screen.
+
+| Environment variable | Meaning | Default |
 |---|---|---|
-| `ANLAGE_LLM` | 使うアダプタの名前。これがオンの設定 | 無し（オフ） |
-| `ANLAGE_LLM_MODEL` | モデルの ID（`anthropic` のとき。例は Claude API の文書のモデルの一覧）。既定は無い | 無し |
-| `ANTHROPIC_API_KEY` | Claude API の鍵（`anthropic` のとき） | 無し |
-| `ANLAGE_LLM_DAILY_CALL_LIMIT` | 1 日に呼んでよい回数。達したら、LLM を呼ばず、手で選ぶ欄に落ちる | 100 |
-| `ANLAGE_LLM_RECORDINGS` | 記録した応答のディレクトリ（`recorded` のとき） | 無し |
+| `ANLAGE_LLM` | Name of the adapter to use (`anthropic`, `openai`, `recorded`). This is the "on" setting | none (off) |
+| `ANLAGE_LLM_MODEL` | Model ID (for `anthropic` and `openai`; see the provider's model list). There is no default | none |
+| `ANTHROPIC_API_KEY` | Claude API key (for `anthropic`) | none |
+| `OPENAI_API_KEY` | OpenAI API key (for `openai`) | none |
+| `ANLAGE_LLM_BASE_URL` | Endpoint (for `openai`). Change it to point at a server that offers the same Chat Completions interface | `https://api.openai.com/v1` |
+| `ANLAGE_LLM_DAILY_CALL_LIMIT` | Calls allowed per day. Once reached, the LLM is not called and you pick by hand | 100 |
+| `ANLAGE_LLM_RECORDINGS` | Directory of recorded responses (for `recorded`; development and tests) | none |
 
-- オンになるのは、`ANLAGE_LLM` と、そのアダプタが要るもの（API の鍵など）の両方がそろったときだけ。鍵を置いただけでは、オンにならない
-- `anthropic` は、`ANLAGE_LLM=anthropic`、`ANLAGE_LLM_MODEL`、`ANTHROPIC_API_KEY` の 3 つがそろったときにオンになる。
-  足りないものがあると、オフのままで、クエリビルダーに理由が出る
-- 1 回の問い合わせの待ち時間の上限は 30 秒。出力の上限は 2,000 トークン
-- 鍵は環境変数で渡す。リポジトリにも、設定のファイルにも書かない。画面とログに、鍵の値は出ない
+- It turns on only when `ANLAGE_LLM` **and** everything that adapter needs (model ID, key) are all set. A key alone does not turn it on
+- **Which company receives the text is decided by `ANLAGE_LLM`.** With `ANLAGE_LLM=anthropic` the text goes to Anthropic and the
+  OpenAI key is not read; with `ANLAGE_LLM=openai` it goes to OpenAI (or to `ANLAGE_LLM_BASE_URL`) and the Anthropic key is not read
+- If something is missing, it stays off and the query builder shows the reason
+- With `openai`, only an endpoint on the same machine (127.0.0.1, localhost) is treated as "not sent outside"; there the key is
+  optional and the warning is not shown. Any other endpoint counts as outside and must be https
+- One question waits at most 30 seconds. The output limit is 2,000 tokens
+- Keys are passed as environment variables. They are not written to the repository or to configuration files, and their values
+  do not appear on the screen or in logs
 
-## 費用と、回数の上限
+## Cost and the daily limit
 
-- 外の API を呼ぶアダプタでは、呼び出すたびに費用がかかる
-- Anlage の画面には認証が無い。**オンにした Anlage に届く人は、だれでも LLM を呼べる**。回数の上限は、その歯止め
-- きょう使った回数と、トークンの数は、クエリビルダーの「文で問う」の欄に出る。数は `storage/llm_usage.json` に、日ごとに残る
-  （日付と数だけ。問いの文と応答は残さない）
+- With an adapter that calls an external API, every call costs money
+- Anlage's screens have no login of their own. **Anyone who can reach an instance with this turned on can call the LLM.** The
+  daily limit is the safeguard
+- Today's call count and token counts are shown in the "文で問う" section of the query builder. The counts are kept per day in
+  `storage/llm_usage.json` (dates and numbers only; neither the question nor the response is stored)
 
-## 外に送るもの、送らないもの
+## What is sent, and what is not
 
-| 送る | 送らない |
+| Sent | Not sent |
 |---|---|
-| 利用者が入れた問いの文 | 記録の中身（実行の結果、患者の ID、氏名） |
-| 候補の項目の一覧（項目名、区分の名前、型、値集合の値の名前、単位、テンプレートの名前） | パス、アーキタイプの ID、at-code、説明、外の用語へのコードの結び付け |
-| 決まった指示文 | テンプレート（OPT）のファイル、用語マスターの中身 |
+| The question the user typed | Record contents (query results, patient IDs, names) |
+| The list of candidate items (item name, section name, type, names of value-set values, unit, template name) | Paths, archetype IDs, at-codes, descriptions, bindings to external terminologies |
+| A fixed instruction text | Template (OPT) files, licensed terminology content |
 
-- **問いの文に、患者の情報を書かない**。問いの文は、そのまま送られる
-- LLM が返すのは、項目の番号、演算子、値だけ。パスやコードは、Anlage がカードから引く。AQL は、クエリビルダーが組み、検査（リンタ）を通ったものだけを実行する
-- 何をどう引いたかの説明は、選んだ項目の文言から Anlage が組む。LLM は書かない
+- **Do not write patient information in the question.** The question is sent as typed
+- The LLM returns only item numbers, operators and values. Anlage looks up paths and codes from its own index. The query
+  builder builds the AQL, and only AQL that passes the checker (linter) is run
+- The explanation of what was queried is assembled by Anlage from the wording of the chosen items. The LLM does not write it
 
-## 使い方
+## How to use it
 
-1. クエリビルダーの「文で問う」に、問いを入れて「選択を作る」
-2. 「表示する項目」と「条件」に、LLM が作った選択が入る。説明を読み、選択を確かめる。直してもよい
-3. 「実行」
+1. In the query builder, type a question under "文で問う" and press "選択を作る"
+2. The selection made by the LLM appears under "表示する項目" and "条件". Read the explanation and check the selection; you can change it
+3. Press "実行"
 
-選択を作れなかったとき（応答が読めない、回数の上限、通信の失敗）は、理由が出る。下の欄で、手で選んで続けられる。
+When a selection could not be made (unreadable response, daily limit, connection failure), the reason is shown and you can
+continue by picking items by hand below.
 
-## OpenAI を使う（2026-11-27）
-
-どちらの会社に文が送られるかは、`ANLAGE_LLM` で決まる。`ANLAGE_LLM=openai` のときは OpenAI に送り、Anthropic の鍵は読まない。
-
-| 環境変数 | 意味 | 既定 |
-|---|---|---|
-| `ANLAGE_LLM=openai` | OpenAI のアダプタを使う | — |
-| `ANLAGE_LLM_MODEL` | モデルの ID（OpenAI の文書のモデルの一覧にあるもの）。既定は無い | 無し |
-| `OPENAI_API_KEY` | OpenAI の鍵 | 無し |
-| `ANLAGE_LLM_BASE_URL` | 接続先。OpenAI と同じ形の口（Chat Completions）を持つサーバーに向けるときに変える | `https://api.openai.com/v1` |
-
-- `ANLAGE_LLM=openai`、`ANLAGE_LLM_MODEL`、`OPENAI_API_KEY` の 3 つがそろったときにオンになる。鍵を置いただけでは、オンにならない
-- 接続先が、その機械の中（127.0.0.1、localhost）のときだけ、画面に「外に送られます」の注意を出さず、鍵が無くてもよい。
-  それ以外の接続先は、外に送る扱いで、https だけを受ける
-- 送るもの、回数の上限、鍵の扱いは、上と同じ
-- **実際の OpenAI の API は、まだ 1 回も呼んでいない**（手元に立てた、決まった応答を返すサーバーを相手にした spec だけ）
+The user interface is in Japanese only.
