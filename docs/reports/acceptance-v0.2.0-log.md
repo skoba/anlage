@@ -155,3 +155,34 @@ H5	PASS	[["148"], ["152"], ["138"]]
   （ブラウザのコンソール: `Failed to execute 'replaceState' on 'History'`）。画面の「最新の版を見る」で戻るように直した。人が画面で操作するときは起きない
   （認証はブラウザの dialog で入れ、URL に入らない）
 - 後片付け済み（`docker rm -f anlage`、`docker volume rm anlage-storage`）
+
+## R4（2026-11-27）Postman のコレクション（#193）のあとに、I 節を通した（R-20261127-5 の受け入れの残り 1）
+
+- 対象: anlage main `7e2e057`（#191・#192・#193 の 3 点が入った状態）。まっさらな Docker（新しい volume、Basic 認証あり）で
+  `demo:reset`（`templates=5 compositions=79 rm_compositions=84`）のあと、C2・H 節（I6 の前提の削除のため）と I 節を通した
+- I1 は実ブラウザ。I2〜I7 は、コレクションと環境の雛形のファイルを読み、環境の `password` と `ehr_id`（H5 で「EHR ID を写す」で写した値）を入れて、
+  書いてある順に同じ URL・ヘッダ・本文・Basic 認証で送った（AQL の応答の 1 行目の uid を `composition_uid` に入れるのは、post-response script と同じ）。
+  Postman の画面での見え方は、人間が確かめる
+
+```
+C2	PASS	records=18 first=CardiologyEncounter — 記録日 2026-10-15
+H1a 記録の中身	PASS	legend=["血圧"] [["収縮期", "134.0 mm[Hg]"], ["拡張期", "82.0 mm[Hg]"]]
+H1	PASS	収縮期=134.0 拡張期=82.0
+H2	PASS	版2=133.0 mm[Hg] 版1=134.0 mm[Hg] 版1の注記=この版は置き換えられています。最新の版を見る
+H3	PASS	flash=削除しました path=/compositions
+H4	FAIL	records=17
+H5a 写す	PASS	copied=（画面の EHR ID と同じ） status=写しました
+H5	PASS	[["148"], ["152"], ["138"]]
+I1	PASS	StructureDefinition openehr-problemlist-evaluation-problem-diagnosis-v1
+I2	PASS	[["FHIR", 2], ["openEHR REST", 3]]
+I3	PASS	200 CapabilityStatement
+I4	PASS	200 openehr-problemlist-evaluation-problem-diagnosis-v1
+I5	PASS	200 EHR subject=DEMO-01
+I6	PASS	200 rows= 3 行（148.0・152.0・138.0、各行の先頭は uid）
+I7	PASS	200 COMPOSITION CardiologyEncounter uid=（I6 の 1 行目）
+```
+
+- H4 の 17 件は R3 と同じ理由（D 節を通していないので 18 − 1）。台本を頭から通すと 18 件
+- 製品の不具合は無かった。道具の誤りも無かった（R3 で直した道具を使った）
+- 後片付け済み（`docker rm -f anlage`、`docker volume rm anlage-storage`）
+- 受け入れの残り: リリースの PR（人間が、記録の画面・EHR ID を写すボタン・Postman を見てマージする。マージがタグの承認）
