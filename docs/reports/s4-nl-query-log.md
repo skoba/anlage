@@ -485,3 +485,20 @@ $ bundle exec rspec spec/lib/evaluation/grounding
   （別名表の「病名」は、語の全体が一致したときだけ引ける）
 - 略語（SBP、DBP、FBS、Hb）は、どのカードにも当たらない
 - 測定の「接地あり」の腕は、検索で絞らず、18 枚をすべて渡す（計画書 5.6 節、`preregistration.md`）
+
+### 追記: CI が赤になった（PR #252 の head `d8f15d2`。run 46013299203）
+
+全体を流す CI で、`scorer_spec` の 4 例が落ちた（886 examples, 4 failures）。手元では、そのディレクトリだけを流していて、出なかった。
+
+```
+rspec ./spec/lib/evaluation/grounding/scorer_spec.rb:31 … 両方の版の AQL を返すと match …   expected: :match  got: :overlooked
+rspec ./spec/lib/evaluation/grounding/scorer_spec.rb:40 … 名指しの文は …                    expected: :match  got: :unparseable
+rspec ./spec/lib/evaluation/grounding/scorer_spec.rb:52 … AQL の文字だけの応答 …            expected: :match  got: :unparseable
+rspec ./spec/lib/evaluation/grounding/scorer_spec.rb:57 … リンタの error がある AQL は …
+```
+
+原因: `scorer_spec` が describe の中で定義した定数 `BP_V2`（AQL の文字）が、`spec/lib/evaluation/report_spec.rb:5` の `BP_V2`（アーキタイプの ID）と同じ名前だった。
+describe の中の定数は、トップレベルに定義される。全体を流すと、あとから読まれたファイルの値に置き換わる。実装の誤りではない。
+
+直し: 定数の名前を `GROUNDING_BP_V2_AQL` などに変えた。`spec/lib/evaluation` をまとめて流して、126 examples, 0 failures。
+マージはしていなかった（CI が赤のあいだ、マージしない）。以後、spec に定数を足すときは、ほかの spec の定数と名前が重ならないことを `grep` で確かめる。

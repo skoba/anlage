@@ -11,13 +11,13 @@ RSpec.describe Evaluation::Grounding::Scorer do
   let(:corpus) { QueryBuilder::Corpus.active }
   let(:queries) { Evaluation::Grounding::Queries.load.index_by(&:id) }
 
-  BP_V2 = <<~AQL.squish.freeze
+  GROUNDING_BP_V2_AQL = <<~AQL.squish.freeze
     SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude
     FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]
     WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude >= 140
   AQL
-  BP_V1 = BP_V2.sub("blood_pressure.v2", "blood_pressure.v1").freeze
-  ONSET = <<~AQL.squish.freeze
+  GROUNDING_BP_V1_AQL = GROUNDING_BP_V2_AQL.sub("blood_pressure.v2", "blood_pressure.v1").freeze
+  GROUNDING_ONSET_AQL = <<~AQL.squish.freeze
     SELECT ev/data[at0001]/items[at0002]/value/value, ev/data[at0001]/items[at0077]/value/value, c/archetype_details/template_id/value
     FROM EHR e CONTAINS COMPOSITION c CONTAINS EVALUATION ev[openEHR-EHR-EVALUATION.problem_diagnosis.v1]
     WHERE ev/data[at0001]/items[at0077]/value/value >= "2025-01-01" AND ev/data[at0001]/items[at0077]/value/value < "2026-01-01"
@@ -29,8 +29,8 @@ RSpec.describe Evaluation::Grounding::Scorer do
 
   describe "AQL を書かせる腕" do
     it "両方の版の AQL を返すと match。片方だけだと overlooked（見落とし）" do
-      both = score("n001-1", :g_aql, aqls: [ BP_V1, BP_V2 ])
-      one = score("n001-1", :g_aql, aqls: [ BP_V2 ])
+      both = score("n001-1", :g_aql, aqls: [ GROUNDING_BP_V1_AQL, GROUNDING_BP_V2_AQL ])
+      one = score("n001-1", :g_aql, aqls: [ GROUNDING_BP_V2_AQL ])
 
       expect(both.status).to eq(:match)
       expect(both).to have_attributes(parseable: true, lint_ok: true, executed: true, order_free: true)
@@ -38,27 +38,27 @@ RSpec.describe Evaluation::Grounding::Scorer do
     end
 
     it "名指しの文は、名指ししたテンプレートの行だけが正解" do
-      expect(score("n001-4", :g_aql, aqls: [ BP_V2 ]).status).to eq(:match)
-      expect(score("n001-4", :g_aql, aqls: [ BP_V1, BP_V2 ]).status).to eq(:mismatch)
+      expect(score("n001-4", :g_aql, aqls: [ GROUNDING_BP_V2_AQL ]).status).to eq(:match)
+      expect(score("n001-4", :g_aql, aqls: [ GROUNDING_BP_V1_AQL, GROUNDING_BP_V2_AQL ]).status).to eq(:mismatch)
     end
 
     it "列の順が違うだけの答えは、主の指標では mismatch、副の指標（列の順を見ない）では一致" do
-      result = score("n013-1", :n1, aqls: [ ONSET ])
+      result = score("n013-1", :n1, aqls: [ GROUNDING_ONSET_AQL ])
 
       expect(result.status).to eq(:mismatch)
       expect(result.order_free).to be(true)
     end
 
     it "AQL の文字だけの応答、コードの囲みつきの応答も読む" do
-      expect(score("n001-4", :n0, BP_V2).status).to eq(:match)
-      expect(score("n001-4", :n0, "```json\n#{JSON.generate(aqls: [ BP_V2 ])}\n```").status).to eq(:match)
+      expect(score("n001-4", :n0, GROUNDING_BP_V2_AQL).status).to eq(:match)
+      expect(score("n001-4", :n0, "```json\n#{JSON.generate(aqls: [ GROUNDING_BP_V2_AQL ])}\n```").status).to eq(:match)
     end
 
     it "リンタの error がある AQL は、実行せず lint。どれか 1 本でもあれば、どれも実行しない" do
-      bad = BP_V2.sub("items[at0004]/value/magnitude >= 140", "items[at0099]/value/magnitude >= 140")
+      bad = GROUNDING_BP_V2_AQL.sub("items[at0004]/value/magnitude >= 140", "items[at0099]/value/magnitude >= 140")
       expect(OpenehrRails::Aql::Executor).not_to receive(:execute)
 
-      result = score("n001-1", :g_aql, aqls: [ BP_V1, bad ])
+      result = score("n001-1", :g_aql, aqls: [ GROUNDING_BP_V1_AQL, bad ])
       expect(result.status).to eq(:lint)
       expect(result).to have_attributes(lint_ok: false, executed: false, order_free: false)
     end
