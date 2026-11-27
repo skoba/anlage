@@ -1,0 +1,1 @@
+- Docs: 「GDL2 に差し替える」記述を、GDL2 は全面採用せず Anlage 独自の軽い定義で進める方針に直した（`docs/ideas-2027.md`、既知の制限 11、`config/form_behaviors.yml` と `app/lib/opt/formula.rb` の注釈）（Refs R-20261127-10）。利用者に見える変更ではない（文書と注釈だけ）
