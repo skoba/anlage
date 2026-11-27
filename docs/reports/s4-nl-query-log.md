@@ -356,3 +356,57 @@ $ bundle exec rspec spec/lib/llm
 
 - **実際の OpenAI の API は、1 回も呼んでいない**。応答の形は、文書の記述を写したもの
 - `system` の役が、いまのモデルで通るか。`max_completion_tokens` を、同じ形の口を持つ手元の道具が知っているか
+
+## R6 手元のモデルのアダプタと、出力の形を渡す引数（2026-11-27。`skoba/anlage#245`。R-20261127-29）
+
+gem を足していない。外を呼んでいない。CI からは、手元のモデルも呼ばない。計画は計画書 14 節。
+
+### 自己承認した判断
+
+| # | 判断 | 採った案 | 捨てた案 | 根拠 |
+|---|---|---|---|---|
+| L1 | 選択の形の JSON スキーマ | 外側の形だけ縛る（`columns` は整数の並び、`conditions` はオブジェクトの並び、ほか） | 条件の中身（型ごとの形）まで縛る | 条件の形は型で違い、入れ子（どちらかを満たす）もある。細かく縛ると、スキーマが大きくなり、道具ごとの制限に当たりやすい。中身は `SelectionParser` が検査する。試しでは、外側の形だけで 3/3 が読めた |
+| L2 | Claude API と OpenAI のアダプタ | 引数は受けるが、まだ使わない | 使う | 裁定のとおり（使えるかは、鍵が渡ったときに確かめる） |
+| L3 | 記録した応答の鍵 | 指示文と入力だけ（出力の形は入れない） | 出力の形も入れる | 出力の形を変えても、同じ文への応答の記録は使える。測定の記録には、縛ったかどうかを別に書く |
+| L4 | local の接続先 | 開発機の中だけ。外は、https でも受けない | 外も受ける | 裁定のとおり（local は、接続先が開発機の中のときだけ使える） |
+| L5 | 温度と乱数の種 | 既定では送らない。アダプタを作るときに指定できる（測定が使う） | 環境変数にする | 画面の利用では要らない。環境変数を増やさない |
+| L6 | 待ち時間と出力の上限 | 300 秒、400 トークン | — | 実測: モデルを読み込んだ直後の 1 問めが 138 秒。選択の JSON は 70 トークンほど |
+| L7 | spec の、決まった応答を返すサーバー | 共通の部品に出した（`spec/support/canned_http_server.rb`）。OpenAI のアダプタの spec は、振る舞いを変えずに、それを使う形に直した（17 例のまま green） | 2 つの spec に同じものを書く | — |
+
+### Red（実行して失敗を確かめた）
+
+```
+$ bundle exec rspec spec/lib/llm spec/lib/nl_query/prompt_spec.rb
+NameError:
+  uninitialized constant Llm::Adapters::Local
+```
+
+アダプタを書いたあと、ほかをつなぐ前に:
+
+```
+  1) Llm::Adapters::Recorded 出力の形（json_schema）を渡されても、受ける（記録の鍵は、指示文と入力だけ）
+     ArgumentError:
+  2) Llm::Settings オフ local で、モデルの名前が無いときはオフ。理由が付く
+       expected: "モデルの名前（ANLAGE_LLM_MODEL）がありません。"
+            got: "このアダプタは、まだ使えません（local）。"
+  3) Llm::Settings オフ local と、モデルの名前がそろうと、オン。外に文を送らないアダプタ。鍵は要らない
+  4) NlQuery::Prompt#json_schema … NoMethodError:
+86 examples, 4 failures
+```
+
+- Local のアダプタの spec（12 例）は、実装の 1 回めで通った。個々の例を、落ちる状態から確かめてはいない
+- `runner_spec` の「アダプタに、選択の形を渡す」は、個別の Red を取っていない（`Prompt#json_schema` が無い状態では、例の中で NoMethodError になる）
+
+### Green
+
+```
+$ bundle exec rspec spec/lib/llm spec/lib/nl_query/prompt_spec.rb
+86 examples, 0 failures
+$ bundle exec rspec spec/lib/nl_query/runner_spec.rb spec/requests/queries_nl_spec.rb
+29 examples, 0 failures
+```
+
+### 実測（アプリのアダプタ経由）
+
+計画書 14.3 節の表。調整用の 3 問で、138 秒（モデルの読み込みを含む）・31 秒・33 秒。2 問は選択ができ、1 問ははねた（値集合の項目に `=`）。
+コンテナは、測ったあとで止めた。

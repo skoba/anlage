@@ -11,7 +11,8 @@ hand. The design is in [`docs/design/s4-nl-aql-plan.md`](design/s4-nl-aql-plan.m
 - The screen, the query flow, the Claude API adapter (`anthropic`) and the OpenAI adapter (`openai`) are in place
 - **Both adapters have only been checked with specs that do not call out. The real APIs have not been called even once**
   (that happens when a key is provided). How correctly each model picks items has not been measured yet
-- The adapter for a locally run model (`local`) is not in place yet
+- An adapter for a locally run model (`local`, for an Ollama server on the same machine) is in place. It was tried with one small
+  model on a CPU-only machine: about 30 seconds per question, and not every answer was usable
 
 ## Turning it on
 
@@ -19,8 +20,8 @@ The operator sets environment variables and restarts. It cannot be switched from
 
 | Environment variable | Meaning | Default |
 |---|---|---|
-| `ANLAGE_LLM` | Name of the adapter to use (`anthropic`, `openai`, `recorded`). This is the "on" setting | none (off) |
-| `ANLAGE_LLM_MODEL` | Model ID (for `anthropic` and `openai`; see the provider's model list). There is no default | none |
+| `ANLAGE_LLM` | Name of the adapter to use (`anthropic`, `openai`, `local`, `recorded`). This is the "on" setting | none (off) |
+| `ANLAGE_LLM_MODEL` | Model ID (for `anthropic`, `openai` and `local`; see the provider's model list, or the name of the model you pulled into Ollama). There is no default | none |
 | `ANTHROPIC_API_KEY` | Claude API key (for `anthropic`) | none |
 | `OPENAI_API_KEY` | OpenAI API key (for `openai`) | none |
 | `ANLAGE_LLM_BASE_URL` | Endpoint (for `openai`). Change it to point at a server that offers the same Chat Completions interface | `https://api.openai.com/v1` |
@@ -33,7 +34,9 @@ The operator sets environment variables and restarts. It cannot be switched from
 - If something is missing, it stays off and the query builder shows the reason
 - With `openai`, only an endpoint on the same machine (127.0.0.1, localhost) is treated as "not sent outside"; there the key is
   optional and the warning is not shown. Any other endpoint counts as outside and must be https
-- One question waits at most 30 seconds. The output limit is 2,000 tokens
+- With `local`, the text goes to an Ollama server on the same machine (`ANLAGE_LLM_BASE_URL`, default `http://127.0.0.1:11434`).
+  Nothing is sent outside, no key is needed, and the warning is not shown. Only an endpoint on the same machine is accepted
+- One question waits at most 30 seconds (300 seconds with `local`). The output limit is 2,000 tokens (400 with `local`)
 - Keys are passed as environment variables. They are not written to the repository or to configuration files, and their values
   do not appear on the screen or in logs
 

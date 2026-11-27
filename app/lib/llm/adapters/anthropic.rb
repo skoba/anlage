@@ -43,7 +43,8 @@ module Llm
       def external? = true
       def inspect = "#<#{self.class.name} model=#{@model.inspect}>"
 
-      def complete(instructions:, input:)
+      # json_schema（出力の形）は受けるだけで、まだ使わない（output_config.format で縛れるかは、鍵が渡ったときに確かめる。R-20261127-29）
+      def complete(instructions:, input:, json_schema: nil)
         message = @client.messages.create(model: @model, max_tokens: MAX_TOKENS, system_: instructions,
                                           messages: [ { role: "user", content: input } ])
         raise Error, "モデルが、応答を断りました。" if message.stop_reason == :refusal

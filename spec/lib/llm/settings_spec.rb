@@ -40,8 +40,16 @@ RSpec.describe Llm::Settings do
       expect(off.reason).to eq("知らないアダプタの名前です（somewhere）。")
     end
 
-    it "まだ入っていないアダプタ（local）はオフ。理由が付く" do
-      expect(settings("ANLAGE_LLM" => "local").reason).to eq("このアダプタは、まだ使えません（local）。")
+    it "local で、モデルの名前が無いときはオフ。理由が付く" do
+      expect(settings("ANLAGE_LLM" => "local").reason).to eq("モデルの名前（ANLAGE_LLM_MODEL）がありません。")
+    end
+
+    it "local と、モデルの名前がそろうと、オン。外に文を送らないアダプタ。鍵は要らない" do
+      on = settings("ANLAGE_LLM" => "local", "ANLAGE_LLM_MODEL" => "qwen3:4b")
+
+      expect(on).to be_on
+      expect(on).not_to be_external
+      expect(on.adapter_name).to eq("local")
     end
 
     it "anthropic で、鍵かモデルの名前が無いときはオフ。理由が付く。理由に鍵の値は出ない" do

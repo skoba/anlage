@@ -160,7 +160,7 @@ RSpec.describe NlQuery::Runner do
       broken = Class.new do
         def name = "broken"
         def external? = false
-        def complete(instructions:, input:) = raise(IOError, "sk-ant-secret を含むかもしれない文")
+        def complete(instructions:, input:, json_schema: nil) = raise(IOError, "sk-ant-secret を含むかもしれない文")
       end.new
 
       result = described_class.call(question: QUESTION, settings: Llm::Settings.new(adapter: broken, adapter_name: "broken"),
@@ -175,5 +175,21 @@ RSpec.describe NlQuery::Runner do
       expect(result.status).to eq(:blank)
       expect(usage.today[:calls]).to eq(0)
     end
+  end
+
+  it "アダプタに、選択の形（JSON スキーマ）を渡す（skoba/anlage#245）" do
+    received = nil
+    spy = Class.new do
+      define_method(:name) { "spy" }
+      define_method(:external?) { false }
+      define_method(:complete) do |instructions:, input:, json_schema: nil|
+        received = json_schema
+        Llm::Response.new(text: %({"columns": [], "conditions": [], "reason": "見ただけ"}), model: "spy")
+      end
+    end.new
+
+    described_class.call(question: QUESTION, settings: Llm::Settings.new(adapter: spy, adapter_name: "spy"), usage: usage, corpus: corpus)
+
+    expect(received).to eq(NlQuery::Prompt.new(question: QUESTION, cards: candidates).json_schema)
   end
 end
