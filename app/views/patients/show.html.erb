@@ -16,6 +16,8 @@
 <%# R-20261127-9: 問いに EHR ID を入れた状態で AQL 照会を開く（実行は画面のボタン）。文言は docs/demo/ui-vocabulary.md %>
 <p><%= link_to "この患者の記録を AQL で引く", patient_records_aql_path(@patient), id: "patient_aql" %></p>
 
+<%= render "patients/chart", chart: @chart, patient: @patient, originals: @originals %>
+
 <h2>カルテ記録</h2>
 <%# skoba/anlage#182: EHR の記録をすべて、記録日の新しい順に。原本の無い記録（テンプレートが未登録）は閲覧の画面へ %>
 <% if @records.empty? %>

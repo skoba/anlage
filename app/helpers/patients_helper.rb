@@ -19,4 +19,17 @@ module PatientsHelper
   def patient_records_aql_path(patient)
     openehr_rails.query_console_path(q: PATIENT_RECORDS_AQL, query_parameters: { ehr_id: patient.ehr_id }.to_json)
   end
+
+  # 患者の画面の部品から、その記録の画面へ（原本があれば記録の画面、無ければ閲覧の画面。#182 と同じ）
+  def chart_record_path(patient, record, originals)
+    original = originals[record.uid]
+    original ? composition_path(original) : record_patient_path(patient.ehr_id, uid: record.uid)
+  end
+
+  # プロブレムリストの列の見出し（テンプレートのラベル。最初の行のテンプレートから）
+  def problem_list_labels(problem)
+    template = Template.active.find_by!(template_id: problem.template_id)
+    component = Charts::Rules.for(template).find { _1.kind == :problem_list }
+    %w[diagnosis certainty onset].map { component.fields[_1]&.dig("label") }
+  end
 end
