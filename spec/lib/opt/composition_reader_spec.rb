@@ -98,3 +98,49 @@ RSpec.describe Opt::CompositionReader, "display: true" do
     expect(described_class.call(template, json, display: true)["problem_diagnosis_at0002"]).to eq("2型糖尿病")
   end
 end
+
+# 患者の画面の数値（skoba/anlage#250、R-20261127-20）: 表示では精度を作らない。DV_QUANTITY の precision があればその桁、
+# 無ければ（または -1〔制限なし〕なら）整数の値に小数点を付けない。既定（修正の帳票）は従来どおり magnitude の文字
+RSpec.describe Opt::CompositionReader, "display: true の数量" do
+  let(:template) { Template.build_from_opt_xml(Rails.root.join("spec/fixtures/opt/LabResultReport.opt").read) }
+
+  def composition(magnitude, precision = nil)
+    canonical = JSON.parse(OpenEHR::Serializer::RMJSONSerializer.new(
+      Opt::CompositionBuilder.new(template, { "laboratory_test_result_at0005" => "血液検査", "laboratory_test_analyte_at0024" => "HbA1c",
+                                             "laboratory_test_analyte_at0001" => "1", "laboratory_test_analyte_at0001__units" => "%" }).build
+    ).serialize)
+    quantity = find_element(canonical, "at0001")["value"]
+    quantity["magnitude"] = magnitude
+    quantity["precision"] = precision unless precision.nil?
+    JSON.generate(canonical)
+  end
+
+  def find_element(node, node_id)
+    case node
+    when Hash
+      return node if node["_type"] == "ELEMENT" && node["archetype_node_id"] == node_id && node.dig("value", "_type") == "DV_QUANTITY"
+
+      node.each_value { (found = find_element(_1, node_id)) && (return found) }
+    when Array
+      node.each { (found = find_element(_1, node_id)) && (return found) }
+    end
+    nil
+  end
+
+  def shown(magnitude, precision = nil) = described_class.call(template, composition(magnitude, precision), display: true)["laboratory_test_analyte_at0001"]
+
+  it "precision が無ければ、整数の値に小数点を付けない。小数の値はそのまま" do
+    expect(shown(148.0)).to eq("148")
+    expect(shown(7.25)).to eq("7.25")
+  end
+
+  it "precision があれば、その桁で出す（0 は整数、-1 は制限なし）" do
+    expect(shown(1.3, 2)).to eq("1.30")
+    expect(shown(148.0, 0)).to eq("148")
+    expect(shown(148.0, -1)).to eq("148")
+  end
+
+  it "既定（display: false）は、これまでどおり magnitude の文字" do
+    expect(described_class.call(template, composition(148.0))["laboratory_test_analyte_at0001"]).to eq("148.0")
+  end
+end
