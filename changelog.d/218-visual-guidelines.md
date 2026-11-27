@@ -1,0 +1,1 @@
+- Change: 見た目の基準（`docs/design/visual-guidelines.md`）を足し、色を CSS 変数（`tokens.css`）にまとめた。表・カード・ボタンの部品（`components.css`）を足した。いまの画面の見た目は変わらない（色の値は同じ）（Refs #218、Refs R-20261127-13）。利用者に見える変更ではない
