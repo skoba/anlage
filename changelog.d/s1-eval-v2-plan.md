@@ -1,1 +1,0 @@
-- Docs: S1（評価 v2）の計画書 `docs/design/s1-eval-v2-plan.md` と進行ログ R1 を追加（Refs R-20261124-11）。semver: 影響なし（文書のみ）

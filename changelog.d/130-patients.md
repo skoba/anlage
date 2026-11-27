@@ -1,2 +1,0 @@
-- 患者（EHR）の画面を足した（`/patients`）。患者 ID を入れると EHR が 1 つでき、一覧と患者の画面に出る。共通ナビの先頭に「患者」を足した（skoba/anlage#130、R-20261124-20）
-  - 利用者に見える変更: はい。新しい画面と URL（`GET/POST /patients`、`GET /patients/:id`。:id は ehr_id）。ナビの項目が 6 つになる。患者は患者 ID と名前空間（anlage）だけを持つ

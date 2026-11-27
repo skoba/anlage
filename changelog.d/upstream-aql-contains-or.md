@@ -1,1 +1,0 @@
-- Docs: 上流の候補に 2 件を足した（29: AQL の `CONTAINS (A OR B)` が `unbound variable` で落ちる。30: `archetype_node_id` のパスに届かない。openehr 2.6.0 で確かめ直した）（Refs R-20261125-11）。利用者に見える変更ではない（文書のみ）

@@ -1,2 +1,0 @@
-- 公開 v0.2.0 の受け入れの台本を足した（`docs/demo/acceptance-v0.2.0.md`）。まっさらな Docker で最後まで通した記録は `docs/reports/acceptance-v0.2.0-log.md`。利用者に見える変更: なし（文書だけ）。
-- 既知の制限に 5a・12a・12b を足した。
