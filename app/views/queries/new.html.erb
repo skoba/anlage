@@ -87,6 +87,11 @@
       <label><%= check_box_tag "template_id", "1", @template_id, id: "template_id" %> テンプレートも表示する</label>
       <%= check_box_tag "across_versions", "1", @across_versions, id: "across_versions" %>
       <label for="across_versions">版をまたいで引く</label>
+      <p>
+        <%= label_tag "order", "並べ替え" %>
+        <%= select_tag "order", options_for_select([ [ "並べ替えない", "" ] ] + (@columns + [ @order_card ].compact).uniq.map { |card| [ query_card_label(card), QueryBuilder::Corpus.ref(card) ] }, @order_card && QueryBuilder::Corpus.ref(@order_card)) %>
+        <%= select_tag "order_direction", options_for_select([ %w[昇順 asc], %w[降順 desc] ], @order_direction), "aria-label": "並べ替えの向き" %>
+      </p>
     <% end %>
   </section>
 

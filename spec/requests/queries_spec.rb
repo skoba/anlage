@@ -303,4 +303,41 @@ RSpec.describe "クエリビルダー", type: :request do
       expect(texts("#search-guidance")).to eq([ "「体格指数」だけでは、項目を特定できません。ほかの語と組み合わせて探してください。" ])
     end
   end
+
+  # 並べ替え（docs/design/s4-nl-aql-plan.md 13 節。skoba/anlage#242）。文言は docs/demo/ui-vocabulary.md
+  describe "並べ替え" do
+    it "表示する項目があると、並べ替える項目（「並べ替えない」と、選んだ項目）と、向き（昇順・降順）を選べる" do
+      get "/queries/new", params: { columns: [ QB_SYSTOLIC ] }
+
+      expect(doc.at_css("label[for=order]").text.strip).to eq("並べ替え")
+      expect(doc.css("select#order option").map { |option| [ option.text, option["value"] ] })
+        .to eq([ [ "並べ替えない", "" ], [ "収縮期（CardiologyEncounter）", QB_SYSTOLIC ] ])
+      expect(doc.css("select#order_direction option").map { |option| [ option.text, option["value"] ] }).to eq([ %w[昇順 asc], %w[降順 desc] ])
+      expect(texts("#query_aql pre").first).not_to include("ORDER BY")
+    end
+
+    it "項目と向きを選んで実行すると、ORDER BY が付き、行がその順に並ぶ" do
+      get "/queries/new", params: { columns: [ QB_SYSTOLIC ], conditions: { "0" => { card: QB_SYSTOLIC, operator: ">=", value: "130" } },
+                                    order: QB_SYSTOLIC, order_direction: "desc", run: "実行" }
+
+      expect(texts("#query_aql pre").first).to end_with("/items[at0004]/value/magnitude DESC")
+      expect(texts("#query_result tbody td")).to eq(%w[152.0 148.0 138.0 134.0 132.0])
+      expect(doc.at_css("select#order option[selected]")["value"]).to eq(QB_SYSTOLIC)
+      expect(doc.at_css("select#order_direction option[selected]")["value"]).to eq("desc")
+    end
+
+    it "日時の項目で並べようとすると、実行せず、理由が出る" do
+      get "/queries/new", params: { columns: [ QB_DIAGNOSIS, QB_ONSET ], order: QB_ONSET, run: "実行" }
+
+      expect(texts("#query_error").first).to include("日時の項目での並べ替えは、まだ使えない")
+      expect(doc.at_css("#query_result")).to be_nil
+    end
+
+    it "索引に無い項目の並べ替えは、外す" do
+      get "/queries/new", params: { columns: [ QB_SYSTOLIC ], order: "NoSuch|/x", run: "実行" }
+
+      expect(texts("#query_aql pre").first).not_to include("ORDER BY")
+      expect(doc.at_css("#query_result")).to be_present
+    end
+  end
 end

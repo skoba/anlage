@@ -16,7 +16,7 @@ class QueriesController < ApplicationController
 
     @run = QueryBuilder::Runner.call(columns: @columns, conditions: grouped_selections,
                                      template_id: @template_id, execute: params[:run].present?,
-                                     across_versions: @across_versions, corpus: @corpus)
+                                     across_versions: @across_versions, corpus: @corpus, order: @order)
     # 文で問うから来たとき（nl がある）は、いまの選択の説明を出す。説明は選択とカードの文言から組む（LLM は書かない）
     @explanation = explanation if @nl_started && @run.error.nil?
   end
@@ -50,6 +50,10 @@ class QueriesController < ApplicationController
     @template_id = params[:template_id].present? || params[:composition_name].present?
     # 版をまたいで引く（docs/design/s2-cross-version-plan.md 5 節）
     @across_versions = params[:across_versions].present?
+    # 並べ替え（skoba/anlage#242）。索引に無い項目は外す（数えない）
+    @order_card = @corpus.find(params[:order].to_s)
+    @order_direction = params[:order_direction].to_s == "desc" ? "desc" : "asc"
+    @order = @order_card && { card: @order_card, direction: @order_direction }
     # 文で問う（LLM）。オンとオフは、運用する人の設定（環境変数。Llm::Settings）
     @llm = Llm::Settings.from_env
     @llm_usage = Llm::Usage.default.today
@@ -65,7 +69,7 @@ class QueriesController < ApplicationController
   end
 
   def explanation
-    NlQuery::Explanation.build(columns: @columns, conditions: grouped_selections,
+    NlQuery::Explanation.build(columns: @columns, conditions: grouped_selections, order: @order,
                                template_id: @template_id, across_versions: @across_versions)
   end
 
