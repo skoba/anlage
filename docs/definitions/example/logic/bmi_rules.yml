@@ -1,0 +1,23 @@
+# 定義の例（臨床に使う定義ではない）。式は config/form_behaviors.yml の写し。区分（cases）は、例のために先頭の 2 つと else だけに縮めた。
+# reviewed_by は書かない（確かめられないため。D8 の案になる）
+logic: bmi_rules
+version: 1.0.0
+template: bmi_calculation
+source: config/form_behaviors.yml の写し（例）
+rules:
+  - id: bmi
+    target: body_mass_index
+    inputs: [ height, body_weight ]
+    formula: "body_weight / (height / 100) ^ 2"
+    round: 1
+    "on": input
+    editable: false
+  - id: bmi_class
+    target: body_mass_index_at0013
+    inputs: [ body_mass_index ]
+    cases:
+      - { when: "body_mass_index < 18.5", value: 低体重 }
+      - { when: "body_mass_index < 25", value: 普通体重 }
+      - { else: 肥満 }
+    "on": input
+    editable: true

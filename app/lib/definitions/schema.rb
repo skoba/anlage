@@ -46,6 +46,25 @@ module Definitions
 
     module_function
 
+    # 公開用の JSON Schema（draft 2020-12）を書き出す。写しなので、対の規則（rule）は description に文で書く。食い違ったら検査器が正
+    def to_json_schema(kind)
+      json_schema(KINDS.fetch(kind))
+    end
+
+    def json_schema(schema)
+      case schema[:type]
+      when :string then { "type" => "string" }
+      when :integer then { "type" => "integer" }
+      when :boolean then { "type" => "boolean" }
+      when :enum then { "enum" => schema[:values] }
+      when :array then { "type" => "array", "items" => json_schema(schema[:of]) }
+      when :object
+        properties = schema[:required].merge(schema[:optional]).transform_values { json_schema(_1) }
+        { "type" => "object", "required" => schema[:required].keys, "properties" => properties, "additionalProperties" => false }
+          .merge(schema[:rule] ? { "description" => "ほかの規則は検査器（Definitions::Schema）が正" } : {})
+      end
+    end
+
     def check(kind, data, definition:)
       problems = []
       walk(KINDS.fetch(kind), data, "", nil, nil, definition, problems)
