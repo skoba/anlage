@@ -208,3 +208,14 @@ $ bundle exec rspec spec/system/demo_nl_query_spec.rb spec/requests/queries_nl_s
 $ bundle exec rspec spec/requests/queries_nl_spec.rb spec/lib/nl_query/explanation_spec.rb spec/requests/queries_spec.rb
 48 examples, 0 failures
 ```
+
+### 追記: 候補の上限を 40 枚から 100 枚に直した（R2 の C2 の訂正）
+
+R2 で、上限を「初期データの 18 枚と、紹介状を入れた 44 枚のあいだ」の 40 に置いた。これは誤りだった。
+紹介状のテンプレート（jp_referral。26 枚）を登録した索引は、ふつうにある（手元の開発用の DB が、その状態だった）。
+40 だと、その索引では「検索で当たったカードと、同じテンプレートのカード」に絞る側に入り、R2 の実測のとおり、候補が足りなくなる。
+
+- Red: fixture の 6 つの OPT を入れた索引（44 枚）で、「空腹時血糖の値」の候補が 0 枚（`expected: 44 got: 0`）
+- 直し: 上限を 100 に。Green（`candidates_spec` 7 examples, 0 failures）
+- 実測: 44 枚をすべて送ったときの入力は 2,616 文字（18 枚の 4〜5 倍。まだ小さい）
+- 100 の根拠も弱い（見込み）。100 枚を超える索引での候補の取り方は、ここでは決めていない（検索の段 C・E は保留）

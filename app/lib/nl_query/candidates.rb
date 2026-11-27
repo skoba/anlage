@@ -2,10 +2,10 @@ module NlQuery
   # LLM に渡す候補のカード（docs/design/s4-nl-aql-plan.md 1 節の 1）。
   #
   # 問いの文の全体でパスカード検索にかけると、表示する項目のカードが候補に入らない問いがある（実測: aql の 12 問のうち 4 問。
-  # docs/reports/s4-nl-query-log.md R2）。なので、索引が小さい（LIMIT 枚まで）あいだは、索引のカードをすべて候補にし、
+  # docs/reports/s4-nl-query-log.md R2）。なので、索引が小さい（LIMIT 枚まで。紹介状を入れた 44 枚で、文は 2,616 文字。実測）あいだは、索引のカードをすべて候補にし、
   # 検索で当たったカードを前に並べる。索引が LIMIT より大きいときは、検索で当たったカードと、同じテンプレートのカードに絞る。
   class Candidates
-    LIMIT = 40
+    LIMIT = 100
 
     def self.call(question, corpus: QueryBuilder::Corpus.active, limit: LIMIT)
       new(question, corpus, limit).call
