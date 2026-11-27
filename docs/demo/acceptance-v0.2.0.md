@@ -107,13 +107,12 @@ H1 で開くのは、DEMO-01 の画面でいちばん上の CardiologyEncounter�
 | # | 操作 | 画面に出るはずの結果 |
 |---|---|---|
 | I1 | ナビ「テンプレート」→ ProblemList の「詳細」→「FHIR プロファイル」のリンク | JSON。`resourceType` が `StructureDefinition`、`id` が `openehr-problemlist-evaluation-problem-diagnosis-v1` |
-| I2 | Postman で `docs/demo/postman/anlage.postman_collection.json` と `anlage.postman_environment.json` を取り込み（Import）、環境「Anlage（ローカルの Docker）」を選ぶ。環境の `password` に `<pw>`、`ehr_id` に DEMO-01 の EHR ID（患者の画面の「EHR ID を写す」）を入れる | コレクション「Anlage（参照実装）の API」に、フォルダ「FHIR」（3 件）と「openEHR REST」（3 件） |
+| I2 | Postman で `docs/demo/postman/anlage.postman_collection.json` と `anlage.postman_environment.json` を取り込み（Import）、環境「Anlage（ローカルの Docker）」を選ぶ。環境の `password` に `<pw>`、`ehr_id` に DEMO-01 の EHR ID（患者の画面の「EHR ID を写す」）を入れる | コレクション「Anlage（参照実装）の API」に、フォルダ「FHIR」（2 件）と「openEHR REST」（3 件） |
 | I3 | 「FHIR」→「CapabilityStatement（metadata）」を Send | 200。`resourceType` が `CapabilityStatement`。コレクションの Authorization（Basic）が効いている（要求ごとの設定は「Inherit auth from parent」） |
 | I4 | 「StructureDefinition（ProblemList の問題・診断）」を Send | 200。`id` が `openehr-problemlist-evaluation-problem-diagnosis-v1`（I1 と同じ） |
-| I5 | 「Observation の検索（患者で絞る）」を Send | 200。`resourceType` が `Bundle`、`total` が `0`（既知の制限 19） |
-| I6 | 「openEHR REST」→「EHR の取得」を Send | 200。`_type` が `EHR`、`ehr_status/subject/external_ref/id/value` が `DEMO-01` |
-| I7 | 「AQL の実行」を Send | 200。`rows` が 3 行（148・152・138。H3 で削除した記録は出ない）。Test Results が 1 件 pass。環境の `composition_uid` に 1 行目の uid が入る |
-| I8 | 「記録の取得」を Send | 200。`_type` が `COMPOSITION`、`archetype_details/template_id/value` が `CardiologyEncounter` |
+| I5 | 「openEHR REST」→「EHR の取得」を Send | 200。`_type` が `EHR`、`ehr_status/subject/external_ref/id/value` が `DEMO-01` |
+| I6 | 「AQL の実行」を Send | 200。`rows` が 3 行（148・152・138。H3 で削除した記録は出ない）。Test Results が 1 件 pass。環境の `composition_uid` に 1 行目の uid が入る |
+| I7 | 「記録の取得」を Send | 200。`_type` が `COMPOSITION`、`archetype_details/template_id/value` が `CardiologyEncounter` |
 
 ## 後片付け
 

@@ -48,8 +48,14 @@ RSpec.describe "Postman のコレクション（docs/demo/postman/）" do
     expect(values["base_url"]).to eq("http://localhost:8080")
   end
 
+  # R-20261127-5 の 1: いつも 0 件になる要求（anlage での FHIR の Observation。既知の制限 19）は入れない
+  it "FHIR の Observation の要求は入れない（FHIR 2 件、openEHR REST 3 件）" do
+    expect(collection["item"].map { |folder| folder["item"].size }).to eq([ 2, 3 ])
+    expect(requests.map { _1.dig("request", "url", "raw") }).to all(satisfy { !_1.include?("/Observation") })
+  end
+
   it "すべての要求のパスが、anlage か engine の routes で解決できる" do
-    expect(requests.size).to eq(6)
+    expect(requests.size).to eq(5)
     requests.each do |request|
       method = request.dig("request", "method").downcase.to_sym
       expect { recognize(method, path_of(request)) }.not_to raise_error, "#{request['name']}: #{method} #{path_of(request)}"

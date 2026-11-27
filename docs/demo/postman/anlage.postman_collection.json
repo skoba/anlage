@@ -71,36 +71,6 @@
             },
             "description": "登録したテンプレートの OPT から作る StructureDefinition（anlage の入口。テンプレートの詳細の「FHIR プロファイル」と同じ）。"
           }
-        },
-        {
-          "name": "Observation の検索（患者で絞る）",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/openehr/fhir/Observation?subject=Patient/{{ehr_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "openehr",
-                "fhir",
-                "Observation"
-              ],
-              "query": [
-                {
-                  "key": "subject",
-                  "value": "Patient/{{ehr_id}}"
-                }
-              ]
-            },
-            "description": "Bundle（searchset）が返る。anlage では total が 0（engine の facade は scaffold した model を引き、実行時に登録したテンプレートの記録を見ない。既知の制限 19）。"
-          }
         }
       ]
     },

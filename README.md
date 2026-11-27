@@ -117,13 +117,13 @@ http://localhost:8080/ を開き（利用者名 `demo` とパスワードを入�
 #### API を Postman で試す
 
 [`docs/demo/postman/`](docs/demo/postman/) に、Postman のコレクション（v2.1）と環境の雛形がある。
-FHIR（CapabilityStatement、StructureDefinition、Observation の検索）と openEHR REST（EHR の取得、AQL の実行、記録の取得）の 6 件。
+FHIR（CapabilityStatement、StructureDefinition）と openEHR REST（EHR の取得、AQL の実行、記録の取得）の 5 件。
 
 1. Postman で `anlage.postman_collection.json` と `anlage.postman_environment.json` を取り込み、環境「Anlage（ローカルの Docker）」を選ぶ
 2. 環境の `password` に起動時の `ANLAGE_BASIC_AUTH_PASSWORD` を、`ehr_id` に患者の画面の EHR ID（「EHR ID を写す」）を入れる。パスワードは雛形に書き込んで commit しない
 3. 「AQL の実行」を送ると、応答の 1 行目の記録の uid が `composition_uid` に入る。そのあと「記録の取得」を送る
 
-認証はコレクションの Basic 認証 1 か所で、各要求はそれを引き継ぐ。Observation の検索は、anlage では 0 件になる（[既知の制限](docs/known-limitations.md) 19）。
+認証はコレクションの Basic 認証 1 か所で、各要求はそれを引き継ぐ。FHIR の Observation は、anlage ではいつも 0 件になるので入れていない（[既知の制限](docs/known-limitations.md) 19）。
 
 #### 任意の Basic 認証
 

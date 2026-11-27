@@ -1,1 +1,1 @@
-- Feat: API を Postman で試せるように、`docs/demo/postman/` にコレクション（v2.1、FHIR 3 件と openEHR REST 3 件）と環境の雛形を置いた。README に手順、既知の制限に 19（FHIR の Observation は anlage では 0 件）を足した（Refs #193、Refs R-20261127-1）。利用者に見える変更（文書と、取り込めるコレクション。アプリの挙動は変わらない）
+- Feat: API を Postman で試せるように、`docs/demo/postman/` にコレクション（v2.1、FHIR 2 件と openEHR REST 3 件）と環境の雛形を置いた。README に手順、既知の制限に 19（FHIR の Observation は anlage では 0 件。コレクションには入れない）を足した（Refs #193、Refs R-20261127-1）。利用者に見える変更（文書と、取り込めるコレクション。アプリの挙動は変わらない）
