@@ -217,4 +217,60 @@ RSpec.describe QueryBuilder::Builder do
       end
     end
   end
+
+  # 並べ替え（docs/design/s4-nl-aql-plan.md 13 節。R-20261127-26 の 5、skoba/anlage#242）
+  describe ".build（並べ替え）" do
+    it "数値の項目の昇順: ORDER BY <パス>/magnitude ASC を、WHERE のあとに足す" do
+      aql = build(columns: [ systolic ], conditions: [ { card: systolic, operator: ">=", value: 140 } ],
+                  order: { card: systolic, direction: :asc })
+
+      expect(aql).to eq(<<~AQL.chomp)
+        SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude
+        FROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[#{QB_BP}]
+        WHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude >= 140
+        ORDER BY o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude ASC
+      AQL
+    end
+
+    it "降順。条件が無くても組める。向きは、文字でも受ける" do
+      aql = build(columns: [ systolic ], order: { card: systolic, direction: "desc" })
+
+      expect(aql.lines.last).to eq("ORDER BY o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude DESC")
+      expect(aql).not_to include("WHERE")
+    end
+
+    it "文字列の項目は、値の文字で並べる（<パス>/value）" do
+      aql = build(columns: [ diagnosis ], order: { card: diagnosis, direction: :asc })
+
+      expect(aql.lines.last).to eq("ORDER BY ev/data[at0001]/items[at0002]/value/value ASC")
+    end
+
+    it "表示しない項目でも、同じ ENTRY の項目なら並べ替えに使える" do
+      aql = build(columns: [ systolic ], order: { card: card("CardiologyEncounter", QB_BP, "at0005"), direction: :desc })
+
+      expect(aql.lines.first).not_to include("at0005")
+      expect(aql.lines.last).to eq("ORDER BY o/data[at0001]/events[at0006]/data[at0003]/items[at0005]/value/magnitude DESC")
+    end
+
+    it "並べ替えが無ければ、これまでと同じ AQL" do
+      expect(build(columns: [ systolic ], order: nil)).to eq(build(columns: [ systolic ]))
+    end
+
+    it "組めない並べ替えは InvalidSelection" do
+      {
+        { card: systolic, direction: :sideways } => /並べ替えの向き/,
+        { card: diagnosis, direction: :asc } => /ENTRY のアーキタイプは 1 つ/,
+        { card: nil, direction: :asc } => /並べ替える項目が無い/
+      }.each do |order, message|
+        expect { build(columns: [ systolic ], order: order) }.to raise_error(described_class::InvalidSelection, message)
+      end
+    end
+
+    # 日時そのものの順（ORDER BY <パス>）は、openehr 2.6.1 では月末で逆になることがある（docs/known-limitations.md 20）。
+    # 直った版が main に入るまで、日時の項目での並べ替えは組まない
+    it "日時の項目での並べ替えは、まだ組まない（理由を出す）" do
+      expect { build(columns: [ diagnosis ], order: { card: onset, direction: :asc }) }
+        .to raise_error(described_class::InvalidSelection, /発症日時.*日時の項目での並べ替えは、まだ使えない/)
+    end
+  end
 end

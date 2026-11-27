@@ -84,11 +84,12 @@ module QueryBuilder
       bindings
     end
 
-    # --- SELECT と WHERE に現れる識別パス（出現順）
+    # --- SELECT と WHERE と ORDER BY に現れる識別パス（出現順）
 
     def identified_paths(query)
       paths = query.select_clause.columns.flat_map { |column| paths_in(column.expression) }
       paths += paths_in(query.where_clause.expression) if query.where_clause
+      paths += query.order_by_clause.items.map(&:path) if query.order_by_clause
       paths
     end
 

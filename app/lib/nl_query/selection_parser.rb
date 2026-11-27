@@ -8,7 +8,7 @@ module NlQuery
   # 例外は外に出さない。結果は ok（選択がある）／unanswerable（LLM が答えられないと返した）／rejected（検査ではねた）。
   #
   # selection の形は QueryBuilder::Runner.call の引数と同じ:
-  #   { columns: [カード], conditions: [条件], template_id: 真偽, across_versions: 真偽 }
+  #   { columns: [カード], conditions: [条件], template_id: 真偽, across_versions: 真偽, order: { card:, direction: }（あれば） }
   class SelectionParser
     Result = Struct.new(:status, :selection, :reason, keyword_init: true) do
       def ok? = status == :ok
@@ -50,6 +50,7 @@ module NlQuery
       selection = { columns: columns.map { |number| card(number) },
                     conditions: conditions.map { |condition| condition(condition, nested: false) },
                     template_id: data["template_id"] == true, across_versions: data["across_versions"] == true }
+      selection[:order] = order(data["order"]) unless data["order"].nil?
       Result.new(status: :ok, selection: selection)
     rescue Rejected => e
       Result.new(status: :rejected, reason: e.message)
@@ -72,6 +73,16 @@ module NlQuery
       raise Rejected, "候補に無い番号（#{number}）" unless number.between?(1, @cards.size)
 
       @cards[number - 1]
+    end
+
+    # 並べ替え: { "card": 番号, "direction": "asc"／"desc" }。向きが無ければ昇順
+    def order(raw)
+      raise Rejected, "決まった形でない並べ替え（#{raw.inspect.truncate(40)}）" unless raw.is_a?(Hash)
+
+      direction = raw.fetch("direction", "asc").to_s.downcase
+      raise Rejected, "並べ替えの向きは asc か desc（#{direction.truncate(20)}）" unless %w[asc desc].include?(direction)
+
+      { card: card(raw["card"]), direction: direction }
     end
 
     def condition(raw, nested:)

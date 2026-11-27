@@ -113,4 +113,45 @@ RSpec.describe QueryBuilder::Runner do
       expect(rows(run(columns: [ systolic, diastolic ], conditions: [ either.call("80"), { card: systolic, operator: ">", value: "200" } ]))).to eq([])
     end
   end
+
+  # 並べ替え（docs/design/s4-nl-aql-plan.md 13 節。skoba/anlage#242）。行の順を見る
+  describe "並べ替え" do
+    let(:systolic) { card(QB_BP_O, "at0004") }
+    let(:diastolic) { card(QB_BP_O, "at0005") }
+
+    it "数値の昇順と降順: 収縮期 >= 130 の 5 行が、値の順に並ぶ" do
+      condition = { card: systolic, operator: ">=", value: 130 }
+      ascending = described_class.call(columns: [ systolic ], conditions: [ condition ], order: { card: systolic, direction: :asc })
+      descending = described_class.call(columns: [ systolic ], conditions: [ condition ], order: { card: systolic, direction: :desc })
+
+      expect(ascending.lint).to be_ok
+      expect(ascending.rows.flatten).to eq([ 132.0, 134.0, 138.0, 148.0, 152.0 ])
+      expect(descending.rows.flatten).to eq([ 152.0, 148.0, 138.0, 134.0, 132.0 ])
+      expect(ascending.aql.lines.last).to end_with("/items[at0004]/value/magnitude ASC")
+    end
+
+    it "表示しない項目（拡張期）で並べる" do
+      run = described_class.call(columns: [ systolic, diastolic ], conditions: [ { card: systolic, operator: ">=", value: 130 } ],
+                                 order: { card: diastolic, direction: :desc })
+
+      expect(run.rows.map(&:last)).to eq(run.rows.map(&:last).sort.reverse)
+      expect(run.rows.size).to eq(5)
+    end
+
+    it "版をまたいで引くときは、並べ替えを組まない（版ごとの AQL の行をつなぐので、全体の順にならない）。理由を error に持つ" do
+      run = described_class.call(columns: [ systolic ], order: { card: systolic, direction: :asc }, across_versions: true)
+
+      expect(run).not_to be_executed
+      expect(run.error).to eq("版をまたいで引くときは、並べ替えは使えない")
+    end
+
+    it "日時の項目での並べ替えは実行せず、理由を error に持つ" do
+      diagnosis = card("openEHR-EHR-EVALUATION.problem_diagnosis.v1", "at0002")
+      onset = card("openEHR-EHR-EVALUATION.problem_diagnosis.v1", "at0077")
+      run = described_class.call(columns: [ diagnosis ], order: { card: onset, direction: :asc })
+
+      expect(run).not_to be_executed
+      expect(run.error).to include("日時の項目での並べ替えは、まだ使えない")
+    end
+  end
 end

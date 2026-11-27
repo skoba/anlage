@@ -446,3 +446,55 @@ selection:
 | T3 | デモクエリ 2・3（`docs/demo/aql-queries.md`、`spec/demo/aql_queries_spec.rb`）の `c/name/value` は触らない。クエリビルダーの列ではなく、書く側の範囲 | あわせて書き換える（裁定の範囲の外） |
 
 全 suite: 615 examples, 0 failures, 2 pending。rubocop は違反なし
+
+## R31 並べ替え（2026-11-27。`skoba/anlage#242`。R-20261127-26 の 5）
+
+計画は `docs/design/s4-nl-aql-plan.md` 13 節（自己承認で、そのまま実装した）。
+
+### 自己承認した判断
+
+| # | 判断 | 採った案 | 捨てた案 | 根拠 |
+|---|---|---|---|---|
+| S1 | 並べ替えの項目の数 | 1 つ | 2 つ以上 | 裁定は「どの項目で、昇順か降順か」。まず 1 つ。エンジンは複数を受ける（`parser.rb:414`） |
+| S2 | 日時の項目 | **組まない**（理由を出して、実行しない） | `…/value`（文字）の順で組む | 裁定: 日時の並べ替えは、日時そのものの順で行い、spec は openehr の版上げのあとで確定する。文字の順は 2.6.1 でも正しい（既知の制限 20 の実測）が、日時そのものの順ではない。試験の無い実装を入れない |
+| S3 | 版をまたいで引くとき | 組まない（「版をまたいで引くときは、並べ替えは使えない」） | 版ごとの AQL に ORDER BY を付ける／アプリで並べ直す | 版ごとに付けても、つないだ行は全体の順にならない。アプリで並べ直す形は、要るようになってから |
+| S4 | 画面で選べる項目 | 表示する項目だけ | 索引のどの項目でも | 画面の状態を小さく保つ。ビルダーは、表示しない項目でも受ける（文で問うの選択から来る） |
+| S5 | URL のパラメータ | `order`（項目の参照）、`order_direction`（`asc`／`desc`。それ以外は昇順） | — | これまでのパラメータは、そのまま。足しただけ |
+
+### Red（実行して失敗を確かめた）
+
+```
+$ bundle exec rspec spec/lib/query_builder/builder_spec.rb -e "並べ替え"
+     ArgumentError:
+       unknown keyword: :order
+7 examples, 7 failures
+
+$ bundle exec rspec spec/lib/query_builder/linter_spec.rb -e "ORDER BY"
+  1) … ORDER BY のパスも検査する: 存在する節は ok、存在しない節（items[at0099]）は error（パス）
+       expected false
+（存在しない節を ORDER BY に書いても、ok? が真のままだった）
+
+$ bundle exec rspec spec/lib/query_builder/runner_spec.rb -e "並べ替え"
+       unknown keyword: :order
+4 examples, 4 failures
+
+$ bundle exec rspec spec/lib/nl_query/{selection_parser,explanation,query_params,prompt}_spec.rb -e "並べ替え"
+6 examples, 6 failures
+$ bundle exec rspec spec/requests/queries_spec.rb -e "並べ替え"
+4 examples, 3 failures
+```
+
+画面の 4 例のうち 1 例（索引に無い項目の並べ替えは、外す）は、実装の前から通った。並べ替えを読まなければ、ORDER BY は付かないため。Red にならない例として書く。
+
+### Green
+
+```
+$ bundle exec rspec spec/lib/query_builder
+78 examples, 0 failures
+$ bundle exec rspec spec/lib/nl_query/{selection_parser,explanation,query_params,prompt}_spec.rb
+48 examples, 0 failures
+$ bundle exec rspec spec/requests/queries_spec.rb -e "並べ替え"
+4 examples, 0 failures
+```
+
+実測（demo_initial）: 収縮期 >= 130 の 5 行は、昇順で 132・134・138・148・152、降順でその逆。
