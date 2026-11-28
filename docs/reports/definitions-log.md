@@ -185,3 +185,21 @@ gem は足さない。migration は 1 つ。範囲の外にしたもの（画面
   - 書いた spec に、確かめていないメソッド（`Demo::SampleCompositions.commit_referral_for_spec!`）を呼ぶ行を入れていた。実在しないので消した（DEMO-01 には紹介状が無く、orders は出ない）
   - `spec/requests`・`spec/views`・患者とデモの system spec: 230 examples, 0 failures（全体は CI。R-20261128-10 のメモリの決まりに合わせた）
 - 例の組（`docs/definitions/example/screens/patient_chart.yml`）に `from: { auto: true }` の部品を 1 つ足した
+
+## R9（2026-11-28）D-4b: 動かす定義の組で患者の画面を出す（`skoba/anlage#283`。R-20261128-7 の回答 2・3）
+
+- Red `spec/requests/active_bundle_spec.rb`（6 例）。実装の前の木（`afbae69`）に spec だけを置いて実行: 6 examples, 5 failures。
+  落ちた 5 例は、印（`data-definition-screen`）・ボタン（`data-definition-button`）・理由の文（`#definition_notice`）が無いことで落ちた（`got: nil`、`undefined method '[]' for nil`）。
+  「設定が無ければ、組み込みの定義」の 1 例は、はじめから通る（いまの振る舞いの pin）
+  - リセットで、はじめの Red の出力が残っていなかった。上は、実装の commit `6db0401` の spec を、その親 `afbae69` の木に置いて取り直したもの（一時の worktree は消した）
+- Green: `Definitions::ActiveScreen`。運用者の設定 `ANLAGE_DEFINITION_BUNDLE` の組の active の版を、表示のたびに表から読む（別のプロセスの rake で動かした版も、再起動なしで次の表示に届く。回答 3）。
+  検査の結果だけを覚える（鍵は、組の行の id と updated_at、動いているテンプレートの id と checksum。32 件で捨てる）
+  - 組に動いている版が無い、または、いまのテンプレートで検査に通らない: 組み込みの定義で出し、理由の文を出す（500 にしない。ログに warn）
+  - `?screen=` で組の中のほかの画面（ボタンの `open.screen`）。組に無い名前は start の画面
+  - 部品は `from` に書いたテンプレート・項目だけを出す（`Section#select_by_template`・`select_series`。`auto` は全体）
+  - 新しい部品の中身: buttons（`open.form` は帳票の入力、`open.screen` は `?screen=`）、form（帳票を開くリンク）、table（まだ出せない、の文）
+  - 語彙表（`docs/demo/ui-vocabulary.md`）に「定義の組」の行を、文言の pin と同じ commit で足した（回答 5）
+- 別のプロセスの例は `use_transactional_tests = false` で、`bin/rails definitions:register`・`activate`・`restore` を実際に走らせる（後片づけは手で）
+- 手元: `spec/requests/active_bundle_spec.rb` と、患者の画面にかかわる spec（`spec/requests`・`spec/lib/definitions`）。全体は CI（R-20261128-10）
+- Change: 運用者が `ANLAGE_DEFINITION_BUNDLE` に組の名前を設定すると、患者の画面を、その組の active の版の画面で出す（Refs #283、Refs R-20261128-7。D-4b）。
+  利用者に見える変更: あり（設定したときだけ。設定しなければ、いまの画面のまま）

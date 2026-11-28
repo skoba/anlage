@@ -1,0 +1,13 @@
+<%# 部品 buttons（skoba/anlage#283）。open.form は帳票へ。open.screen は同じ組の画面へ（?screen=）。保存のあとの then は D-4c %>
+<section class="card" data-definition-section="<%= section.id %>">
+  <p class="definition-buttons">
+    <% section.items.each do |item| %>
+      <% open = item["open"] || {} %>
+      <% if open["form"] %>
+        <%= link_to item["label"], form_path(open["form"]), class: "button", data: { definition_button: item["id"] } %>
+      <% elsif open["screen"] %>
+        <%= link_to item["label"], patient_path(patient.ehr_id, screen: open["screen"]), class: "button", data: { definition_button: item["id"] } %>
+      <% end %>
+    <% end %>
+  </p>
+</section>
