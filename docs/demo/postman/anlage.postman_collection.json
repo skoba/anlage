@@ -71,12 +71,164 @@
             },
             "description": "登録したテンプレートの OPT から作る StructureDefinition（anlage の入口。テンプレートの詳細の「FHIR プロファイル」と同じ）。"
           }
+        },
+        {
+          "name": "Observation の検索（その患者）",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 1 件目の Observation の id を observation_id に入れる（次の「Observation の 1 件」で使う）",
+                  "pm.test(\"200 が返る\", () => pm.response.to.have.status(200));",
+                  "const entries = pm.response.json().entry || [];",
+                  "if (entries.length > 0) {",
+                  "  const id = entries[0].resource.id;",
+                  "  // 環境を選んでいれば環境の変数に、選んでいなければコレクションの変数に入れる（環境の変数が先に引かれるため）",
+                  "  if (pm.environment.name) { pm.environment.set(\"observation_id\", id); } else { pm.collectionVariables.set(\"observation_id\", id); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/fhir+json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/openehr/fhir/Observation?subject=Patient/{{ehr_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "openehr",
+                "fhir",
+                "Observation"
+              ],
+              "query": [
+                {
+                  "key": "subject",
+                  "value": "Patient/{{ehr_id}}"
+                }
+              ]
+            },
+            "description": "その患者（環境の ehr_id）の記録を FHIR の Observation で引く（searchset の Bundle）。初期データの DEMO-01 は 26 件（血圧、身長・体重・BMI、検査結果）。1 件目の id を observation_id に入れる。"
+          }
+        },
+        {
+          "name": "Observation の 1 件",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/fhir+json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/openehr/fhir/Observation/{{observation_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "openehr",
+                "fhir",
+                "Observation",
+                "{{observation_id}}"
+              ]
+            },
+            "description": "Observation を id で 1 件引く。id は「c<記録の uuid>-<entry の番号>」（openehr-rails が付ける）。"
+          }
+        },
+        {
+          "name": "Condition の検索（その患者のプロブレムリスト）",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/fhir+json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/openehr/fhir/Condition?subject=Patient/{{ehr_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "openehr",
+                "fhir",
+                "Condition"
+              ],
+              "query": [
+                {
+                  "key": "subject",
+                  "value": "Patient/{{ehr_id}}"
+                }
+              ]
+            },
+            "description": "その患者のプロブレムリスト（問題・診断）を FHIR の Condition で引く。DEMO-01 は 3 件。clinicalStatus は facade が置く値（既知の制限 24）。"
+          }
         }
       ]
     },
     {
       "name": "openEHR REST",
       "item": [
+        {
+          "name": "患者 ID から EHR を引く",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 応答の ehr_id を ehr_id に入れる（あとの「EHR の取得」「AQL の実行」「記録の取得」で使う）",
+                  "pm.test(\"200 が返る\", () => pm.response.to.have.status(200));",
+                  "const ehrId = pm.response.json().ehr_id.value;",
+                  "// 環境を選んでいれば環境の変数に、選んでいなければコレクションの変数に入れる（環境の変数が先に引かれるため）",
+                  "if (pm.environment.name) { pm.environment.set(\"ehr_id\", ehrId); } else { pm.collectionVariables.set(\"ehr_id\", ehrId); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/openehr/v1/ehr?subject_id={{subject_id}}&subject_namespace=anlage",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "openehr",
+                "v1",
+                "ehr"
+              ],
+              "query": [
+                {
+                  "key": "subject_id",
+                  "value": "{{subject_id}}"
+                },
+                {
+                  "key": "subject_namespace",
+                  "value": "anlage"
+                }
+              ]
+            },
+            "description": "患者 ID（環境の subject_id。既定は DEMO-01）から、その患者の EHR を引く（openehr-rails 0.13.0 からの入口）。応答の EHR ID を ehr_id に入れる。無い患者 ID は 404。"
+          }
+        },
         {
           "name": "EHR の取得",
           "request": {

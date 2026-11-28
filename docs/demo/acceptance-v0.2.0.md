@@ -107,12 +107,16 @@ H1 で開くのは、DEMO-01 の画面でいちばん上の CardiologyEncounter�
 | # | 操作 | 画面に出るはずの結果 |
 |---|---|---|
 | I1 | ナビ「テンプレート」→ ProblemList の「詳細」→「FHIR プロファイル」のリンク | JSON。`resourceType` が `StructureDefinition`、`id` が `openehr-problemlist-evaluation-problem-diagnosis-v1` |
-| I2 | Postman で `docs/demo/postman/anlage.postman_collection.json` と `anlage.postman_environment.json` を取り込み（Import）、環境「Anlage（ローカルの Docker）」を選ぶ。環境の `password` に `<pw>`、`ehr_id` に DEMO-01 の EHR ID（患者の画面の「EHR ID を写す」）を入れる | コレクション「Anlage（参照実装）の API」に、フォルダ「FHIR」（2 件）と「openEHR REST」（3 件） |
+| I2 | Postman で `docs/demo/postman/anlage.postman_collection.json` と `anlage.postman_environment.json` を取り込み（Import）、環境「Anlage（ローカルの Docker）」を選ぶ。環境の `password` に `<pw>` を入れる（`subject_id` は DEMO-01 のまま） | コレクション「Anlage（参照実装）の API」に、フォルダ「FHIR」（2 件）と「openEHR REST」（4 件） |
 | I3 | 「FHIR」→「CapabilityStatement（metadata）」を Send | 200。`resourceType` が `CapabilityStatement`。コレクションの Authorization（Basic）が効いている（要求ごとの設定は「Inherit auth from parent」） |
 | I4 | 「StructureDefinition（ProblemList の問題・診断）」を Send | 200。`id` が `openehr-problemlist-evaluation-problem-diagnosis-v1`（I1 と同じ） |
+| I4a | 「openEHR REST」→「患者 ID から EHR を引く」を Send（v0.2.1 から。番号は v0.2.0 の記録のために変えない） | 200。`ehr_id/value` が DEMO-01 の EHR ID（患者の画面の「EHR ID を写す」と同じ）。Test Results が 1 件 pass。環境の `ehr_id` に、その EHR ID が入る |
 | I5 | 「openEHR REST」→「EHR の取得」を Send | 200。`_type` が `EHR`、`ehr_status/subject/external_ref/id/value` が `DEMO-01` |
 | I6 | 「AQL の実行」を Send | 200。`rows` が 3 行（148・152・138。H3 で削除した記録は出ない）。Test Results が 1 件 pass。環境の `composition_uid` に 1 行目の uid が入る |
 | I7 | 「記録の取得」を Send | 200。`_type` が `COMPOSITION`、`archetype_details/template_id/value` が `CardiologyEncounter` |
+| I8 | 「FHIR」→「Observation の検索（その患者）」を Send（v0.2.1 から。I4a のあと） | 200。`resourceType` が `Bundle`、`total` が 25（初期データの 26 から、H3 で削除した 2026-10-15 の血圧の 1 件を除く）。1 件目は `code` が `openEHR-EHR-OBSERVATION.blood_pressure.v2`、`effectiveDateTime` が `2026-01-15T00:00:00Z`、`component` の収縮期が 148.0。Test Results が 1 件 pass。環境の `observation_id` に 1 件目の id が入る |
+| I9 | 「Observation の 1 件」を Send | 200。`resourceType` が `Observation`、`id` が I8 の 1 件目と同じ |
+| I10 | 「Condition の検索（その患者のプロブレムリスト）」を Send | 200。`total` が 3（2型糖尿病・糖尿病性腎症・高血圧症）。各件の `clinicalStatus` が `unknown`（facade が置く値。既知の制限 24）、`verificationStatus` が `at0076`「確定」 |
 
 ## J. 患者の画面（v0.2.1 から。skoba/anlage#220・#221、U1）
 
