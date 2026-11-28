@@ -16,7 +16,7 @@
 <%# R-20261127-9: 問いに EHR ID を入れた状態で AQL 照会を開く（実行は画面のボタン）。文言は docs/demo/ui-vocabulary.md %>
 <p><%= link_to "この患者の記録を AQL で引く", patient_records_aql_path(@patient), id: "patient_aql" %></p>
 
-<%= render "patients/chart", screen: @screen, chart: @chart, patient: @patient, originals: @originals, records: @records %>
+<%= render "patients/chart", definition: @definition, chart: @chart, patient: @patient, originals: @originals, records: @records %>
 
 <%= button_to "この患者を選ぶ", select_patient_path(@patient.ehr_id) %>
 

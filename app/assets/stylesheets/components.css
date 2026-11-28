@@ -39,3 +39,9 @@ svg.transition-diagram .diagram-edge line { stroke: var(--color-muted); }
 svg.transition-diagram .diagram-back line { stroke-dasharray: 4 3; }
 svg.transition-diagram .diagram-label { fill: var(--color-muted); font-size: 11px; }
 svg.transition-diagram marker path { fill: var(--color-muted); }
+
+/* skoba/anlage#283: 定義の組が動かせず、既定の画面に落ちたときの理由の文（docs/design/definition-registration-plan.md 3 節） */
+#definition_notice { margin: 0 0 var(--space-4); padding: var(--space-2) var(--space-4); border: 1px solid var(--color-warning);
+                     background: #fef3c7; color: #7c2d12; }
+#definition_notice ul { margin: var(--space-2) 0 0; padding-left: 1.25rem; font-size: 0.85rem; }
+.definition-buttons { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; }

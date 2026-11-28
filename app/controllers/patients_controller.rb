@@ -31,8 +31,8 @@ class PatientsController < ApplicationController
     @originals = Composition.latest_versions.where(uid: @records.map(&:uid)).index_by(&:uid)
     # skoba/anlage#220: 患者の画面の部品（プロブレムリスト、経過、検査結果、依頼と紹介状。docs/design/u1-patient-chart-plan.md）
     @chart = Charts::PatientChart.call(@patient)
-    # skoba/anlage#281（D-4a）: 部品の並びは画面の定義から。いまは組み込みの定義（動かす組は D-4b）
-    @screen = Definitions::Builtin.patient_screen
+    # skoba/anlage#281・#283: 部品の並びは画面の定義から。ANLAGE_DEFINITION_BUNDLE の組の active の版、無ければ組み込みの定義
+    @definition = Definitions::ActiveScreen.call(screen: params[:screen].presence)
   end
 
   # テンプレートが未登録の記録の閲覧（skoba/anlage#182）。その患者の記録で、削除済みでないものだけ

@@ -1,6 +1,17 @@
-<%# skoba/anlage#220・#281: 患者の画面の部品。並びは画面の定義（いまは組み込みの定義 config/definitions/builtin。
-    docs/design/definition-registration-plan.md 3 節）。部品ごとの中身は patients/sections/。部品の無いものは出さない %>
-<% screen.data["sections"].each do |section_data| %>
-  <% section = Definitions::Section.from(section_data) %>
-  <%= render "patients/sections/#{section.partial}", section:, chart:, patient:, originals:, records: %>
+<%# skoba/anlage#220・#281・#283: 患者の画面の部品。並びは画面の定義（ANLAGE_DEFINITION_BUNDLE の組の active の版、無ければ
+    組み込みの定義 config/definitions/builtin。docs/design/definition-registration-plan.md 3 節）。部品ごとの中身は patients/sections/。
+    部品に入れるものが無ければ出さない。文言は docs/demo/ui-vocabulary.md の「定義の組」 %>
+<% if definition.notice %>
+  <div id="definition_notice" role="status">
+    <p><%= definition.notice %></p>
+    <% if definition.problems.any? %>
+      <ul><% definition.problems.each do |problem| %><li><%= problem.to_s %></li><% end %></ul>
+    <% end %>
+  </div>
 <% end %>
+<div data-definition-screen="<%= [ definition.bundle_id, definition.version, definition.screen.id ].join(" ") %>">
+  <% definition.screen.data["sections"].each do |section_data| %>
+    <% section = Definitions::Section.from(section_data) %>
+    <%= render "patients/sections/#{section.partial}", section:, chart:, patient:, originals:, records: %>
+  <% end %>
+</div>
