@@ -155,3 +155,21 @@ gem は足さない。migration は 1 つ。範囲の外にしたもの（画面
 - サイクル 3（`demo:reset`、回答 6）: Red `spec/tasks/demo_reset_spec.rb` の「登録した定義の組も消す」→ `expected: 0, got: 1`。
   Green: `DefinitionBundle.delete_all`（トランザクションの中）。タスクの説明と README（英・日）に書いた → 10 examples, 0 failures
 - rake（register・activate・restore・list）は D-3b
+
+## R8（2026-11-28）D-4a: `from: { auto: true }` と組み込みの定義（`skoba/anlage#281`。R-20261128-7 の回答 4）
+
+- サイクル 1（書式）: Red `spec/lib/definitions/auto_from_spec.rb`（6 例）。D-3a の前の main では `Linter.check` が無いので 6 failures、
+  D-3a のブランチを取り込んでから 5 failures（記録を引かない部品の例は、はじめから通る）。
+  Green: `Definitions::Schema` の `FROM` に `auto`（`enum(true)`）。対の規則: `auto` と一緒に書けるのは `rm_type` だけ。
+  `SECTION` の対の規則: 記録を引く部品（`RECORD_COMPONENTS` = problem_list・time_series・lab_table・records・table）で `from` が無いと D1、文に `from: { auto: true }` の書き方。
+  `problem_list` の D4（`from.archetype` が要る）は、`auto` のときは出さない
+  - 1 回目の Green で 3 failures: D1 を通らない画面は読まれず、その画面への遷移が D5 になる（検査器のこれまでの振る舞い）。spec は D1 だけを見る形にした
+  - `auto` に `rm_type` を許した理由（自己承認）: 組み込みの定義で「依頼と紹介状」（U1 の R2、INSTRUCTION）と「記録の一覧」を、同じ `records` で分けるため
+  - `rake definitions:context` の部品の説明と、`from_rule`（材料の JSON の新しいキー）。JSON のキーの pin（`spec/tasks/definitions_spec.rb`）を合わせた
+- サイクル 2（組み込みの定義）: Red `spec/lib/definitions/builtin_spec.rb` → `NameError`（`Definitions::Builtin`）、`spec/requests/patient_chart_spec.rb` の並びの例 → `got: []`。
+  Green: `config/definitions/builtin/`（部品はどれも `from: { auto: true }`）、`Definitions::Builtin`、`Definitions::Section`、`patients/sections/` に部品ごとの中身を分けた
+  （もとの `patients/_chart` と、`patients/show` の「カルテ記録」から、そのまま移した。各 `<section>` に `data-definition-section`）。`patients/_chart` は部品の並びを回すだけになった（ファイルは消していない）
+  - 1 回目は `Data.define` の `new` を上書きして `NoMethodError`。`Section.from(data)` にした
+  - 書いた spec に、確かめていないメソッド（`Demo::SampleCompositions.commit_referral_for_spec!`）を呼ぶ行を入れていた。実在しないので消した（DEMO-01 には紹介状が無く、orders は出ない）
+  - `spec/requests`・`spec/views`・患者とデモの system spec: 230 examples, 0 failures（全体は CI。R-20261128-10 のメモリの決まりに合わせた）
+- 例の組（`docs/definitions/example/screens/patient_chart.yml`）に `from: { auto: true }` の部品を 1 つ足した
