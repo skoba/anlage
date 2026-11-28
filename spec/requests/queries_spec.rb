@@ -326,11 +326,13 @@ RSpec.describe "クエリビルダー", type: :request do
       expect(doc.at_css("select#order_direction option[selected]")["value"]).to eq("desc")
     end
 
-    it "日時の項目で並べようとすると、実行せず、理由が出る" do
-      get "/queries/new", params: { columns: [ QB_DIAGNOSIS, QB_ONSET ], order: QB_ONSET, run: "実行" }
+    it "日時の項目（発症日時）でも並べられる" do
+      get "/queries/new", params: { columns: [ QB_ONSET ], conditions: { "0" => { card: QB_ONSET, operator: "BETWEEN", from: "2025-01-01", to: "2026-01-01" } },
+                                    order: QB_ONSET, order_direction: "desc", run: "実行" }
 
-      expect(texts("#query_error").first).to include("日時の項目での並べ替えは、まだ使えない")
-      expect(doc.at_css("#query_result")).to be_nil
+      expect(doc.at_css("#query_error")).to be_nil
+      expect(texts("#query_aql pre").first).to end_with("ORDER BY ev/data[at0001]/items[at0077]/value DESC")
+      expect(texts("#query_result tbody td")).to eq(%w[2025-11-01T00:00:00Z 2025-11-01T00:00:00Z 2025-10-01T00:00:00Z])
     end
 
     it "索引に無い項目の並べ替えは、外す" do

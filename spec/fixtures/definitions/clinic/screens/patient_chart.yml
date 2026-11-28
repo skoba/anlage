@@ -1,0 +1,23 @@
+screen: patient_chart
+version: 1.0.0
+title: 患者の画面
+applies_to: patient
+sections:
+  - id: problems
+    component: problem_list
+    from: { archetype: openEHR-EHR-EVALUATION.problem_diagnosis.v1 }
+    columns: [ at0002, at0073, at0077 ]
+  - id: labs
+    component: lab_table
+    from: { template: LabResultReport, field: laboratory_test_analyte_at0001 }
+    series_key: laboratory_test_analyte_at0024
+  - id: blood_pressure
+    component: time_series
+    from: { template: CardiologyEncounter, fields: [ blood_pressure_at0004, blood_pressure_at0005 ] }
+    chart: line
+  - id: actions
+    component: buttons
+    items:
+      - id: enter_lab
+        label: 検査結果を入力
+        open: { screen: lab_entry }

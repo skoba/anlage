@@ -1,0 +1,13 @@
+# 測る前に決めておいたこと（機械が読む側）。説明は preregistration.md。spec/lib/evaluation/grounding/preregistration_spec.rb が、いまのコードと照らす
+registered_at: 2026-11-27
+# 2026-11-28 に、測る前に書き直した（R-20261128-3。理由は preregistration.md の「替えたこと」）
+revised_at: 2026-11-28
+queries: 37
+queries_sha256: bf673fadcdbb5d9637f0dc8c8e25b5651f3f88450b3689a2835005f941cae9d9
+dialect_sha256: 759af6ac775f68c554e914c9c93d4e22eb33b2da711a61d9799aeef822545754
+selection_instructions_sha256: 3c459ade7d5fd8d39574551c1e1f4977106fb67e764cc7b93a80279f8e892c49
+selection_json_schema_sha256: 6c33b4a9c39764334e118f2a784987cc4282cc8fb5346f20d94b6fead6450d76
+arms: [n0, n1, g_aql, g_selection]
+repeats: 5
+primary_metric: match
+secondary_metric: order_free

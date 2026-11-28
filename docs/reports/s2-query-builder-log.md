@@ -498,3 +498,49 @@ $ bundle exec rspec spec/requests/queries_spec.rb -e "並べ替え"
 ```
 
 実測（demo_initial）: 収縮期 >= 130 の 5 行は、昇順で 132・134・138・148・152、降順でその逆。
+
+## R32 日時の項目での並べ替え（2026-11-28。`skoba/anlage#242` の続き。R-20261128-3）
+
+基準点: anlage main `1c25de1`（openehr 2.9.0、openehr-rails 0.12.0）。
+
+### 実測（openehr 2.9.0。demo_initial）
+
+- `ORDER BY ev/data[at0001]/items[at0077]/value ASC`（日時そのもの）: 発症日時の 13 件が、2015-03-01 から 2026-06-08 まで、日時の順に並ぶ。発症日時の無い 5 件は最後
+- `DESC`: 2026-06-08 から 2015-03-01 まで。**発症日時の無い 5 件は、最初に来る**（openehr 2.6.1 のソースの注釈は「値の無い行は、向きによらず最後」だった。2.9.0 では違う）
+- `ORDER BY …/value/value`（値の文字）: 昇順は、日時そのものと同じ並び（どれも UTC の同じ書き方のため）
+- リンタ: `ORDER BY <パス>/value`（終端のホップなし）に、指摘は無い
+- 月末: `DvDateTime` の比較で、`2026-01-31T12:00:00Z` は `2026-02-01T00:00:00Z` より前（-1）。2.6.1 では逆だった（既知の制限 20。解消）
+- 版上げ（2.6.1 → 2.9.0）の前後で、測定の問いの正解の行は変わっていない（`spec/lib/evaluation/nl_queries_spec.rb` と `spec/lib/evaluation/grounding` の 45 例が、2.9.0 の main で green）
+
+### 自己承認した判断
+
+| # | 判断 | 採った案 | 根拠 |
+|---|---|---|---|
+| D1 | 日時の項目の ORDER BY のパス | `<項目のパス>`（DV_DATE_TIME そのもの。`/value` の文字にしない） | 裁定: 日時そのものの順。時刻帯の書き方が違う記録が混ざっても、時刻の順になる |
+| D2 | 月末の pin | `DvDateTime` の比較そのものを spec に置く（1 月 31 日の昼 < 2 月 1 日の 0 時） | サンプルデータに、月末をまたぐ近い日時の組が無い。エンジンは、この比較で並べる。記録を作って AQL で確かめる spec は、足していない |
+| D3 | 値の無い行の位置 | 決めない（エンジンのまま） | 降順で最初に来る。上流候補に書くかは、次に見る |
+| D4 | n013-2 の採点の印の持ち方 | 問いのファイルに `sorted_column: 2`（並んでいるはずの列。0 から数える） | 裁定: 印を足してよい（文と正解の行は変えない）。採点は、行が合っていて、その列が昇順か降順のどちらかに並んでいれば正解。同じ値どうしの順は見ない |
+
+### Red（実行して失敗を確かめた）
+
+```
+$ bundle exec rspec spec/lib/query_builder/builder_spec.rb spec/lib/query_builder/runner_spec.rb spec/requests/queries_spec.rb spec/lib/evaluation/grounding -e "日時" -e "行の順" -e "方言の説明に"
+  1) QueryBuilder::Builder.build（並べ替え） 日時の項目は、日時そのもので並べる …
+  2) QueryBuilder::Runner 並べ替え 日時の項目（発症日時）で並べる …
+  3) クエリビルダー 並べ替え 日時の項目（発症日時）でも並べられる
+  4) Evaluation::Grounding::AqlPrompt 方言の説明に、出力の決まりがある …
+  5) Evaluation::Grounding::Queries 行の順を見る問い（n013-2）は、どの列の順かを持つ …
+  6) Evaluation::Grounding::Scorer 行の順を見る問い（n013-2） 行は合っていても、発症日の順に並んでいなければ mismatch …
+10 examples, 6 failures
+```
+
+実装の前から通った 4 例: 月末の比較の pin（gem の振る舞い）、n013-2 が昇順・降順で match（実装の前は、行の順を見ていないので通る）、n013-1 が並んでいなくても match。
+
+実装のあと、`preregistration_spec` が落ちた（問いのファイルと、方言の説明の sha256 が変わった。想定どおり）。理由を `preregistration.md` の「替えたこと」に書いてから、値を直した。
+
+### Green
+
+```
+$ bundle exec rspec spec/lib/query_builder spec/requests/queries_spec.rb spec/lib/evaluation spec/docs
+235 examples, 0 failures
+```

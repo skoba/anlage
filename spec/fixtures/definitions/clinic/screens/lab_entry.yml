@@ -1,0 +1,13 @@
+screen: lab_entry
+version: 1.0.0
+title: 検査結果の入力
+sections:
+  - id: lab_form
+    component: form
+    from: { template: LabResultReport }
+  - id: lab_actions
+    component: buttons
+    items:
+      - id: save_and_back
+        label: 保存して患者の画面へ
+        open: { form: LabResultReport, then: { screen: patient_chart } }
