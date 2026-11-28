@@ -37,6 +37,24 @@ class DefinitionBundle < ApplicationRecord
     Registration.new(bundle:, errors: [], message: nil)
   end
 
+  VERSION_LINE = /^version:.*$/
+
+  # 前の版を動かす状態に戻す（計画書 1.1 節、R-20261128-7 の「足すこと」）。前の版の中身を写して、新しい行として足す（履歴は消さない）。
+  # 版は、組の最新の版のパッチを 1 つ上げたもの。bundle.yml は version: の 1 行だけを替え、替えたあとの組が検査を通ることを確かめてから足す
+  def self.restore!(bundle_id, version, registered_by:)
+    source = find_by!(bundle_id:, version:)
+    latest = where(bundle_id:).pluck(:version).max_by { Gem::Version.new(_1) }
+    next_version = Template.next_version(latest)
+    files = source.files.merge("bundle.yml" => source.files.fetch("bundle.yml").sub(VERSION_LINE, "version: #{next_version}"))
+    report = Definitions::Linter.check(files)
+    raise LintFailed, report.errors.map(&:to_s).join("\n") unless report.ok?
+
+    transaction do
+      create!(bundle_id:, version: next_version, files:, checksum: checksum(files), registered_by:, restored_from: version,
+              lint_report: report.problems.map { _1.to_h.transform_keys(&:to_s) }).tap(&:activate!)
+    end
+  end
+
   # 下書き（か superseded）を動かす。直前に、いまのテンプレートで検査し直す
   def activate!
     report = Definitions::Linter.check(files)
