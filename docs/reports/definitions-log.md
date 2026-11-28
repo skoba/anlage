@@ -108,3 +108,32 @@ cases の要素は `when` と `value`、または `else`。
 
   Red に使った worktree は、spec の写しを除いてから外した（`5ccf342` は origin/main の祖先）
 - Green: main（`1c25de1`）の上で `bundle exec rspec spec/docs/` → 4 examples, 0 failures
+
+## R5（2026-11-28）ゲート報告: D-3・D-4 の計画（`skoba/anlage#265`。R-20261128-1）
+
+種別: (a) ゲート報告。計画書: `docs/design/definition-registration-plan.md`。実装は回答のあと（migration があるので、必ず止まる 2）。
+
+### 実測（計画の 0 節）
+
+- 患者の画面は、U1 の規則（`app/lib/charts/rules.rb`）で、登録済みのテンプレート全体から部品を決める。定義を読む道は無い
+- `Definitions::Linter.call(dir, templates: Template.active)`（`app/lib/definitions/linter.rb:16`）はディレクトリを読む。表から読むには、読み元を分ける
+- テンプレートを消す道は、画面と API に無い（`config/routes.rb`）。`demo:reset` が全部を消す（`lib/tasks/demo.rake:24-27`）
+- 帳票の保存のあとは、記録の画面に移る（`app/controllers/compositions_controller.rb:82`）
+- 認証は無い。任意の Basic 認証だけ（`config/application.rb:35`）
+
+### 決めてほしい点（推す案）
+
+| # | 問い | 推す案 | 捨てた案 |
+|---|---|---|---|
+| 1 | 表の単位 | 1 行 = 1 つの組の 1 つの版（`definition_bundles`。YAML の文字をそのまま `files` に持つ）。検査の単位（D2・D5・D6）と合い、画面ごとの版が混ざらない | 画面・ロジックを別の行にする |
+| 2 | 動かす組の選び方 | 環境変数 `ANLAGE_DEFINITION_BUNDLE=<bundle_id>`。その組の active の版。組の中の版の入れ替えは、再起動なし | 「動かす組」を表に持ち、rake で切り替える |
+| 3 | 組が無い・通らないとき | 500 にせず、組み込みの定義（いまの画面）と、理由の文（D コード、場所、候補）を画面の上に出す。検査し直しは、組の行とテンプレートの checksum を鍵にして覚える | エラーの画面にする |
+| 4 | 組み込みの定義 | `config/definitions/builtin/`。`from` の無い部品は、U1 の規則で全体から引く（D-1 の書式に意味を足す）。いまの画面と同じ並びと中身を spec で pin する | 組み込みの定義を、初期データのテンプレートを名指しで書く（別のテンプレートを登録すると、画面に出なくなる） |
+| 5 | 登録の入口 | 書き込み（登録・動かす・戻す）は rake だけ。画面 `/definitions` は読むだけ（一覧、検査、図、差分、試しに表示のリンク）。認証が無いので、画面から全員の画面を変えられる道を作らない | テンプレートと同じく、画面から登録する。注意書きだけで足りるとする |
+| 6 | `demo:reset` | 定義の組も消す（初期データのテンプレートしか残らず、参照が切れるため） | 定義の組は残す |
+| 7 | 保存のあとの `then` | 帳票の URL にボタンの印（組の行の id とボタンの id）を付け、保存のあと、サーバが組から先を引き直す。先を URL に書かない | 先の画面を URL に書く |
+
+### 段（回答のあと。計画の 8 節）
+
+D-3a 表とモデル → D-3b rake → D-4a 組み込みの定義 → D-4b 動かす組で出す → D-4c `?preview` と `then` → D-4d 読むだけの画面。
+gem は足さない。migration は 1 つ。範囲の外にしたもの（画面からの書き込み、取り込みの前の警告）は `docs/ideas-2027.md` に書いた。
