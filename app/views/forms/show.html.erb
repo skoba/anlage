@@ -25,6 +25,10 @@
 <%# skoba/anlage#138: 修正の帳票（@composition があるとき）は、その記録への PATCH %>
 <% form_url, form_method = @composition ? [ composition_path(@composition), :patch ] : [ template_compositions_path(@template.template_id), :post ] %>
 <%= form_with url: form_url, method: form_method, local: true, data: behavior_data do %>
+  <%# skoba/anlage#294: 定義の組のボタンの印。保存のあとに進む先は、サーバが組の行から引き直す %>
+  <% if @composition.nil? && params[:via].present? %>
+    <%= hidden_field_tag :via, params[:via] %>
+  <% end %>
   <% Opt::FormLayout.call(@template).each do |node| %>
     <%= render "forms/root_group", node: node %>
   <% end %>

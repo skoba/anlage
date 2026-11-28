@@ -7,16 +7,20 @@ module Definitions
     ENV_KEY = "ANLAGE_DEFINITION_BUNDLE".freeze
     CACHE_LIMIT = 32
     # bundle_id・version: いま出している組と版（組み込みは builtin）。screen: 画面の定義（Linter::Definition）。
-    # notice: 組み込みに落ちたときの理由の文。problems: 検査のエラー（Definitions::Problem）
-    Result = Data.define(:bundle_id, :version, :screen, :notice, :problems)
+    # notice: 組み込みに落ちたとき・試しの表示のときの文。problems: 検査のエラー（Definitions::Problem）。
+    # row_id: 組の行の id（組み込みは nil。ボタンの via の印に使う）。preview: 下書きの試しの表示（?preview=）か
+    Result = Data.define(:bundle_id, :version, :screen, :notice, :problems, :row_id, :preview)
 
     @cache = {}
     @mutex = Mutex.new
 
     module_function
 
-    # screen: 画面の id（ボタンの open.screen、?screen=）。組に無ければ start の画面
-    def call(env: ENV, screen: nil)
+    # screen: 画面の id（ボタンの open.screen、?screen=）。組に無ければ start の画面。
+    # preview: 下書きの行の id（?preview=。skoba/anlage#294）。下書きのときだけ、その下書きで出す。動いている版は変えない
+    def call(env: ENV, screen: nil, preview: nil)
+      return preview_screen(preview, env:, screen:) if preview
+
       bundle_id = env[ENV_KEY].presence
       return builtin unless bundle_id
 
@@ -30,13 +34,34 @@ module Definitions
                        problems: report.errors)
       end
 
+      bundle_screen(bundle, report, screen)
+    end
+
+    def preview_screen(id, env:, screen:)
+      draft = DefinitionBundle.find_by(id:, status: "draft")
+      unless draft
+        return call(env:, screen:).then { |result| result.with(notice: [ "試しに表示する下書き（#{id}）がありません。動いている画面を出しています。", result.notice ].compact.join(" ")) }
+      end
+
+      report = lint(draft)
+      unless report.ok?
+        return call(env:, screen:).with(notice: "下書き #{draft.bundle_id} #{draft.version} は、いまのテンプレートで検査に通りません。動いている画面を出しています。",
+                                        problems: report.errors)
+      end
+
+      bundle_screen(draft, report, screen, preview: true)
+        .with(notice: "下書き #{draft.bundle_id} #{draft.version} を試しに表示しています。ここから開いた帳票で保存すると、本当に保存されます。")
+    end
+
+    def bundle_screen(bundle, report, screen, preview: false)
       chosen = report.screens.find { _1.id == screen } || start_screen(report)
-      Result.new(bundle_id:, version: bundle.version, screen: chosen, notice: nil, problems: [])
+      Result.new(bundle_id: bundle.bundle_id, version: bundle.version, screen: chosen, notice: nil, problems: [], row_id: bundle.id, preview:)
     end
 
     def builtin(notice: nil, problems: [])
       report = Builtin.report
-      Result.new(bundle_id: report.bundle.id, version: report.bundle.data["version"], screen: Builtin.patient_screen, notice:, problems:)
+      Result.new(bundle_id: report.bundle.id, version: report.bundle.data["version"], screen: Builtin.patient_screen, notice:, problems:,
+                 row_id: nil, preview: false)
     end
 
     def start_screen(report) = report.screens.find { _1.id == report.bundle.data.dig("start", "screen") }
