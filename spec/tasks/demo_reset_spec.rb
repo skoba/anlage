@@ -42,6 +42,16 @@ RSpec.describe "demo:reset" do
       .to eq((1..9).map { [ format("DEMO-%02d", _1), "anlage" ] })
   end
 
+  # docs/design/definition-registration-plan.md 5 節（R-20261128-7 の回答 6）: テンプレートを入れ直すので、組の参照が切れる。定義の組も消す
+  it "登録した定義の組も消す（既定の画面に戻る）" do
+    DEMO_FIXTURES.each { |name| Template.build_from_opt_xml(fixture(name)).save! unless Template.find_by_checksum(fixture(name)) }
+    DefinitionBundle.register(Definitions::Files.read(Rails.root.join("spec/fixtures/definitions/clinic")), registered_by: "rake").bundle.activate!
+
+    run_task
+
+    expect(DefinitionBundle.count).to eq(0)
+  end
+
   describe "サンプルの 84 件（設計書 3 節と 7.3 節の表）" do
     before { run_task }
 
