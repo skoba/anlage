@@ -12,6 +12,6 @@
 <div data-definition-screen="<%= [ definition.bundle_id, definition.version, definition.screen.id ].join(" ") %>">
   <% definition.screen.data["sections"].each do |section_data| %>
     <% section = Definitions::Section.from(section_data) %>
-    <%= render "patients/sections/#{section.partial}", section:, chart:, patient:, originals:, records: %>
+    <%= render "patients/sections/#{section.partial}", section:, chart:, patient:, originals:, records:, definition: %>
   <% end %>
 </div>
