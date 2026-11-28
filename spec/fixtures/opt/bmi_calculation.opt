@@ -6,7 +6,7 @@
   sha256: d72b6d50b33b2a40d22fce2dad0269f84bb348096e0fda2508b122170df8c272
   Language declared: en (not ja). Used for AQL seed purposes only
   (path resolution against real height.v2/body_weight.v2 archetype
-  structure) -- label language is not essential to this use.
+  structure); label language is not essential to this use.
 -->
 <template xmlns="http://schemas.openehr.org/v1">
     <language>
