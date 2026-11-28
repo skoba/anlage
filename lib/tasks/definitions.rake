@@ -40,6 +40,8 @@ namespace :definitions do
     puts
     context[:components].each { |component| puts "- `#{component[:name]}`: #{component[:shows]}。受け取るもの: #{component[:accepts]}" }
     puts
+    puts context[:from_rule]
+    puts
     puts "## 検査"
     puts
     context[:checks].each { |code, text| puts "- #{code}: #{text}" }

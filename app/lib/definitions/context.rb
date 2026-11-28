@@ -6,14 +6,17 @@ module Definitions
     FIELD_KEYS = %w[name label rm_type archetype_id node_id units].freeze
     EXAMPLE = Rails.root.join("docs/definitions/example")
     COMPONENTS = {
-      "problem_list" => { accepts: "from.archetype: openEHR-EHR-EVALUATION.problem_diagnosis.v1。columns: その at-code", shows: "プロブレムリスト（表）" },
-      "time_series" => { accepts: "from.template と from.field か from.fields（DV_QUANTITY か DV_COUNT）", shows: "時系列（折れ線と表）" },
-      "lab_table" => { accepts: "from.template、from.field（DV_QUANTITY か DV_COUNT の値）、series_key（DV_TEXT の名前の項目）", shows: "検査結果の時系列表" },
-      "records" => { accepts: "from.template か from.rm_type（例 INSTRUCTION）", shows: "記録の一覧" },
+      "problem_list" => { accepts: "from.archetype: openEHR-EHR-EVALUATION.problem_diagnosis.v1。columns: その at-code。全体から引くなら from: { auto: true }", shows: "プロブレムリスト（表）" },
+      "time_series" => { accepts: "from.template と from.field か from.fields（DV_QUANTITY か DV_COUNT）。全体から引くなら from: { auto: true }", shows: "時系列（折れ線と表）" },
+      "lab_table" => { accepts: "from.template、from.field（DV_QUANTITY か DV_COUNT の値）、series_key（DV_TEXT の名前の項目）。全体から引くなら from: { auto: true }", shows: "検査結果の時系列表" },
+      "records" => { accepts: "from.template か from.rm_type（例 INSTRUCTION）。全体から引くなら from: { auto: true }（rm_type を足して絞れる）", shows: "記録の一覧" },
       "form" => { accepts: "from.template（登録済みのテンプレート）", shows: "帳票" },
-      "table" => { accepts: "from.template と from.fields", shows: "表" },
+      "table" => { accepts: "from.template と from.fields。全体から引くなら from: { auto: true }", shows: "表" },
       "buttons" => { accepts: "items: id・label・open（form か screen、任意で then）", shows: "ボタンの並び" }
     }.freeze
+    # from の書き方の決まり（記録を引く部品は from が要る。書き忘れが黙って「全部を出す」にならない。R-20261128-7 の回答 4）
+    FROM_RULE = "記録を引く部品（#{Schema::RECORD_COMPONENTS.join('・')}）は from が要る。" \
+                "from: { auto: true } は、登録済みのテンプレート全体から U1 の規則で引く（rm_type のほかのキーと一緒に書けない）"
     CHECKS = {
       "D1" => "書式（スキーマ）に合う", "D2" => "id が組の中で重ならない", "D3" => "参照するテンプレート・field・archetype・at-code が実在する",
       "D4" => "部品と項目の型が合う", "D5" => "遷移先の画面・帳票が実在する", "D6" => "どこからもたどり着けない画面が無い",
@@ -26,6 +29,7 @@ module Definitions
       {
         templates: templates.map { template(_1) },
         components: Schema::COMPONENTS.map { |name| { name:, **COMPONENTS.fetch(name) } },
+        from_rule: FROM_RULE,
         schemas: Schema::KINDS.keys.index_with { Schema.to_json_schema(_1) },
         checks: CHECKS,
         examples: examples
