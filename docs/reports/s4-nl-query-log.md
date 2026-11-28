@@ -550,7 +550,7 @@ rspec ./spec/lib/llm/adapters/local_spec.rb:105 # Llm::Adapters::Local.build …
 
 ### 自己承認した判断
 
-- **置き場所は `script/lmstudio_relay.rb`**（spec は `spec/script/`）。裁定は「開発機だけの道具。アプリのコードに入れない」。
+- **置き場所は `script/lmstudio_relay.rb`**（spec は `spec/script/`）。アプリのコードには入れない（R-20261128-10）。
   `app/`・`lib/` に入れる案は、捨てた（アプリが読み込む）。リポジトリの外に置く案も、捨てた（spec が付けられず、記録に残らない）
 - **作りは、Ruby の標準のライブラリだけ**（`socket`・`open3`）。gem は足さない。`socat` などの道具で組む案は、捨てた
   （HTTP の要求を読んで `curl.exe` の引数に直すところが、書けない）
