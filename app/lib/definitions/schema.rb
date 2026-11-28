@@ -4,6 +4,10 @@ module Definitions
   # 書式の説明は docs/reports/definitions-log.md R1
   module Schema
     COMPONENTS = %w[problem_list time_series lab_table records form table buttons].freeze
+    # 記録を引く部品。from が要る（全体から引くなら from: { auto: true }。R-20261128-7 の回答 4、skoba/anlage#281）
+    RECORD_COMPONENTS = %w[problem_list time_series lab_table records table].freeze
+    # auto と一緒に書けるのは rm_type だけ（records の絞り込み。依頼と紹介状 = INSTRUCTION）
+    AUTO_WITH = %w[auto rm_type].freeze
 
     def self.string = { type: :string }
     def self.integer = { type: :integer }
@@ -19,11 +23,21 @@ module Definitions
     OPEN = object(optional: { "form" => string, "screen" => string, "then" => THEN },
                   rule: one_of_keys(%w[form screen], "open には form か screen のどちらか 1 つが要る"))
     BUTTON = object(required: { "id" => string, "label" => string, "open" => OPEN })
-    FROM = object(optional: { "template" => string, "archetype" => string, "field" => string, "fields" => array(string),
-                              "rm_type" => string })
+    # auto: true は「U1 の規則で、登録済みのテンプレート全体から引く」（docs/design/definition-registration-plan.md 3 節）
+    FROM = object(optional: { "auto" => enum(true), "template" => string, "archetype" => string, "field" => string,
+                              "fields" => array(string), "rm_type" => string },
+                  rule: lambda { |hash|
+                    others = hash.keys - AUTO_WITH
+                    "from の auto は rm_type のほかのキーと一緒に書けない（#{others.join('、')}）" if hash.key?("auto") && others.any?
+                  })
     SECTION = object(required: { "id" => string, "component" => enum(COMPONENTS) },
                      optional: { "from" => FROM, "columns" => array(string), "series_key" => string, "only" => array(string),
-                                 "chart" => enum("line"), "items" => array(BUTTON) })
+                                 "chart" => enum("line"), "items" => array(BUTTON) },
+                     rule: lambda { |hash|
+                       next unless RECORD_COMPONENTS.include?(hash["component"]) && !hash.key?("from")
+
+                       "#{hash['component']} には from が要る。登録済みのテンプレート全体から引くなら from: { auto: true } と書く"
+                     })
     CASE = object(optional: { "when" => string, "value" => string, "else" => string },
                   rule: ->(hash) { "cases の要素は when と value、または else だけ" unless hash.keys.sort == %w[value when] || hash.keys == %w[else] })
     RULE = object(required: { "id" => string, "target" => string },

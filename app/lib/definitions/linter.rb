@@ -154,7 +154,7 @@ module Definitions
           problem("D4", screen, "#{base}/series_key", "lab_table の series_key は DV_TEXT の項目でなければならない", id:)
         end
       when "problem_list"
-        problem("D4", screen, "#{base}/from", "problem_list は from.archetype で #{PROBLEM_ARCHETYPE} を指す", id:) unless section.dig("from", "archetype")
+        problem("D4", screen, "#{base}/from", "problem_list は from.archetype で #{PROBLEM_ARCHETYPE} を指す", id:) unless section.dig("from", "archetype") || section.dig("from", "auto")
       end
     end
 

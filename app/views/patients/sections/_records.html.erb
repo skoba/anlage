@@ -1,0 +1,16 @@
+<%# 部品 records（全体。skoba/anlage#281。もとは patients/show の「カルテ記録」） %>
+<section data-definition-section="<%= section.id %>">
+  <h2>カルテ記録</h2>
+  <%# skoba/anlage#182: EHR の記録をすべて、記録日の新しい順に。原本の無い記録（テンプレートが未登録）は閲覧の画面へ %>
+  <% if records.empty? %>
+    <p>この患者のカルテ記録はまだありません。</p>
+  <% else %>
+    <ul class="patient-records">
+      <% records.each do |record| %>
+        <% label = "#{record_template_label(record)} — 記録日 #{recorded_date(record.context_start_time)}" %>
+        <% original = originals[record.uid] %>
+        <li><%= link_to label, original ? composition_path(original) : record_patient_path(patient.ehr_id, uid: record.uid) %></li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>
