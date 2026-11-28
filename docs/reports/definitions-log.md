@@ -155,3 +155,71 @@ gem は足さない。migration は 1 つ。範囲の外にしたもの（画面
 - サイクル 3（`demo:reset`、回答 6）: Red `spec/tasks/demo_reset_spec.rb` の「登録した定義の組も消す」→ `expected: 0, got: 1`。
   Green: `DefinitionBundle.delete_all`（トランザクションの中）。タスクの説明と README（英・日）に書いた → 10 examples, 0 failures
 - rake（register・activate・restore・list）は D-3b
+
+## R7（2026-11-28）D-3b: 定義の組の rake（`skoba/anlage#279`。R-20261128-7 の回答 5 と「足すこと」）
+
+- サイクル 1（戻す）: Red `spec/models/definition_bundle_spec.rb` の `.restore!` 3 例 → `undefined method 'restore!' for class DefinitionBundle`。
+  Green: 前の版の `files` を写し、`bundle.yml` の `version:` の 1 行だけを、最新の版のパッチを 1 つ上げた版に替える（`Template.next_version`）。
+  替えたあとの組を検査し、通れば新しい行（`restored_from` に元の版）として足して動かす。通らなければ `LintFailed`（足さない）→ 10 examples, 0 failures
+  - 「1 行だけ」は spec で、行数が同じで、違う行が `version: 0.1.1` の 1 行だけであることを見た
+- サイクル 2（rake）: Red `spec/tasks/definitions_registry_spec.rb` → `Don't know how to build task 'definitions:register'`。
+  Green: `definitions:register DIR=`（下書き。エラーは文で出して終了コード 1、同じ版で別の中身も 1、同じ中身は 0）、`definitions:activate BUNDLE= VERSION=`、
+  `definitions:restore BUNDLE= VERSION=`、`definitions:list` → 13 examples, 0 failures（既存の `definitions:lint` などの spec を含む）
+  - `registered_by` は `rake（<環境の利用者名>）`（`Etc.getlogin`、無ければ `USER`）。運用者の名前で、患者の記録や計測には使わない（10 節）
+- Refactor（緑のまま）: `DefinitionBundle::Registration` に `status`（`:registered`・`:invalid`・`:exists`・`:conflict`）を持たせ、rake は status で分ける（24 examples, 0 failures）
+
+## R8（2026-11-28）D-4a: `from: { auto: true }` と組み込みの定義（`skoba/anlage#281`。R-20261128-7 の回答 4）
+
+- サイクル 1（書式）: Red `spec/lib/definitions/auto_from_spec.rb`（6 例）。D-3a の前の main では `Linter.check` が無いので 6 failures、
+  D-3a のブランチを取り込んでから 5 failures（記録を引かない部品の例は、はじめから通る）。
+  Green: `Definitions::Schema` の `FROM` に `auto`（`enum(true)`）。対の規則: `auto` と一緒に書けるのは `rm_type` だけ。
+  `SECTION` の対の規則: 記録を引く部品（`RECORD_COMPONENTS` = problem_list・time_series・lab_table・records・table）で `from` が無いと D1、文に `from: { auto: true }` の書き方。
+  `problem_list` の D4（`from.archetype` が要る）は、`auto` のときは出さない
+  - 1 回目の Green で 3 failures: D1 を通らない画面は読まれず、その画面への遷移が D5 になる（検査器のこれまでの振る舞い）。spec は D1 だけを見る形にした
+  - `auto` に `rm_type` を許した理由（自己承認）: 組み込みの定義で「依頼と紹介状」（U1 の R2、INSTRUCTION）と「記録の一覧」を、同じ `records` で分けるため
+  - `rake definitions:context` の部品の説明と、`from_rule`（材料の JSON の新しいキー）。JSON のキーの pin（`spec/tasks/definitions_spec.rb`）を合わせた
+- サイクル 2（組み込みの定義）: Red `spec/lib/definitions/builtin_spec.rb` → `NameError`（`Definitions::Builtin`）、`spec/requests/patient_chart_spec.rb` の並びの例 → `got: []`。
+  Green: `config/definitions/builtin/`（部品はどれも `from: { auto: true }`）、`Definitions::Builtin`、`Definitions::Section`、`patients/sections/` に部品ごとの中身を分けた
+  （もとの `patients/_chart` と、`patients/show` の「カルテ記録」から、そのまま移した。各 `<section>` に `data-definition-section`）。`patients/_chart` は部品の並びを回すだけになった（ファイルは消していない）
+  - 1 回目は `Data.define` の `new` を上書きして `NoMethodError`。`Section.from(data)` にした
+  - 書いた spec に、確かめていないメソッド（`Demo::SampleCompositions.commit_referral_for_spec!`）を呼ぶ行を入れていた。実在しないので消した（DEMO-01 には紹介状が無く、orders は出ない）
+  - `spec/requests`・`spec/views`・患者とデモの system spec: 230 examples, 0 failures（全体は CI。R-20261128-10 のメモリの決まりに合わせた）
+- 例の組（`docs/definitions/example/screens/patient_chart.yml`）に `from: { auto: true }` の部品を 1 つ足した
+
+## R9（2026-11-28）D-4b: 動かす定義の組で患者の画面を出す（`skoba/anlage#283`。R-20261128-7 の回答 2・3）
+
+- Red `spec/requests/active_bundle_spec.rb`（6 例）。実装の前の木（`afbae69`）に spec だけを置いて実行: 6 examples, 5 failures。
+  落ちた 5 例は、印（`data-definition-screen`）・ボタン（`data-definition-button`）・理由の文（`#definition_notice`）が無いことで落ちた（`got: nil`、`undefined method '[]' for nil`）。
+  「設定が無ければ、組み込みの定義」の 1 例は、はじめから通る（いまの振る舞いの pin）
+  - リセットで、はじめの Red の出力が残っていなかった。上は、実装の commit `6db0401` の spec を、その親 `afbae69` の木に置いて取り直したもの（一時の worktree は消した）
+- Green: `Definitions::ActiveScreen`。運用者の設定 `ANLAGE_DEFINITION_BUNDLE` の組の active の版を、表示のたびに表から読む（別のプロセスの rake で動かした版も、再起動なしで次の表示に届く。回答 3）。
+  検査の結果だけを覚える（鍵は、組の行の id と updated_at、動いているテンプレートの id と checksum。32 件で捨てる）
+  - 組に動いている版が無い、または、いまのテンプレートで検査に通らない: 組み込みの定義で出し、理由の文を出す（500 にしない。ログに warn）
+  - `?screen=` で組の中のほかの画面（ボタンの `open.screen`）。組に無い名前は start の画面
+  - 部品は `from` に書いたテンプレート・項目だけを出す（`Section#select_by_template`・`select_series`。`auto` は全体）
+  - 新しい部品の中身: buttons（`open.form` は帳票の入力、`open.screen` は `?screen=`）、form（帳票を開くリンク）、table（まだ出せない、の文）
+  - 語彙表（`docs/demo/ui-vocabulary.md`）に「定義の組」の行を、文言の pin と同じ commit で足した（回答 5）
+- 別のプロセスの例は `use_transactional_tests = false` で、`bin/rails definitions:register`・`activate`・`restore` を実際に走らせる（後片づけは手で）
+- 手元: `spec/requests/active_bundle_spec.rb` と、患者の画面にかかわる spec（`spec/requests`・`spec/lib/definitions`）。全体は CI（R-20261128-10）
+- Change: 運用者が `ANLAGE_DEFINITION_BUNDLE` に組の名前を設定すると、患者の画面を、その組の active の版の画面で出す（Refs #283、Refs R-20261128-7。D-4b）。
+  利用者に見える変更: あり（設定したときだけ。設定しなければ、いまの画面のまま）
+
+## R10（2026-11-28）D-4c: 下書きの試しの表示（`?preview=`）と、保存のあと `then` に進む（`skoba/anlage#294`。R-20261128-7 の回答と 10 節）
+
+- サイクル 1（request）: Red `spec/requests/definition_preview_spec.rb`（7 例）→ 7 examples, 6 failures
+  （下書きで出ない `got: "builtin 1.0.0 patient_chart"`、理由の文が無い `got: nil`、ボタンに印が無い `got: "/forms/LabResultReport"`、保存のあと then に移らない）。
+  「印が引けないときは記録の画面」の 1 例は、はじめから通る（いまの振る舞いの pin。移る先を URL から取らないことも、この例で見る）。
+  Green: `Definitions::ActiveScreen.call(preview:)`（下書きの行のときだけ、その下書きで出す。`Result` に `row_id`・`preview`）、
+  `Definitions::Via`（`via=<組の行の id>.<ボタンの id>` から、組の行のボタンを引き直す。`open.form` が保存した帳票と同じで、`then` のあるときだけ）、
+  `CompositionsController#after_save_path`、帳票の画面に `via` の隠し項目（新しい記録のときだけ）→ 13 examples, 0 failures（active_bundle_spec を含む）。
+  `spec/requests`・`spec/lib/definitions`・`spec/docs`: 277 examples, 0 failures
+- サイクル 2（実ブラウザ）: `spec/system/definition_then_spec.rb`（患者の画面 → 検査結果を入力 → 保存して患者の画面へ → 保存した値が検査結果に出る）。
+  Red は、実装の前の木（`HEAD~1`）に spec だけを置いて実行: 保存のあと `[data-definition-screen='clinic_spec 0.1.0 patient_chart']` が無い（記録の画面に移った）。一時の worktree は消した。
+  Green: 実装の木で、患者の画面・検査結果の system spec と合わせて 6 examples, 0 failures
+- 自己承認した判断（計画に書いていない細部。どれも計画の 1.1 節・6 節の範囲）:
+  - 試しに使うのは `status: draft` の行だけ。動いている行・無い行の id は、動いている画面と「試しに表示する下書き（id）がありません」の文（理由: 計画の「下書きで画面を出す」。動いている版はいつでも印の無い URL で見られる）
+  - 試しの表示の中のボタン（`open.screen`）と、下書きのボタンから保存したあとの `then` の画面は、`?preview=` を付けたまま（理由: 試しの途中で、動いている画面に黙って戻らないように）
+  - `via` は、どの状態の行でも引く（動かしたあとに前の版の帳票を保存しても、その版のボタンの then に進む）
+- 語彙表（`docs/demo/ui-vocabulary.md`）の「定義の組」の行に、試しの表示の文 3 つを、文言の pin と同じ commit で足した
+- Change: 下書きの定義の組を `?preview=<行の id>` で試しに表示できる。定義のボタンから開いた帳票は、保存のあと、ボタンの `then` の画面に進む（Refs #294、Refs R-20261128-7。D-4c）。
+  利用者に見える変更: あり（定義の組を設定・登録したときだけ。設定しなければ変わらない）

@@ -15,6 +15,9 @@ sections:
     component: time_series
     from: { template: CardiologyEncounter, fields: [ blood_pressure_at0004, blood_pressure_at0005 ] }
     chart: line
+  - id: other_records
+    component: records
+    from: { auto: true }          # 登録済みのテンプレート全体から引く（from を書かないと D1 のエラー）
   - id: actions
     component: buttons
     items:

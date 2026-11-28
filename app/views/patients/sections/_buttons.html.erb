@@ -1,0 +1,16 @@
+<%# 部品 buttons（skoba/anlage#283・#294）。open.form は帳票へ。then があれば via の印を付ける（保存のあと、サーバがボタンを引き直す）。
+    open.screen は同じ組の画面へ（?screen=）。試しの表示（?preview=）の中では、試しの表示のまま %>
+<% preview = definition.row_id if definition.preview %>
+<section class="card" data-definition-section="<%= section.id %>">
+  <p class="definition-buttons">
+    <% section.items.each do |item| %>
+      <% open = item["open"] || {} %>
+      <% if open["form"] %>
+        <% via = Definitions::Via.token(definition.row_id, item["id"]) if open["then"] && definition.row_id %>
+        <%= link_to item["label"], form_path(open["form"], via:), class: "button", data: { definition_button: item["id"] } %>
+      <% elsif open["screen"] %>
+        <%= link_to item["label"], patient_path(patient.ehr_id, screen: open["screen"], preview:), class: "button", data: { definition_button: item["id"] } %>
+      <% end %>
+    <% end %>
+  </p>
+</section>

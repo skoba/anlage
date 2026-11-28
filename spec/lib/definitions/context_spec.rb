@@ -22,6 +22,13 @@ RSpec.describe Definitions::Context do
     expect(context[:components].find { _1[:name] == "time_series" }[:accepts]).to include("DV_QUANTITY")
   end
 
+  # R-20261128-7 の回答 4: AI に、from の書き忘れが黙って「全部を出す」にならないことを伝える
+  it "from の決まり（記録を引く部品は from が要る、全体から引くなら from: { auto: true }）" do
+    expect(context[:from_rule]).to include("from が要る", "from: { auto: true }")
+    expect(context[:components].find { _1[:name] == "lab_table" }[:accepts]).to include("from: { auto: true }")
+    expect(context[:schemas]["screen"].dig("properties", "sections", "items", "properties", "from", "properties", "auto")).to eq("enum" => [ true ])
+  end
+
   it "スキーマは検査器から書き出した JSON Schema（正は検査器）" do
     screen = context[:schemas]["screen"]
 

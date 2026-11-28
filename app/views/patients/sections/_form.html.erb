@@ -1,0 +1,4 @@
+<%# 部品 form（skoba/anlage#283）。いまの帳票の画面（forms/show）へのリンク。帳票を画面の中に埋め込むのは、あとの段 %>
+<section class="card" data-definition-section="<%= section.id %>">
+  <p><%= link_to "帳票「#{section.from['template']}」を開く", form_path(section.from["template"]) %></p>
+</section>

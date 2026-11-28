@@ -86,7 +86,7 @@ RSpec.describe "definitions:context" do
     run_task(format: "json")
     $stdout = original
 
-    expect(JSON.parse(out.string).keys).to eq(%w[templates components schemas checks examples])
+    expect(JSON.parse(out.string).keys).to eq(%w[templates components from_rule schemas checks examples])
   end
 end
 
