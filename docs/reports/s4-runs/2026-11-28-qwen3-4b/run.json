@@ -1,0 +1,63 @@
+{
+  "adapter": "local",
+  "external": false,
+  "model": "qwen3:4b",
+  "arms": [
+    "g_selection"
+  ],
+  "repeats": 5,
+  "queries": [
+    "n001-1",
+    "n001-2",
+    "n001-3",
+    "n001-4",
+    "n001-5",
+    "n002-1",
+    "n002-2",
+    "n002-3",
+    "n003-1",
+    "n003-2",
+    "n004-1",
+    "n004-2",
+    "n004-3",
+    "n005-1",
+    "n005-2",
+    "n006-1",
+    "n006-2",
+    "n006-3",
+    "n009-1",
+    "n009-2",
+    "n009-3",
+    "n010-1",
+    "n010-2",
+    "n010-3",
+    "n011-1",
+    "n011-2",
+    "n012-1",
+    "n012-2",
+    "n013-1",
+    "n013-2",
+    "n013-3",
+    "n014-1",
+    "n014-2",
+    "n101-1",
+    "n101-2",
+    "n102-1",
+    "n102-2"
+  ],
+  "queries_sha256": "bf673fadcdbb5d9637f0dc8c8e25b5651f3f88450b3689a2835005f941cae9d9",
+  "cards": 18,
+  "json_schema": {
+    "g_selection": true
+  },
+  "dialect_sha256": "759af6ac775f68c554e914c9c93d4e22eb33b2da711a61d9799aeef822545754",
+  "selection_instructions_sha256": "3c459ade7d5fd8d39574551c1e1f4977106fb67e764cc7b93a80279f8e892c49",
+  "commit": "a89771cf59d21dde88ef12ba3183807163fb4265",
+  "gems": {
+    "openehr": "2.9.0",
+    "openehr-rails": "0.14.1",
+    "anthropic": "2.14.0"
+  },
+  "started_at": "2026-11-28T05:33:10Z",
+  "note": "測る前(2026-11-28 14:33 JST): WSL の空きメモリ available 8.1Gi(全体 15Gi)、load average 1.44/1.45/1.77。ほかのレーンも動いている。コンテナの上限 5 GB・CPU 4"
+}
