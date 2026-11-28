@@ -25,22 +25,24 @@ end
 
 # 接地あり・なしの測定（docs/design/s4-nl-aql-plan.md 5 節・7 節の段 6。R-20261127-32）。
 #   NAME=<名前>           記録の置き場所 docs/reports/s4-runs/<名前>/（要る）
-#   ADAPTER=<アダプタ>    recorded（既定）／local／anthropic／openai。外を呼ぶアダプタは EXTERNAL=1 を付けたときだけ
+#   ADAPTER=<アダプタ>    recorded（既定）／local／lmstudio／anthropic／openai。外を呼ぶアダプタは EXTERNAL=1 を付けたときだけ
 #   ARMS=n0,n1,g_aql,g_selection（既定は g_selection）  REPEATS=5  QUERIES=n001-1,n002-1（既定はすべて）
-#   SEED=<数> TEMPERATURE=<数>   local のときだけ（乱数の種を固定した 1 回、など）
+#   SEED=<数> TEMPERATURE=<数>   local と lmstudio のときだけ（乱数の種を固定した 1 回、など）
 #   RESET=1               記録を demo:reset の初期状態に作り直してから回す（開発用の DB の記録を入れ替える）
 # 済んだ試行は飛ばすので、途中で止めても、同じ NAME で続きから回せる。鍵は、環境変数から、アダプタが読む。記録には入らない
 namespace :evaluation do
-  desc "Run the grounded/ungrounded NL-to-AQL measurement (NAME=..., ADAPTER=recorded|local|anthropic|openai, ARMS=..., REPEATS=5). Never calls an external API unless EXTERNAL=1"
+  desc "Run the grounded/ungrounded NL-to-AQL measurement (NAME=..., ADAPTER=recorded|local|lmstudio|anthropic|openai, ARMS=..., REPEATS=5). Never calls an external API unless EXTERNAL=1"
   task grounding: :environment do
     name = ENV["NAME"].to_s
     abort "NAME=<名前> が要る（記録は docs/reports/s4-runs/<名前>/ に残る）" unless name.match?(/\A[\w.-]+\z/)
 
     adapter_name = ENV.fetch("ADAPTER", "recorded")
-    adapter = if adapter_name == "local"
-      built, reason = Llm::Adapters::Local.build(ENV.to_h)
-      abort "local のアダプタを作れない: #{reason}" unless built
-      Llm::Adapters::Local.new(model: built.model, base_url: built.base_url, seed: ENV["SEED"]&.to_i, temperature: ENV["TEMPERATURE"]&.to_f)
+    # 手元のモデルのアダプタ（同じ機械の中だけ）。温度と乱数の種を足せる
+    on_this_machine = { "local" => Llm::Adapters::Local, "lmstudio" => Llm::Adapters::LmStudio }[adapter_name]
+    adapter = if on_this_machine
+      built, reason = on_this_machine.build(ENV.to_h, { seed: ENV["SEED"]&.to_i, temperature: ENV["TEMPERATURE"]&.to_f }.compact)
+      abort "#{adapter_name} のアダプタを作れない: #{reason}" unless built
+      built
     else
       settings = Llm::Settings.from_env(ENV.to_h.merge("ANLAGE_LLM" => adapter_name))
       abort "アダプタ #{adapter_name} を使えない: #{settings.reason}" unless settings.on?

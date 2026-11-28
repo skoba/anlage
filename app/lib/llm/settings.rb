@@ -2,10 +2,12 @@ module Llm
   # LLM のオンとオフ（docs/design/s4-nl-aql-plan.md 10.1 節。R-20261127-14）。運用する人が、環境変数で決める。
   #   ANLAGE_LLM                    アダプタの名前。これがオンの設定。無い・空・off はオフ
   #   ANLAGE_LLM_DAILY_CALL_LIMIT   1 日に呼んでよい回数（既定 100）
-  #   ANLAGE_LLM_MODEL              モデルの名前（anthropic・openai・local のとき。既定は無い）
+  #   ANLAGE_LLM_MODEL              モデルの名前（anthropic・openai・local・lmstudio のとき。既定は無い）
   #   ANTHROPIC_API_KEY             API の鍵（anthropic のとき）
   #   OPENAI_API_KEY                API の鍵（openai のとき）
-  #   ANLAGE_LLM_BASE_URL           接続先（openai のとき。既定は OpenAI。local のときは、開発機の中の Ollama の口。既定は http://127.0.0.1:11434）
+  #   ANLAGE_LLM_BASE_URL           接続先（openai のとき。既定は OpenAI。local のときは、開発機の中の Ollama の口。既定は http://127.0.0.1:11434。
+  #                                 lmstudio のときは、開発機の中の LM Studio の口。既定は http://127.0.0.1:1234/v1）
+  #   LM_API_TOKEN                  LM Studio の API のトークン（lmstudio のとき。LM Studio が求める設定のときだけ）
   #   ANLAGE_LLM_RECORDINGS         記録した応答のディレクトリ（recorded のとき）
   # オンになるのは、ANLAGE_LLM と、そのアダプタが要るもの（鍵など）の両方がそろったときだけ。鍵だけではオンにならない。
   # 鍵の値は持たない（アダプタを作るところで環境変数から読み、ここには残さない）。reason にも出さない。
@@ -28,6 +30,7 @@ module Llm
       return Adapters::Anthropic.build(env) if name == "anthropic"
       return Adapters::Openai.build(env) if name == "openai"
       return Adapters::Local.build(env) if name == "local"
+      return Adapters::LmStudio.build(env) if name == "lmstudio"
       return [ nil, "知らないアダプタの名前です（#{name.truncate(40)}）。" ] unless name == "recorded"
 
       dir = env["ANLAGE_LLM_RECORDINGS"].to_s

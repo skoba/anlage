@@ -83,7 +83,7 @@ module Evaluation
         { "adapter" => @adapter.name, "external" => @adapter.external?, "model" => (@adapter.model if @adapter.respond_to?(:model)),
           "arms" => @arms.map(&:to_s), "repeats" => @repeats, "queries" => @queries.map(&:id),
           "queries_sha256" => Queries.sha256, "cards" => @corpus.cards.size,
-          # 出力の形（JSON スキーマ）を渡したか。腕ごと。渡しても、縛るかどうかはアダプタによる（いま縛るのは local だけ）
+          # 出力の形（JSON スキーマ）を渡したか。腕ごと。渡しても、縛るかどうかはアダプタによる（いま縛るのは local と lmstudio）
           "json_schema" => @arms.to_h { |arm| [ arm.to_s, arm == :g_selection ] },
           "dialect_sha256" => Digest::SHA256.hexdigest(AqlPrompt::DIALECT), "selection_instructions_sha256" => Digest::SHA256.hexdigest(NlQuery::Prompt::INSTRUCTIONS),
           "commit" => `git -C #{Rails.root} rev-parse HEAD`.strip,
