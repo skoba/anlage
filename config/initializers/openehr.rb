@@ -61,3 +61,13 @@ OpenehrRails.default_territory = "JP"
 OpenehrRails.authenticate_with = OptionalBasicAuth.engine_hook(
   username: ENV["ANLAGE_BASIC_AUTH_USERNAME"], password: ENV["ANLAGE_BASIC_AUTH_PASSWORD"]
 )
+
+# R-20261127-30・R-20261128-1: FHIR の facade（/openehr/fhir）が、anlage が実行時に登録したテンプレートの記録を読む。
+# 渡すのは template_id ごとに 1 つ、動いている版（Template.active）。同じ template_id が 2 つ active なら、
+# あとから登録したもの（患者の画面 Charts::PatientChart と同じ選び方）。gem は template_id が重なると 500
+# （OpenehrRails::Fhir::TemplateSourceError。openehr-rails 0.14.1 lib/openehr_rails/fhir/template_source.rb）
+Rails.application.config.to_prepare do
+  OpenehrRails::Fhir.template_source = lambda do
+    Template.active.order(:id).index_by(&:template_id).values.map { |t| { template_id: t.template_id, opt: t.source_xml } }
+  end
+end
