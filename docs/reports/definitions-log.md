@@ -156,6 +156,18 @@ gem は足さない。migration は 1 つ。範囲の外にしたもの（画面
   Green: `DefinitionBundle.delete_all`（トランザクションの中）。タスクの説明と README（英・日）に書いた → 10 examples, 0 failures
 - rake（register・activate・restore・list）は D-3b
 
+## R7（2026-11-28）D-3b: 定義の組の rake（`skoba/anlage#279`。R-20261128-7 の回答 5 と「足すこと」）
+
+- サイクル 1（戻す）: Red `spec/models/definition_bundle_spec.rb` の `.restore!` 3 例 → `undefined method 'restore!' for class DefinitionBundle`。
+  Green: 前の版の `files` を写し、`bundle.yml` の `version:` の 1 行だけを、最新の版のパッチを 1 つ上げた版に替える（`Template.next_version`）。
+  替えたあとの組を検査し、通れば新しい行（`restored_from` に元の版）として足して動かす。通らなければ `LintFailed`（足さない）→ 10 examples, 0 failures
+  - 「1 行だけ」は spec で、行数が同じで、違う行が `version: 0.1.1` の 1 行だけであることを見た
+- サイクル 2（rake）: Red `spec/tasks/definitions_registry_spec.rb` → `Don't know how to build task 'definitions:register'`。
+  Green: `definitions:register DIR=`（下書き。エラーは文で出して終了コード 1、同じ版で別の中身も 1、同じ中身は 0）、`definitions:activate BUNDLE= VERSION=`、
+  `definitions:restore BUNDLE= VERSION=`、`definitions:list` → 13 examples, 0 failures（既存の `definitions:lint` などの spec を含む）
+  - `registered_by` は `rake（<環境の利用者名>）`（`Etc.getlogin`、無ければ `USER`）。運用者の名前で、患者の記録や計測には使わない（10 節）
+- Refactor（緑のまま）: `DefinitionBundle::Registration` に `status`（`:registered`・`:invalid`・`:exists`・`:conflict`）を持たせ、rake は status で分ける（24 examples, 0 failures）
+
 ## R8（2026-11-28）D-4a: `from: { auto: true }` と組み込みの定義（`skoba/anlage#281`。R-20261128-7 の回答 4）
 
 - サイクル 1（書式）: Red `spec/lib/definitions/auto_from_spec.rb`（6 例）。D-3a の前の main では `Linter.check` が無いので 6 failures、

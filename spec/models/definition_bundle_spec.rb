@@ -75,6 +75,40 @@ RSpec.describe DefinitionBundle do
     end
   end
 
+  describe ".restore!" do
+    it "前の版の中身で新しい版を足して動かす。版は最新のパッチを 1 つ上げ、履歴は消えない" do
+      old = described_class.register(files, registered_by: "rake").bundle.tap(&:activate!)
+      described_class.register(with_version(files, "0.2.0"), registered_by: "rake").bundle.activate!
+
+      restored = described_class.restore!("clinic_spec", "0.1.0", registered_by: "rake（operator）")
+
+      expect(restored).to have_attributes(version: "0.2.1", status: "active", restored_from: "0.1.0", registered_by: "rake（operator）")
+      expect(described_class.where(bundle_id: "clinic_spec").order(:id).pluck(:version, :status))
+        .to eq([ %w[0.1.0 superseded], %w[0.2.0 superseded], %w[0.2.1 active] ])
+      expect(restored.files.except("bundle.yml")).to eq(old.files.except("bundle.yml"))
+    end
+
+    it "bundle.yml は version: の 1 行だけを替える" do
+      described_class.register(files, registered_by: "rake").bundle.activate!
+
+      restored = described_class.restore!("clinic_spec", "0.1.0", registered_by: "rake")
+
+      before_lines = files["bundle.yml"].lines
+      after_lines = restored.files["bundle.yml"].lines
+      changed = before_lines.each_index.reject { before_lines[_1] == after_lines[_1] }
+      expect(after_lines.size).to eq(before_lines.size)
+      expect(changed.map { after_lines[_1] }).to eq([ "version: 0.1.1\n" ])
+    end
+
+    it "替えたあとの組が検査を通らなければ、足さない（テンプレートが消えたなど）" do
+      described_class.register(files, registered_by: "rake").bundle.activate!
+      Template.find_by!(template_id: "LabResultReport").destroy!
+
+      expect { described_class.restore!("clinic_spec", "0.1.0", registered_by: "rake") }.to raise_error(DefinitionBundle::LintFailed, /D3/)
+      expect(described_class.count).to eq(1)
+    end
+  end
+
   it "active は組ごとに 1 つ（表の部分索引）" do
     one = described_class.register(files, registered_by: "rake").bundle
     two = described_class.register(with_version(files, "0.2.0"), registered_by: "rake").bundle
