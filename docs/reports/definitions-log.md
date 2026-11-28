@@ -204,6 +204,26 @@ gem は足さない。migration は 1 つ。範囲の外にしたもの（画面
 - Change: 運用者が `ANLAGE_DEFINITION_BUNDLE` に組の名前を設定すると、患者の画面を、その組の active の版の画面で出す（Refs #283、Refs R-20261128-7。D-4b）。
   利用者に見える変更: あり（設定したときだけ。設定しなければ、いまの画面のまま）
 
+## R10（2026-11-28）D-4c: 下書きの試しの表示（`?preview=`）と、保存のあと `then` に進む（`skoba/anlage#294`。R-20261128-7 の回答と 10 節）
+
+- サイクル 1（request）: Red `spec/requests/definition_preview_spec.rb`（7 例）→ 7 examples, 6 failures
+  （下書きで出ない `got: "builtin 1.0.0 patient_chart"`、理由の文が無い `got: nil`、ボタンに印が無い `got: "/forms/LabResultReport"`、保存のあと then に移らない）。
+  「印が引けないときは記録の画面」の 1 例は、はじめから通る（いまの振る舞いの pin。移る先を URL から取らないことも、この例で見る）。
+  Green: `Definitions::ActiveScreen.call(preview:)`（下書きの行のときだけ、その下書きで出す。`Result` に `row_id`・`preview`）、
+  `Definitions::Via`（`via=<組の行の id>.<ボタンの id>` から、組の行のボタンを引き直す。`open.form` が保存した帳票と同じで、`then` のあるときだけ）、
+  `CompositionsController#after_save_path`、帳票の画面に `via` の隠し項目（新しい記録のときだけ）→ 13 examples, 0 failures（active_bundle_spec を含む）。
+  `spec/requests`・`spec/lib/definitions`・`spec/docs`: 277 examples, 0 failures
+- サイクル 2（実ブラウザ）: `spec/system/definition_then_spec.rb`（患者の画面 → 検査結果を入力 → 保存して患者の画面へ → 保存した値が検査結果に出る）。
+  Red は、実装の前の木（`HEAD~1`）に spec だけを置いて実行: 保存のあと `[data-definition-screen='clinic_spec 0.1.0 patient_chart']` が無い（記録の画面に移った）。一時の worktree は消した。
+  Green: 実装の木で、患者の画面・検査結果の system spec と合わせて 6 examples, 0 failures
+- 自己承認した判断（計画に書いていない細部。どれも計画の 1.1 節・6 節の範囲）:
+  - 試しに使うのは `status: draft` の行だけ。動いている行・無い行の id は、動いている画面と「試しに表示する下書き（id）がありません」の文（理由: 計画の「下書きで画面を出す」。動いている版はいつでも印の無い URL で見られる）
+  - 試しの表示の中のボタン（`open.screen`）と、下書きのボタンから保存したあとの `then` の画面は、`?preview=` を付けたまま（理由: 試しの途中で、動いている画面に黙って戻らないように）
+  - `via` は、どの状態の行でも引く（動かしたあとに前の版の帳票を保存しても、その版のボタンの then に進む）
+- 語彙表（`docs/demo/ui-vocabulary.md`）の「定義の組」の行に、試しの表示の文 3 つを、文言の pin と同じ commit で足した
+- Change: 下書きの定義の組を `?preview=<行の id>` で試しに表示できる。定義のボタンから開いた帳票は、保存のあと、ボタンの `then` の画面に進む（Refs #294、Refs R-20261128-7。D-4c）。
+  利用者に見える変更: あり（定義の組を設定・登録したときだけ。設定しなければ変わらない）
+
 ## R11（2026-11-28）D-4d: 定義の組の画面 `/definitions`（読むだけ。`skoba/anlage#296`。R-20261128-7、計画 4 節）
 
 - Red `spec/requests/definitions_screen_spec.rb`（8 例）→ 8 examples, 8 failures（`undefined method 'definitions_path'`・`definition_path`、route の例は `[]`）

@@ -79,7 +79,7 @@ class CompositionsController < ApplicationController
       rm_composition: commit.canonical_hash,
       uid: commit.uid
     )
-    redirect_to composition_path(composition), notice: "保存しました"
+    redirect_to after_save_path(composition), notice: "保存しました"
   end
 
   # 削除（skoba/anlage#140）。gem の REST の DELETE（openehr-rails 0.9.0 openehr_api/compositions_controller.rb:57-65）と
@@ -99,6 +99,16 @@ class CompositionsController < ApplicationController
   end
 
   private
+
+  # skoba/anlage#294: 定義の組のボタン（via の印）から開いた帳票は、保存のあと、そのボタンの then へ。
+  # 試しの表示（下書き）の then の画面は、試しの表示のまま。引けなければ、記録の画面
+  def after_save_path(composition)
+    target = Definitions::Via.resolve(params[:via], template_id: @template.template_id)
+    screen = target&.then&.[]("screen")
+    return composition_path(composition) unless screen
+
+    patient_path(current_ehr.ehr_id, screen:, preview: (target.bundle.id if target.bundle.status == "draft"))
+  end
 
   def editable?(composition)
     composition.uid.present? && composition.latest_version? && !composition.deleted? &&
