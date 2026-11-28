@@ -1,0 +1,121 @@
+{
+  "query": "n102-2",
+  "arm": "g_selection",
+  "repeat": 1,
+  "instructions_sha256": "3c459ade7d5fd8d39574551c1e1f4977106fb67e764cc7b93a80279f8e892c49",
+  "sha256": "30c0d5d6625b63261927460e9e49cc047c026380816444d63b00254412387dad",
+  "input": "候補の項目:\n1 | Systolic | Blood Pressure | 数値 |  | mm[Hg] | patient_blood_pressure.v1\n2 | Diastolic | Blood Pressure | 数値 |  | mm[Hg] | patient_blood_pressure.v1\n3 | 収縮期 | 血圧 | 数値 |  | mm[Hg] | CardiologyEncounter\n4 | 拡張期 | 血圧 | 数値 |  | mm[Hg] | CardiologyEncounter\n5 | 検査名 | 検体検査結果 | 文字列 |  |  | LabResultReport\n6 | 分析名 | 検体検査結果／検査分析結果 | 文字列 |  |  | LabResultReport\n7 | 分析結果 | 検体検査結果／検査分析結果 | 数値 |  |  | LabResultReport\n8 | プロブレム・診断名 | プロブレム・診断 | 文字列 |  |  | ProblemList\n9 | 発症日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n10 | 臨床的に認識された日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n11 | 治癒日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n12 | 診断確度 | プロブレム・診断 | 値集合 | 疑い、推定、確定 |  | ProblemList\n13 | 最終更新日 | プロブレム・診断 | 日時 |  |  | ProblemList\n14 | 身長 | 身長 | 数値 |  | cm | bmi_calculation\n15 | 体重 | 体重 | 数値 |  | kg | bmi_calculation\n16 | Body mass index | Body mass index | 数値 |  | kg/m2 | bmi_calculation\n17 | 判定 | Body mass index | 文字列 |  |  | bmi_calculation\n18 | Rate | Heart rate and rhythm | 数値 |  | /min | patient_blood_pressure.v1\n\n問い: HbA1c 7 以上の記録の、HbA1c の値\n",
+  "response": "{\n  \"columns\": [\n    7\n  ],\n  \"conditions\": [\n    {\n      \"card\": 7,\n      \"operator\": \">=\",\n      \"value\": 7\n    }\n  ],\n  \"order\": null,\n  \"template_id\": false,\n  \"across_versions\": false,\n  \"reason\": null\n}",
+  "model": "qwen3:4b",
+  "input_tokens": 1404,
+  "output_tokens": 73,
+  "seconds": 41.1,
+  "status": "mismatch",
+  "order_free": false,
+  "parseable": true,
+  "lint_ok": true,
+  "executed": true,
+  "card_match": false,
+  "aqls": [
+    "SELECT o/data[at0001]/events[at0002]/data[at0003]/items[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1]/items[at0001]/value/magnitude\nFROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.laboratory_test_result.v1]\nWHERE o/data[at0001]/events[at0002]/data[at0003]/items[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1]/items[at0001]/value/magnitude >= 7"
+  ],
+  "reason": null,
+  "rows": [
+    [
+      156.0
+    ],
+    [
+      142.0
+    ],
+    [
+      128.0
+    ],
+    [
+      8.1
+    ],
+    [
+      7.6
+    ],
+    [
+      7.2
+    ],
+    [
+      102.0
+    ],
+    [
+      128.0
+    ],
+    [
+      9.8
+    ],
+    [
+      11.9
+    ],
+    [
+      84.0
+    ],
+    [
+      168.0
+    ],
+    [
+      142.0
+    ],
+    [
+      96.0
+    ],
+    [
+      27.0
+    ],
+    [
+      26.0
+    ],
+    [
+      7.0
+    ],
+    [
+      92.0
+    ],
+    [
+      104.0
+    ],
+    [
+      14.2
+    ],
+    [
+      48500.0
+    ],
+    [
+      58.0
+    ],
+    [
+      8.9
+    ],
+    [
+      1150.0
+    ],
+    [
+      6800.0
+    ],
+    [
+      412.0
+    ],
+    [
+      2450.0
+    ],
+    [
+      10.4
+    ],
+    [
+      5120.0
+    ],
+    [
+      25.0
+    ],
+    [
+      10.9
+    ],
+    [
+      9.4
+    ]
+  ]
+}

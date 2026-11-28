@@ -1,0 +1,22 @@
+{
+  "query": "n009-1",
+  "arm": "g_selection",
+  "repeat": 3,
+  "instructions_sha256": "3c459ade7d5fd8d39574551c1e1f4977106fb67e764cc7b93a80279f8e892c49",
+  "sha256": "f984ae5faf1b0363963a45d9f829e6037ef31a7d97c51d368982bf5a49d219a6",
+  "input": "候補の項目:\n1 | 収縮期 | 血圧 | 数値 |  | mm[Hg] | CardiologyEncounter\n2 | 拡張期 | 血圧 | 数値 |  | mm[Hg] | CardiologyEncounter\n3 | Body mass index | Body mass index | 数値 |  | kg/m2 | bmi_calculation\n4 | 判定 | Body mass index | 文字列 |  |  | bmi_calculation\n5 | Rate | Heart rate and rhythm | 数値 |  | /min | patient_blood_pressure.v1\n6 | Systolic | Blood Pressure | 数値 |  | mm[Hg] | patient_blood_pressure.v1\n7 | Diastolic | Blood Pressure | 数値 |  | mm[Hg] | patient_blood_pressure.v1\n8 | 検査名 | 検体検査結果 | 文字列 |  |  | LabResultReport\n9 | 分析名 | 検体検査結果／検査分析結果 | 文字列 |  |  | LabResultReport\n10 | 分析結果 | 検体検査結果／検査分析結果 | 数値 |  |  | LabResultReport\n11 | プロブレム・診断名 | プロブレム・診断 | 文字列 |  |  | ProblemList\n12 | 発症日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n13 | 臨床的に認識された日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n14 | 治癒日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n15 | 診断確度 | プロブレム・診断 | 値集合 | 疑い、推定、確定 |  | ProblemList\n16 | 最終更新日 | プロブレム・診断 | 日時 |  |  | ProblemList\n17 | 身長 | 身長 | 数値 |  | cm | bmi_calculation\n18 | 体重 | 体重 | 数値 |  | kg | bmi_calculation\n\n問い: 収縮期血圧が 100 mmHg 未満の記録の、収縮期血圧と拡張期血圧の値\n",
+  "response": "{\"columns\": [1, 2], \"conditions\": [{\"card\": 6, \"operator\": \"<\", \"value\": 100}], \"order\": null, \"template_id\": false, \"across_versions\": false, \"reason\": null}",
+  "model": "qwen3:4b",
+  "input_tokens": 1425,
+  "output_tokens": 55,
+  "seconds": 14.53,
+  "status": "lint",
+  "order_free": false,
+  "parseable": true,
+  "lint_ok": false,
+  "executed": false,
+  "card_match": true,
+  "aqls": [],
+  "reason": "1 つのクエリで使える ENTRY のアーキタイプは 1 つ（openEHR-EHR-OBSERVATION.blood_pressure.v2、openEHR-EHR-OBSERVATION.blood_pressure.v1）",
+  "rows": []
+}
