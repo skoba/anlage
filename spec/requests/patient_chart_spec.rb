@@ -109,6 +109,16 @@ RSpec.describe "患者の画面の部品", type: :request do
     end
   end
 
+  # skoba/anlage#281（D-4a）: 患者の画面は、組み込みの定義の部品の並びで出す。中身はいままでと同じ（このファイルのほかの例が見る）
+  it "部品は、組み込みの定義の並び（プロブレムリスト → 経過 → 検査結果 → 依頼と紹介状 → 記録の一覧）で出る" do
+    # DEMO-01 には依頼と紹介状が無いので、orders は出ない（部品に入れるものが無ければ出さない。U1 のまま）
+    show("DEMO-01")
+
+    ids = document.css("section[data-definition-section]").map { _1["data-definition-section"] }
+    expect(ids).to eq(%w[problem_list time_series lab_table records])
+    expect(document.at_css("section[data-definition-section='records'] h2").text).to eq("カルテ記録")
+  end
+
   it "検査結果の時系列表: DEMO-07 は 5 行、各 1 点なのでグラフは無い" do
     show("DEMO-07")
 

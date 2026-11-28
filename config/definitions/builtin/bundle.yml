@@ -1,0 +1,8 @@
+# 組み込みの定義の組（docs/design/definition-registration-plan.md 3 節、skoba/anlage#281、R-20261128-7）。
+# 定義の組を動かしていないとき（ANLAGE_DEFINITION_BUNDLE が無い・動いている版が無い・検査に通らない）の、既定の患者の画面（U1）。
+# 表には入れない。部品はどれも from: { auto: true }（U1 の規則で、登録済みのテンプレート全体から引く）
+bundle: builtin
+version: 1.0.0
+title: 既定の画面
+screens: [ patient_chart ]
+start: { screen: patient_chart }
