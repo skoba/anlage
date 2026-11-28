@@ -6,7 +6,7 @@ RSpec.describe "Postman のコレクション（docs/demo/postman/）" do
   COLLECTION = Rails.root.join("docs/demo/postman/anlage.postman_collection.json")
   ENVIRONMENT = Rails.root.join("docs/demo/postman/anlage.postman_environment.json")
   ENGINE_MOUNT = "/openehr".freeze
-  SAMPLE = { "ehr_id" => "08ec1843-d1f3-4e8b-ab99-9194f41c745e",
+  SAMPLE = { "subject_id" => "DEMO-01", "ehr_id" => "08ec1843-d1f3-4e8b-ab99-9194f41c745e",
              "composition_uid" => "833da556-875f-4cf2-9931-ef04a6c0ce73" }.freeze
 
   let(:collection) { JSON.parse(COLLECTION.read) }
@@ -41,21 +41,22 @@ RSpec.describe "Postman のコレクション（docs/demo/postman/）" do
     expect(requests.map { _1["request"]["auth"] }.compact).to be_empty
   end
 
-  it "環境の雛形は、接続先・利用者名・パスワード（空）・EHR ID・記録の uid を持つ" do
+  it "環境の雛形は、接続先・利用者名・パスワード（空）・患者 ID・EHR ID・記録の uid を持つ" do
     values = environment["values"].to_h { [ _1["key"], _1["value"] ] }
-    expect(values.keys).to eq(%w[base_url username password ehr_id composition_uid])
+    expect(values.keys).to eq(%w[base_url username password subject_id ehr_id composition_uid])
+    expect(values["subject_id"]).to eq("DEMO-01")
     expect(values["password"]).to eq("")
     expect(values["base_url"]).to eq("http://localhost:8080")
   end
 
   # R-20261127-5 の 1: いつも 0 件になる要求（anlage での FHIR の Observation。既知の制限 19）は入れない
-  it "FHIR の Observation の要求は入れない（FHIR 2 件、openEHR REST 3 件）" do
-    expect(collection["item"].map { |folder| folder["item"].size }).to eq([ 2, 3 ])
+  it "FHIR の Observation の要求は入れない（FHIR 2 件、openEHR REST 4 件）" do
+    expect(collection["item"].map { |folder| folder["item"].size }).to eq([ 2, 4 ])
     expect(requests.map { _1.dig("request", "url", "raw") }).to all(satisfy { !_1.include?("/Observation") })
   end
 
   it "すべての要求のパスが、anlage か engine の routes で解決できる" do
-    expect(requests.size).to eq(5)
+    expect(requests.size).to eq(6)
     requests.each do |request|
       method = request.dig("request", "method").downcase.to_sym
       expect { recognize(method, path_of(request)) }.not_to raise_error, "#{request['name']}: #{method} #{path_of(request)}"
@@ -70,5 +71,24 @@ RSpec.describe "Postman のコレクション（docs/demo/postman/）" do
     expect(body["query_parameters"]).to eq("ehr_id" => "{{ehr_id}}")
     script = aql["event"].find { _1["listen"] == "test" }.dig("script", "exec").join("\n")
     expect(script).to include('.set("composition_uid", uid)')
+  end
+
+  # R-20261127-30: 患者 ID から EHR を引く（openehr-rails 0.13.0 からの GET /v1/ehr?subject_id=&subject_namespace=、#95）。
+  # 応答の ehr_id を環境の ehr_id に入れるので、「EHR ID を写す」を手で写さなくてよい
+  describe "患者 ID から EHR を引く" do
+    let(:lookup) { requests.find { _1["name"] == "患者 ID から EHR を引く" } }
+
+    it "openEHR REST の最初の要求で、患者 ID と anlage の名前空間を渡す" do
+      expect(collection["item"].last["item"].first["name"]).to eq("患者 ID から EHR を引く")
+      expect(lookup.dig("request", "method")).to eq("GET")
+      expect(lookup.dig("request", "url", "raw"))
+        .to eq("{{base_url}}/openehr/v1/ehr?subject_id={{subject_id}}&subject_namespace=#{PatientsController::SUBJECT_NAMESPACE}")
+    end
+
+    it "応答の ehr_id/value を ehr_id に入れる" do
+      script = lookup["event"].find { _1["listen"] == "test" }.dig("script", "exec").join("\n")
+      expect(script).to include("pm.response.json().ehr_id.value")
+      expect(script).to include('.set("ehr_id", ehrId)')
+    end
   end
 end
