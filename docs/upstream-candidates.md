@@ -699,3 +699,5 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   対応（`Fhir::TypeMap`、`ProfileGenerator`）は今のまま共有する。scaffold の経路と実行時の経路が、同じ入口（検索・1 件・CapabilityStatement）を使う
 - anlage の側の続き: 先方の版が公開されたら、source を 1 つ登録する PR（依存を変えるので、マージは人間）と、
   Postman のコレクションに Observation の検索を戻す（R-20261127-10 の 2）。それまで既知の制限 19 のまま
+- 2026-11-28 追記: 先方の 0.14.0 で source の口（`OpenehrRails::Fhir.template_source`）が入り、0.14.1 で日時の形が直った。
+  anlage は 0.14.1 に上げて source を 1 つ登録し（`config/initializers/openehr.rb`、`skoba/anlage#273`）、Postman に Observation と Condition を戻した。既知の制限 19 は解消
