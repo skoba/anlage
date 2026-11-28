@@ -3,6 +3,18 @@ module DefinitionsHelper
   # 段（layer）を左から右へ、同じ段の節を上から下へ。辺は節の右端から左端への線（戻る辺は、同じ線で向きが逆になる）
   DIAGRAM_NODE = { width: 160, height: 40, gap_x: 70, gap_y: 30, pad: 16 }.freeze
 
+  # 定義の組の画面（skoba/anlage#296）の文言。正典は docs/demo/ui-vocabulary.md の「定義の組」
+  BUNDLE_STATUS_LABELS = { "draft" => "下書き", "active" => "動いている", "superseded" => "前の版" }.freeze
+
+  def bundle_status_label(status) = BUNDLE_STATUS_LABELS.fetch(status, status)
+
+  # 検査の結果（Definitions::Linter::Report）の一言。案は D8（出どころとレビュー者の無いロジック）
+  def lint_summary(report)
+    return "通らない（エラー #{report.errors.size} 件）" unless report.ok?
+
+    "通る（案 #{report.problems.count { _1.severity == :draft }} 件）"
+  end
+
   def transition_diagram(diagram)
     positions = diagram_positions(diagram.nodes)
     width = positions.values.map { _1[:x] }.max.to_i + DIAGRAM_NODE[:width] + DIAGRAM_NODE[:pad]

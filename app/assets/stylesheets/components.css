@@ -45,3 +45,9 @@ svg.transition-diagram marker path { fill: var(--color-muted); }
                      background: #fef3c7; color: #7c2d12; }
 #definition_notice ul { margin: var(--space-2) 0 0; padding-left: 1.25rem; font-size: 0.85rem; }
 .definition-buttons { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; }
+
+/* skoba/anlage#296: 定義の組の版どうしの差分（行ごと）。色は変数 */
+pre.definition-diff { font-family: var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+pre.definition-diff .diff-added { color: var(--color-accent); }
+pre.definition-diff .diff-removed { color: var(--color-danger); }
+pre.definition-diff .diff-same { color: var(--color-muted); }

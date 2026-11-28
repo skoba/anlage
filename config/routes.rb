@@ -19,6 +19,11 @@ Rails.application.routes.draw do
     get "records/:uid", to: "patients#record", as: :record, on: :member, format: false, constraints: { uid: /[^\/]+/ }
   end
 
+  # 定義の組の画面（読むだけ。skoba/anlage#296、docs/design/definition-registration-plan.md 4 節）。
+  # 登録・動かす・戻すは rake だけ（画面から書き込む route を作らない。認証が無いため）
+  get "definitions",     to: "definitions#index", as: :definitions
+  get "definitions/:id", to: "definitions#show",  as: :definition, constraints: { id: /\d+/ }
+
   get  "templates",         to: "templates#index"
   post "templates/preview", to: "templates#preview"
   post "templates",         to: "templates#create"
