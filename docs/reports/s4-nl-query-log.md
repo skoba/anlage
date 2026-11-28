@@ -502,3 +502,81 @@ describe の中の定数は、トップレベルに定義される。全体を�
 
 直し: 定数の名前を `GROUNDING_BP_V2_AQL` などに変えた。`spec/lib/evaluation` をまとめて流して、126 examples, 0 failures。
 マージはしていなかった（CI が赤のあいだ、マージしない）。以後、spec に定数を足すときは、ほかの spec の定数と名前が重ならないことを `grep` で確かめる。
+
+## R8 LM Studio の手元のモデルのアダプタ（2026-11-28。`skoba/anlage#268`。R-20261128-5 の 1）
+
+### 自己承認した判断
+
+- **名前を分ける**（`ANLAGE_LLM=lmstudio`、`Llm::Adapters::LmStudio`）。`local` に口の形の設定を足す案は、捨てた。根拠は計画書 15.1 節
+  （口の形が、Ollama の元の口とすべて違う。記録で、どちらで動かしたかが名前で分かる）
+- **OpenAI と同じ形の口を使い、考える分の指定は送らない**。LM Studio の文書に、この口で考える分を止める項目が無い（計画書 15.2 節）。
+  元の口（`/api/v1/chat`）には `reasoning: "off"` があるが、出力の形を縛る項目が無い。出力の形を取った。考える分は、試しで実測する
+- **`response_format` の `strict` は送らない**。文書の例は、文字の `"true"` を付けたものと、付けないものの 2 つ。要るかどうかは書いていない
+- **トークンの環境変数は `LM_API_TOKEN`**。LM Studio の文書の例が使っている名前
+- `Local.build` と `LmStudio.build` に、2 つめの引数（温度と乱数の種）を足した。測定の rake が、2 つのアダプタを同じ書き方で作るため
+
+### Red（実行して失敗を確かめた）
+
+```
+NameError:
+  uninitialized constant Llm::Adapters::LmStudio
+# ./spec/lib/llm/adapters/lm_studio_spec.rb:8:in '<top (required)>'
+0 examples, 0 failures, 1 error occurred outside of examples
+```
+
+`Local.build` の 2 つめの引数（実装を外して流した）:
+
+```
+ArgumentError:
+  wrong number of arguments (given 2, expected 1)
+27 examples, 1 failure
+rspec ./spec/lib/llm/adapters/local_spec.rb:105 # Llm::Adapters::Local.build … 温度と乱数の種は、作るときに足せる（測定のとき）
+```
+
+- 途中の誤り: `LmStudio.build(env, **options)` と書いたところ、括弧なしのハッシュ（`build("ANLAGE_LLM_MODEL" => …)`）がキーワード引数に取られ、
+  `wrong number of arguments (given 0, expected 1)` で 2 例が落ちた。2 つめの引数を、ふつうのハッシュ（`options = {}`）に直した
+- `settings_spec` の lmstudio の例は、アダプタの spec と同じ実行で Red を見た（定数が無い）。1 例ずつは取っていない
+
+### Green
+
+`bundle exec rspec spec/lib/llm` → 90 examples, 0 failures。
+
+### まだ確かめていないこと
+
+- 実際の LM Studio のサーバーには、つないでいない（Windows 側で、サーバーが立っていない。WSL は NAT。`docs/reports/s4-lmstudio-network-check.md`）
+- 考える分が出るか、`usage` に何が入るか、`response_format` で選択の形が縛れるか、モデルが無いときの状態の番号
+
+## R9 開発機の道具: LM Studio への中継（2026-11-28。`skoba/anlage#286`。R-20261128-10）
+
+### 自己承認した判断
+
+- **置き場所は `script/lmstudio_relay.rb`**（spec は `spec/script/`）。アプリのコードには入れない（R-20261128-10）。
+  `app/`・`lib/` に入れる案は、捨てた（アプリが読み込む）。リポジトリの外に置く案も、捨てた（spec が付けられず、記録に残らない）
+- **作りは、Ruby の標準のライブラリだけ**（`socket`・`open3`）。gem は足さない。`socat` などの道具で組む案は、捨てた
+  （HTTP の要求を読んで `curl.exe` の引数に直すところが、書けない）
+- **中継の先は固定**（Windows 側の `http://127.0.0.1:1234`）。同じ機械の中でない先は、立ち上げのときに断る
+- **`Authorization` のヘッダは渡さない**。`curl.exe` の引数に書くと、Windows 側のプロセスの一覧にトークンが出る。
+  LM Studio の既定は、トークンを求めない（`docs/reports/s4-lmstudio-network-check.md` 7 節）
+- 根拠の実測: WSL から `/mnt/c/Windows/System32/curl.exe`（8.23.0）を起こせる。標準入力を渡せる。サーバーが無いときは、終了の番号 7
+
+### Red（実行して失敗を確かめた）
+
+```
+Failure/Error: require Rails.root.join("script/lmstudio_relay").to_s
+
+LoadError:
+  cannot load such file -- /home/skoba/src/anlage-worktrees/lmstudio-relay/script/lmstudio_relay
+# ./spec/script/lmstudio_relay_spec.rb:4:in '<top (required)>'
+0 examples, 0 failures, 1 error occurred outside of examples
+```
+
+### Green
+
+`bundle exec rspec spec/script/lmstudio_relay_spec.rb` → 8 examples, 0 failures。`bin/rubocop script spec/script` → no offenses。
+
+実物の `curl.exe` を通した確かめ（LM Studio のサーバーは立っていない）: 中継（`127.0.0.1:11234`）に POST → 502、
+`curl が失敗しました（終了の番号 7）`。0.2 秒。
+
+### まだ確かめていないこと
+
+- LM Studio のサーバーが立っているときに、応答が返ること。日本語の本文が、Windows 側の `curl.exe` を通って崩れないこと（試しで見る）

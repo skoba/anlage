@@ -13,6 +13,8 @@ hand. The design is in [`docs/design/s4-nl-aql-plan.md`](design/s4-nl-aql-plan.m
   (that happens when a key is provided). How correctly each model picks items has not been measured yet
 - An adapter for a locally run model (`local`, for an Ollama server on the same machine) is in place. It was tried with one small
   model on a CPU-only machine: about 30 seconds per question, and not every answer was usable
+- An adapter for LM Studio on the same machine (`lmstudio`) is in place. It has only been checked with specs; it has not been
+  tried against a real LM Studio server yet
 
 ## Turning it on
 
@@ -20,11 +22,12 @@ The operator sets environment variables and restarts. It cannot be switched from
 
 | Environment variable | Meaning | Default |
 |---|---|---|
-| `ANLAGE_LLM` | Name of the adapter to use (`anthropic`, `openai`, `local`, `recorded`). This is the "on" setting | none (off) |
-| `ANLAGE_LLM_MODEL` | Model ID (for `anthropic`, `openai` and `local`; see the provider's model list, or the name of the model you pulled into Ollama). There is no default | none |
+| `ANLAGE_LLM` | Name of the adapter to use (`anthropic`, `openai`, `local`, `lmstudio`, `recorded`). This is the "on" setting | none (off) |
+| `ANLAGE_LLM_MODEL` | Model ID (for `anthropic`, `openai`, `local` and `lmstudio`; see the provider's model list, or the name of the model you pulled into Ollama or loaded in LM Studio). There is no default | none |
 | `ANTHROPIC_API_KEY` | Claude API key (for `anthropic`) | none |
 | `OPENAI_API_KEY` | OpenAI API key (for `openai`) | none |
 | `ANLAGE_LLM_BASE_URL` | Endpoint (for `openai`). Change it to point at a server that offers the same Chat Completions interface | `https://api.openai.com/v1` |
+| `LM_API_TOKEN` | LM Studio API token (for `lmstudio`; only when "Require Authentication" is on in LM Studio) | none |
 | `ANLAGE_LLM_DAILY_CALL_LIMIT` | Calls allowed per day. Once reached, the LLM is not called and you pick by hand | 100 |
 | `ANLAGE_LLM_RECORDINGS` | Directory of recorded responses (for `recorded`; development and tests) | none |
 
@@ -36,7 +39,13 @@ The operator sets environment variables and restarts. It cannot be switched from
   optional and the warning is not shown. Any other endpoint counts as outside and must be https
 - With `local`, the text goes to an Ollama server on the same machine (`ANLAGE_LLM_BASE_URL`, default `http://127.0.0.1:11434`).
   Nothing is sent outside, no key is needed, and the warning is not shown. Only an endpoint on the same machine is accepted
-- One question waits at most 30 seconds (300 seconds with `local`). The output limit is 2,000 tokens (400 with `local`)
+- With `lmstudio`, the text goes to an LM Studio server on the same machine, through its OpenAI-compatible endpoint
+  (`ANLAGE_LLM_BASE_URL`, default `http://127.0.0.1:1234/v1`). Nothing is sent outside and the warning is not shown. Only an
+  endpoint on the same machine is accepted. Start the server in LM Studio (Developer tab, or `lms server start`), keep
+  "Serve on Local Network" off, and use a model you downloaded (not a cloud model). The output is constrained with a JSON
+  schema (`response_format`). No token is needed unless you turned on "Require Authentication"; then pass it as `LM_API_TOKEN`
+- One question waits at most 30 seconds (300 seconds with `local` and `lmstudio`). The output limit is 2,000 tokens
+  (400 with `local`, 1,000 with `lmstudio`)
 - Keys are passed as environment variables. They are not written to the repository or to configuration files, and their values
   do not appear on the screen or in logs
 

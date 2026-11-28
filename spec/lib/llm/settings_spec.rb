@@ -52,6 +52,16 @@ RSpec.describe Llm::Settings do
       expect(on.adapter_name).to eq("local")
     end
 
+    it "lmstudio と、モデルの名前がそろうと、オン。外に文を送らないアダプタ。トークンは要らない" do
+      expect(settings("ANLAGE_LLM" => "lmstudio").reason).to eq("モデルの名前（ANLAGE_LLM_MODEL）がありません。")
+
+      on = settings("ANLAGE_LLM" => "lmstudio", "ANLAGE_LLM_MODEL" => "google/gemma-4-12b")
+      expect(on).to be_on
+      expect(on).not_to be_external
+      expect(on.adapter_name).to eq("lmstudio")
+      expect(on.adapter).to be_a(Llm::Adapters::LmStudio)
+    end
+
     it "anthropic で、鍵かモデルの名前が無いときはオフ。理由が付く。理由に鍵の値は出ない" do
       expect(settings("ANLAGE_LLM" => "anthropic", "ANLAGE_LLM_MODEL" => "claude-haiku-5-5").reason)
         .to eq("API の鍵（ANTHROPIC_API_KEY）がありません。")

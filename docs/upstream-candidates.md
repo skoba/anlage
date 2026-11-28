@@ -701,3 +701,16 @@ gem 本体は改変しない（anlage 内で進め、還流は別途相談・PR�
   Postman のコレクションに Observation の検索を戻す（R-20261127-10 の 2）。それまで既知の制限 19 のまま
 - 2026-11-28 追記: 先方の 0.14.0 で source の口（`OpenehrRails::Fhir.template_source`）が入り、0.14.1 で日時の形が直った。
   anlage は 0.14.1 に上げて source を 1 つ登録し（`config/initializers/openehr.rb`、`skoba/anlage#273`）、Postman に Observation と Condition を戻した。既知の制限 19 は解消
+
+## 32. AQL の `ORDER BY … DESC` で、値の無い行が最初に来る（openehr 2.9.0）
+
+- 観察（2026-11-28、`skoba/anlage#242` の続き、PR #267 の実測。R-20261128-3）: クエリビルダーの、日時の項目での並べ替えを
+  `demo_initial` で実行すると、昇順では発症日時の無い 5 件が最後に来るが、降順では最初に来る
+- 起票先: [skoba/openehr-ruby#151](https://github.com/skoba/openehr-ruby/issues/151)（R-20261128-8。根拠と再現の表は Issue にある。
+  `lib/openehr/aql/engine.rb` の `compare_bindings` が、値の無い行との比較も含めて、降順で結果を反転していた）
+- 状態（2026-11-28 に読んだ）: 修正は openehr-ruby の PR #152 で master `013fa6d` に入った。Issue は閉じている。
+  RubyGems の最新は 2.9.0 で、修正を含む版は、まだ公開されていない
+- anlage の側: 回避策は入れていない（エンジンのままにした）。クエリビルダーの画面と文書に、降順のときの値の無い行の位置を
+  説明する文は無い（`app/`・`docs/nl-query.md`・`docs/demo/ui-vocabulary.md` を引いて確かめた）ので、直すものは無い。
+  測定の採点（`app/lib/evaluation/grounding/scorer.rb` の並びの検査）は、値の無い行を見ないので、この件に左右されない
+- 続き: 修正を含む openehr の版が公開されたら、版上げ（依存の更新。マージは人間）のあとで、降順でも値の無い行が最後に来ることを確かめる

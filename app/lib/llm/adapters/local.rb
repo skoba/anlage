@@ -23,8 +23,8 @@ module Llm
 
       attr_reader :model, :base_url
 
-      # 環境変数から作る。[アダプタ, nil] か [nil, 使えない理由]
-      def self.build(env)
+      # 環境変数から作る。[アダプタ, nil] か [nil, 使えない理由]。options は、温度と乱数の種（測定のとき）
+      def self.build(env, options = {})
         model = env["ANLAGE_LLM_MODEL"].to_s.strip
         base_url = env["ANLAGE_LLM_BASE_URL"].to_s.strip.then { |url| url.empty? ? DEFAULT_BASE_URL : url }
         uri = Openai.parse(base_url)
@@ -32,7 +32,7 @@ module Llm
         return [ nil, "local の接続先（ANLAGE_LLM_BASE_URL）は、開発機の中（127.0.0.1、localhost）だけです。" ] unless Openai.local?(uri)
         return [ nil, "モデルの名前（ANLAGE_LLM_MODEL）がありません。" ] if model.empty?
 
-        [ new(model: model, base_url: base_url), nil ]
+        [ new(model: model, base_url: base_url, **options), nil ]
       end
 
       def initialize(model:, base_url: DEFAULT_BASE_URL, timeout: TIMEOUT_IN_SECONDS, temperature: nil, seed: nil)

@@ -78,8 +78,8 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/up        # 200 (
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/patients  # 401
 ```
 
-Load the sample data (5 fixture templates; 9 fictitious patients, 84 records). This **deletes all data and reloads it**, so it
-must be enabled explicitly:
+Load the sample data (5 fixture templates; 9 fictitious patients, 84 records). This **deletes all data and reloads it** (registered
+definition bundles too, so the patient screen returns to the built-in one), so it must be enabled explicitly:
 
 ```sh
 docker exec -e ANLAGE_ALLOW_DEMO_RESET=1 anlage bin/rails demo:reset
@@ -105,7 +105,7 @@ set (a key alone does not turn it on), and every call costs money:
 The question text and the names of the candidate items are sent to the API; record contents are not. Anlage's screens have no
 login of their own, so anyone who can reach an instance with this turned on can spend your API budget, up to the daily limit.
 Which company receives the text is decided by `ANLAGE_LLM`: use `ANLAGE_LLM=openai` with `OPENAI_API_KEY` (instead of
-`ANTHROPIC_API_KEY`) to call OpenAI, or `ANLAGE_LLM=local` to use an Ollama server on the same machine (nothing is sent outside). Details: [`docs/nl-query.md`](docs/nl-query.md).
+`ANTHROPIC_API_KEY`) to call OpenAI, or `ANLAGE_LLM=local` (Ollama) or `ANLAGE_LLM=lmstudio` (LM Studio) to use a model server on the same machine (nothing is sent outside). Details: [`docs/nl-query.md`](docs/nl-query.md).
 
 The user interface is in Japanese only (known limitation 5).
 

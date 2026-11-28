@@ -102,7 +102,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -u demo:'<長いパスワード>' http:
 ```
 
 初期データ（fixture のテンプレート 5 本と、架空の患者 9 人・84 件のサンプル）を入れるときは、
-**全データを消して入れ直す**操作なので、環境変数で明示する:
+**全データを消して入れ直す**操作（登録した定義の組も消え、患者の画面は既定の画面に戻る）なので、環境変数で明示する:
 
 ```sh
 docker exec -e ANLAGE_ALLOW_DEMO_RESET=1 anlage bin/rails demo:reset
@@ -122,7 +122,7 @@ http://localhost:8080/ を開き（利用者名 `demo` とパスワードを入�
 
 API に送るのは、問いの文と、候補の項目の名前。記録の中身は送らない。anlage の画面には認証が無いので、オンにした Anlage に
 届く人は、だれでも、1 日の上限まで API を呼べる。どちらの会社に文が送られるかは `ANLAGE_LLM` で決まる: OpenAI を使うときは
-`ANLAGE_LLM=openai` と `OPENAI_API_KEY`（`ANTHROPIC_API_KEY` の代わり）。`ANLAGE_LLM=local` は、同じ機械の中の Ollama のサーバーを使い、
+`ANLAGE_LLM=openai` と `OPENAI_API_KEY`（`ANTHROPIC_API_KEY` の代わり）。`ANLAGE_LLM=local`（Ollama）と `ANLAGE_LLM=lmstudio`（LM Studio）は、同じ機械の中のサーバーを使い、
 外には何も送らない。詳しくは [`docs/nl-query.ja.md`](docs/nl-query.ja.md)。
 
 #### API を Postman で試す
