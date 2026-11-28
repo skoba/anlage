@@ -102,7 +102,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -u demo:'<長いパスワード>' http:
 ```
 
 初期データ（fixture のテンプレート 5 本と、架空の患者 9 人・84 件のサンプル）を入れるときは、
-**全データを消して入れ直す**操作なので、環境変数で明示する:
+**全データを消して入れ直す**操作（登録した定義の組も消え、患者の画面は既定の画面に戻る）なので、環境変数で明示する:
 
 ```sh
 docker exec -e ANLAGE_ALLOW_DEMO_RESET=1 anlage bin/rails demo:reset

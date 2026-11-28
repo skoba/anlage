@@ -137,3 +137,21 @@ cases の要素は `when` と `value`、または `else`。
 
 D-3a 表とモデル → D-3b rake → D-4a 組み込みの定義 → D-4b 動かす組で出す → D-4c `?preview` と `then` → D-4d 読むだけの画面。
 gem は足さない。migration は 1 つ。範囲の外にしたもの（画面からの書き込み、取り込みの前の警告）は `docs/ideas-2027.md` に書いた。
+
+## R6（2026-11-28）D-3a: 定義の組の表とモデル（`skoba/anlage#277`。R-20261128-7）
+
+計画: `docs/design/definition-registration-plan.md` 1 節・1.1 節・5 節（R-20261128-7 で承認）。migration は計画の表のとおり（R-20261128-7「進め方」: このとおりなら CI が green のとき、セッションがマージしてよい）。
+
+- サイクル 1（読み元）: Red `spec/lib/definitions/linter_files_spec.rb` → `NameError: uninitialized constant Definitions::Files`（3 examples, 3 failures）。
+  Green: `Definitions::Files.read(dir)`（目録と screens・logic の YAML を、path の順の対応表に）と `Definitions::Linter.check(files)`。`Linter.call(dir)` はその 2 つの組み合わせ。
+  1 回目は並びが glob ごとで期待と違った（1 failure）ので、全体を path の順にした（checksum が読む順によらない）。D-1・D-2・D-5 の spec を含めて 48 examples, 0 failures
+  - 目録（bundle.yml）が無いときは、例外（`Errno::ENOENT`）ではなく D1 の問題にした（表の組では、ファイルが無いことがあり得る。自己承認）
+- サイクル 2（表とモデル）: Red `spec/models/definition_bundle_spec.rb` → `uninitialized constant DefinitionBundle`。
+  Green: migration `20261128000001_create_definition_bundles`（計画 1 節のカラム。`(bundle_id, version)` 一意、active は組ごとに 1 つの部分索引 `WHERE status = 'active'`）と
+  `DefinitionBundle.register`・`#activate!` → 7 examples, 0 failures
+  - 登録: エラーがあれば足さない（D8 の案は `lint_report` に残して足す）。同じ組・版で中身が違えば断る。同じ checksum は「登録済み」
+  - 動かす: 直前に、いまのテンプレートで検査し直す。通らなければ `DefinitionBundle::LintFailed`
+  - checksum は `files` を path の順に並べた JSON の SHA-256
+- サイクル 3（`demo:reset`、回答 6）: Red `spec/tasks/demo_reset_spec.rb` の「登録した定義の組も消す」→ `expected: 0, got: 1`。
+  Green: `DefinitionBundle.delete_all`（トランザクションの中）。タスクの説明と README（英・日）に書いた → 10 examples, 0 failures
+- rake（register・activate・restore・list）は D-3b

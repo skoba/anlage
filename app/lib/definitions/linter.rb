@@ -14,17 +14,22 @@ module Definitions
     end
 
     def self.call(dir, templates: Template.active)
-      new(dir, templates).call
+      check(Files.read(dir), templates:)
     end
 
-    def initialize(dir, templates)
-      @root = Pathname(dir)
+    # files: path（組の中の相対パス）→ YAML の文字（Definitions::Files、DefinitionBundle#files）
+    def self.check(files, templates: Template.active)
+      new(files, templates).call
+    end
+
+    def initialize(files, templates)
+      @files = files
       @templates = templates.to_a.index_by(&:template_id)
       @problems = []
     end
 
     def call
-      bundle = load("bundle", @root.join(BUNDLE))
+      bundle = load("bundle", BUNDLE)
       return Report.new(problems: @problems, bundle: nil, screens: [], logics: []) unless bundle
 
       screens = load_listed(bundle, "screens", "screen")
@@ -40,9 +45,11 @@ module Definitions
     private
 
     # 読めて D1 を通った定義だけを返す（通らないものは、ほかの検査をしない）
-    def load(kind, path)
-      relative = path.relative_path_from(@root).to_s
-      result = Loader.read(path, root: @root)
+    def load(kind, relative)
+      text = @files[relative]
+      return @problems << Problem.new(code: "D1", definition: relative, message: "#{relative} が無い") && nil unless text
+
+      result = Loader.parse(text, path: relative)
       @problems.concat(result.problems)
       return unless result.data
 
@@ -53,8 +60,8 @@ module Definitions
 
     def load_listed(bundle, key, kind)
       Array(bundle.data[key]).each_with_index.filter_map do |id, index|
-        path = @root.join(key, "#{id}.yml")
-        next problem("D3", bundle, "/#{key}/#{index}", "定義のファイル #{key}/#{id}.yml が無い") unless path.file?
+        path = "#{key}/#{id}.yml"
+        next problem("D3", bundle, "/#{key}/#{index}", "定義のファイル #{path} が無い") unless @files.key?(path)
 
         definition = load(kind, path)
         next problem("D3", definition, "/#{kind}", "#{kind} は #{id} でなければならない（ファイル名と同じ）") if definition && definition.id != id

@@ -77,8 +77,8 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/up        # 200 (
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/patients  # 401
 ```
 
-Load the sample data (5 fixture templates; 9 fictitious patients, 84 records). This **deletes all data and reloads it**, so it
-must be enabled explicitly:
+Load the sample data (5 fixture templates; 9 fictitious patients, 84 records). This **deletes all data and reloads it** (registered
+definition bundles too, so the patient screen returns to the built-in one), so it must be enabled explicitly:
 
 ```sh
 docker exec -e ANLAGE_ALLOW_DEMO_RESET=1 anlage bin/rails demo:reset
