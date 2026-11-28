@@ -82,9 +82,10 @@ RSpec.describe "患者の画面の部品", type: :request do
       expect(lab_cells("試験項目乙（mmol/L）")).to eq("2026-03-02" => "4.5／6.5")
     end
 
-    # 裁定の前提（Opt::RecordedTime が nil を返し、記録の開始時刻に置き換わる）は、openehr-rails では成り立たない（実測）:
-    # 日までの値は、保存のときに gem が 00:00Z を補う。月までの値は、0.12.0 では保存で例外、0.14.1 からは 1 日の 00:00Z（openehr-rails#109）。既知の制限 23
-    it "イベントの時刻が日までの値の記録は、gem が 00:00Z を補って保存し、その日の列に出る（既知の制限 23）" do
+    # openehr-rails 0.15.0 から、記録した文字（`2026-03-01`・`2026-03`）がそのまま読み戻る（openehr-rails#121）。
+    # Opt::RecordedTime（Time.iso8601）は日まで・月までの値を読めず nil を返すので、患者の画面は記録の開始時刻（context の start_time）の日の列に出す。
+    # 0.14.1 までは gem が 00:00Z を補って読み戻し、その日（月までの値は 1 日）の列に出ていた（期待値は "2026-03-01"）。既知の制限 23
+    it "イベントの時刻が日までの値の記録は、記録の開始時刻の日の列に出る（openehr-rails 0.15.0 から。既知の制限 23）" do
       Opt::RmCompositionCommitter.call(lab, { "laboratory_test_result_at0005" => "血液検査", "laboratory_test_analyte_at0024" => "試験項目丁",
                                               "laboratory_test_analyte_at0001" => "3.5", "laboratory_test_analyte_at0001__units" => "mmol/L" },
                                        ehr:, recorded_at: Time.utc(2026, 3, 9, 1, 0)) do |canonical|
@@ -94,10 +95,10 @@ RSpec.describe "患者の画面の部品", type: :request do
       show("DEMO-02")
 
       expect(response).to have_http_status(:ok)
-      expect(lab_cells("試験項目丁（mmol/L）")).to eq("2026-03-01" => "3.5")
+      expect(lab_cells("試験項目丁（mmol/L）")).to eq("2026-03-09" => "3.5")
     end
 
-    it "イベントの時刻が月までの値の記録も保存でき、その月の 1 日の列に出る（openehr-rails 0.14.1 から。既知の制限 23）" do
+    it "イベントの時刻が月までの値の記録も保存でき、記録の開始時刻の日の列に出る（openehr-rails 0.15.0 から。既知の制限 23）" do
       Opt::RmCompositionCommitter.call(lab, { "laboratory_test_result_at0005" => "血液検査", "laboratory_test_analyte_at0024" => "試験項目戊",
                                               "laboratory_test_analyte_at0001" => "4.5", "laboratory_test_analyte_at0001__units" => "mmol/L" },
                                        ehr:, recorded_at: Time.utc(2026, 3, 9, 1, 0)) do |canonical|
@@ -107,7 +108,7 @@ RSpec.describe "患者の画面の部品", type: :request do
       show("DEMO-02")
 
       expect(response).to have_http_status(:ok)
-      expect(lab_cells("試験項目戊（mmol/L）")).to eq("2026-03-01" => "4.5")
+      expect(lab_cells("試験項目戊（mmol/L）")).to eq("2026-03-09" => "4.5")
     end
 
     it "整数の値に小数点を付けない。グラフの軸の文字も同じ" do
