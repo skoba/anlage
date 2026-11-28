@@ -102,6 +102,15 @@ RSpec.describe Llm::Adapters::Local do
       expect(adapter.model).to eq("qwen3:4b")
     end
 
+    it "温度と乱数の種は、作るときに足せる（測定のとき）" do
+      serve(body: reply) do |base_url, requests|
+        adapter, = described_class.build({ "ANLAGE_LLM_MODEL" => "qwen3:4b", "ANLAGE_LLM_BASE_URL" => base_url }, seed: 1, temperature: 0)
+        adapter.complete(instructions: "指示文", input: "問い")
+
+        expect(requests.first[:body]["options"]).to include("seed" => 1, "temperature" => 0)
+      end
+    end
+
     it "モデルの名前が無いときは、使えない" do
       expect(described_class.build({})).to eq([ nil, "モデルの名前（ANLAGE_LLM_MODEL）がありません。" ])
     end

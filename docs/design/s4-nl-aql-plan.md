@@ -702,3 +702,56 @@ Chat Completions の形は、ほかの道具（手元のサーバー）も真似
   （`ollama/ollama@sha256:1cabd20e1762a7a8444bf4a7110b346d923cd77ab6c97c984434140638c913ec`）、指定（`think: false`、出力の形は 14.1 節の JSON スキーマ、
   温度と乱数の種は、5 回は指定しない。乱数の種を固定した 1 回を別に測る）
 - 報告に書く限界: GPU の無い機械、4B の大きさのモデル 1 つ、考える分を止めている
+
+## 15. LM Studio の手元のモデルのアダプタ（R-20261128-5 で足した節。`skoba/anlage#268`）
+
+開発機の Windows 側に、LM Studio が入った。WSL の中の Ollama のコンテナ（上限 5 GB）より大きいモデルを動かせる。
+LM Studio の、OpenAI と同じ形の口（`/v1/chat/completions`）につなぐアダプタを足す。
+
+### 15.1 作り方: `local` に形を足す案と、名前を分ける案
+
+| | 案 A: 名前を分ける（`ANLAGE_LLM=lmstudio`、`Llm::Adapters::LmStudio`） | 案 B: `local` に、口の形の設定を足す |
+|---|---|---|
+| 設定 | アダプタの名前だけで、口の形と既定の接続先が決まる | 環境変数が 1 つ増える（口の形）。組み合わせを誤ると、つながらない |
+| 記録 | 測定の記録の「アダプタ」の欄で、Ollama と LM Studio を分けられる | 同じ名前になり、口の形を別に書く必要がある |
+| コード | 2 つのクラス。通信のところが似る | 1 つのクラスに、2 つの口の形の分かれ道 |
+
+**案 A を採る**（自己承認。裁定が、作り方を計画書で決める、としている）。理由: 口の形（本文、出力の形の渡し方、考える分の扱い、応答、
+トークン）が、Ollama の元の口とすべて違う。設定は、名前 1 つで決まるほうが誤りにくい。測定の記録で、どちらで動かしたかが名前で分かる。
+OpenAI のアダプタの接続先を変える形にしなかったのは、あちらは `max_completion_tokens` を送り（LM Studio の文書にあるのは `max_tokens`）、
+出力の形を渡さず、待ち時間が 30 秒で、鍵が `OPENAI_API_KEY` のため。
+
+### 15.2 口の形（LM Studio の公式の文書で確かめた。2026-11-28）
+
+読んだページ（`lmstudio.ai/docs/developer` の下）: `openai-compat/chat-completions`、`openai-compat/structured-output`、`openai-compat/models`、
+`rest/chat`、`rest/list`、`rest/endpoints`、`core/authentication`、`core/server/settings`、`api-changelog`、`lmstudio.ai/docs/cli/serve/server-start`。
+
+| 項目 | 文書に書いてあること | アダプタ |
+|---|---|---|
+| 本文の項目 | `model`、`messages`、`temperature`、`max_tokens`、`stream`、`seed`、`stop`、`top_p`、`top_k` など。`max_completion_tokens` は載っていない | `model`、`messages`（system と user）、`stream: false`、`max_tokens` 1000。温度と乱数の種は、指定したときだけ |
+| 出力の形 | `response_format: { type: "json_schema", json_schema: { name, schema } }`。例は、`strict` を文字の `"true"` で付けたものと、付けないものがある。要るかどうかは書いていない。GGUF のモデルでは、llama.cpp の文法で縛る。「7B より小さいモデルでは、できないものがある」 | `name`（`output`）と `schema` を送る。`strict` は送らない（例にある、付けない形） |
+| 考える分の指定 | **`/v1/chat/completions` には、書いていない**。`reasoning`（`off`／`low`／`medium`／`high`／`on`）があるのは、LM Studio の元の口（`POST /api/v1/chat`）。`reasoning.effort` があるのは `/v1/responses` | **送らない**（書いていない項目を、推測で送らない） |
+| 考える分の返り方 | 変更の履歴: 0.3.9 で、`reasoning_content` を本文と別の項目にする設定（アプリの設定の Developer）。0.3.23 で、gpt-oss では `choices.message.reasoning` に入る | 本文（`content`）だけを読む。本文が空で、`reasoning` か `reasoning_content` があれば、「考える分だけが返り、本文がありません。」 |
+| 応答の usage | `/v1/chat/completions` のページに、応答の例が無い。`/api/v0/chat/completions` の例は `usage.prompt_tokens`／`completion_tokens`／`total_tokens`。**考える分のトークンの数の項目は、どこにも書いていない**（元の口の `stats.reasoning_output_tokens` だけ） | `usage.prompt_tokens` と `completion_tokens` を読む。無ければ nil |
+| トークン | 既定では要らない。「Require Authentication」をオンにすると、`Authorization: Bearer <トークン>`（0.4.0 以上）。`/v1/*` に効くかは、明記が無い | `LM_API_TOKEN` があるときだけ、ヘッダで送る。記録・画面・ログ・`inspect` に出さない |
+| 待ち受け | 既定は `127.0.0.1`（`lms server start --bind` の説明）。ポートは「前に使ったもの」（例は 1234） | 既定の接続先は `http://127.0.0.1:1234/v1` |
+
+- 元の口（`/api/v1/chat`）を使わない理由: 考える分を止める指定（`reasoning: "off"`）はあるが、**出力の形を縛る項目が、文書に無い**。
+  qwen3:4b では、出力の形を縛らないと、JSON として読めなかった（14.2 節）。出力の形を取る
+- 考える分が出るかどうか、出たときの量と止め方は、試し（裁定の 3 節）で実測する。止められないと分かったら、元の口を使う形を、ゲート報告に書く
+- 文書に書いていない状態の番号（モデルが無いとき、など）は、決め打ちにしない。「LM Studio が、エラーを返しました（<状態>）。」で返す
+
+### 15.3 アダプタ（`Llm::Adapters::LmStudio`）
+
+| | |
+|---|---|
+| 設定 | `ANLAGE_LLM=lmstudio`、`ANLAGE_LLM_MODEL`（既定は無い）、`ANLAGE_LLM_BASE_URL`（既定は `http://127.0.0.1:1234/v1`）、`LM_API_TOKEN`（省ける） |
+| 接続先 | **開発機の中（127.0.0.1、localhost、::1）だけ**。`local` と同じ検査（`Openai.local?`）。それ以外は、https でも使えない |
+| 表示 | 外に送らない扱い。回数の上限と、回数の表示は、ほかのアダプタと同じ |
+| 待ち時間 | 300 秒。出力の上限は 1,000 トークン（AQL を書かせる腕と、考える分が出たときの余裕） |
+| 測定 | `rake evaluation:grounding ADAPTER=lmstudio`。`SEED` と `TEMPERATURE` は、`local` と同じに渡せる |
+
+- gem は足さない（標準の `Net::HTTP`）。spec は、決まった応答を返すサーバーだけを相手にする。CI は LM Studio を呼ばない
+- LM Studio の、クラウドのモデルは使わない。試しの前に、モデルが手元のファイルであることを確かめる（裁定の 3 節）
+- WSL の中から Windows 側の LM Studio に届くかは、`docs/reports/s4-lmstudio-network-check.md`（いまは NAT で、届かない）
+- 実測は、まだ無い（LM Studio のサーバーが立ち、届くようになってから）

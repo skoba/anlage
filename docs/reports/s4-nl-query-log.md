@@ -502,3 +502,46 @@ describe の中の定数は、トップレベルに定義される。全体を�
 
 直し: 定数の名前を `GROUNDING_BP_V2_AQL` などに変えた。`spec/lib/evaluation` をまとめて流して、126 examples, 0 failures。
 マージはしていなかった（CI が赤のあいだ、マージしない）。以後、spec に定数を足すときは、ほかの spec の定数と名前が重ならないことを `grep` で確かめる。
+
+## R8 LM Studio の手元のモデルのアダプタ（2026-11-28。`skoba/anlage#268`。R-20261128-5 の 1）
+
+### 自己承認した判断
+
+- **名前を分ける**（`ANLAGE_LLM=lmstudio`、`Llm::Adapters::LmStudio`）。`local` に口の形の設定を足す案は、捨てた。根拠は計画書 15.1 節
+  （口の形が、Ollama の元の口とすべて違う。記録で、どちらで動かしたかが名前で分かる）
+- **OpenAI と同じ形の口を使い、考える分の指定は送らない**。LM Studio の文書に、この口で考える分を止める項目が無い（計画書 15.2 節）。
+  元の口（`/api/v1/chat`）には `reasoning: "off"` があるが、出力の形を縛る項目が無い。出力の形を取った。考える分は、試しで実測する
+- **`response_format` の `strict` は送らない**。文書の例は、文字の `"true"` を付けたものと、付けないものの 2 つ。要るかどうかは書いていない
+- **トークンの環境変数は `LM_API_TOKEN`**。LM Studio の文書の例が使っている名前
+- `Local.build` と `LmStudio.build` に、2 つめの引数（温度と乱数の種）を足した。測定の rake が、2 つのアダプタを同じ書き方で作るため
+
+### Red（実行して失敗を確かめた）
+
+```
+NameError:
+  uninitialized constant Llm::Adapters::LmStudio
+# ./spec/lib/llm/adapters/lm_studio_spec.rb:8:in '<top (required)>'
+0 examples, 0 failures, 1 error occurred outside of examples
+```
+
+`Local.build` の 2 つめの引数（実装を外して流した）:
+
+```
+ArgumentError:
+  wrong number of arguments (given 2, expected 1)
+27 examples, 1 failure
+rspec ./spec/lib/llm/adapters/local_spec.rb:105 # Llm::Adapters::Local.build … 温度と乱数の種は、作るときに足せる（測定のとき）
+```
+
+- 途中の誤り: `LmStudio.build(env, **options)` と書いたところ、括弧なしのハッシュ（`build("ANLAGE_LLM_MODEL" => …)`）がキーワード引数に取られ、
+  `wrong number of arguments (given 0, expected 1)` で 2 例が落ちた。2 つめの引数を、ふつうのハッシュ（`options = {}`）に直した
+- `settings_spec` の lmstudio の例は、アダプタの spec と同じ実行で Red を見た（定数が無い）。1 例ずつは取っていない
+
+### Green
+
+`bundle exec rspec spec/lib/llm` → 90 examples, 0 failures。
+
+### まだ確かめていないこと
+
+- 実際の LM Studio のサーバーには、つないでいない（Windows 側で、サーバーが立っていない。WSL は NAT。`docs/reports/s4-lmstudio-network-check.md`）
+- 考える分が出るか、`usage` に何が入るか、`response_format` で選択の形が縛れるか、モデルが無いときの状態の番号

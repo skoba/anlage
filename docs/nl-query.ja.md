@@ -88,3 +88,22 @@
 - 鍵は要らない。画面に「外に送られます」の注意は出ない。回数の上限と、回数の表示は、同じ
 - 1 回の問い合わせの待ち時間の上限は 300 秒。出力の上限は 400 トークン
 - Ollama と、モデルは、自分で入れる。Anlage は、入れない
+
+### LM Studio を使う（2026-11-28）
+
+`ANLAGE_LLM=lmstudio` のときは、同じ機械の中の LM Studio のサーバーに、OpenAI と同じ形の口で文を送る。外には、何も送らない。
+
+| 環境変数 | 意味 | 既定 |
+|---|---|---|
+| `ANLAGE_LLM=lmstudio` | LM Studio のアダプタを使う | — |
+| `ANLAGE_LLM_MODEL` | モデルの名前（LM Studio に入れたもの）。既定は無い | 無し |
+| `ANLAGE_LLM_BASE_URL` | 接続先。同じ機械の中（127.0.0.1、localhost）だけを受ける | `http://127.0.0.1:1234/v1` |
+| `LM_API_TOKEN` | LM Studio の API のトークン。LM Studio の「Require Authentication」をオンにしたときだけ要る | 無し |
+
+- LM Studio のサーバーを立てる（Developer のタブ、または `lms server start`）。「Serve on Local Network」は、オフのままにする
+- 使うのは、手元に落としたモデルだけ。クラウドのモデルは、文が外に出るので、使わない
+- 出力の形は、JSON スキーマで縛る（`response_format`）
+- 画面に「外に送られます」の注意は出ない。回数の上限と、回数の表示は、同じ。トークンの値は、画面にもログにも出ない
+- 1 回の問い合わせの待ち時間の上限は 300 秒。出力の上限は 1,000 トークン
+- **実際の LM Studio のサーバーには、まだつないでいない**（決まった応答を返すサーバーを相手にした spec だけ）
+- WSL の中の Anlage から、Windows 側の LM Studio には、そのままでは届かない（`docs/reports/s4-lmstudio-network-check.md`）

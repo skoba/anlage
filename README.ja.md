@@ -122,7 +122,7 @@ http://localhost:8080/ を開き（利用者名 `demo` とパスワードを入�
 
 API に送るのは、問いの文と、候補の項目の名前。記録の中身は送らない。anlage の画面には認証が無いので、オンにした Anlage に
 届く人は、だれでも、1 日の上限まで API を呼べる。どちらの会社に文が送られるかは `ANLAGE_LLM` で決まる: OpenAI を使うときは
-`ANLAGE_LLM=openai` と `OPENAI_API_KEY`（`ANTHROPIC_API_KEY` の代わり）。`ANLAGE_LLM=local` は、同じ機械の中の Ollama のサーバーを使い、
+`ANLAGE_LLM=openai` と `OPENAI_API_KEY`（`ANTHROPIC_API_KEY` の代わり）。`ANLAGE_LLM=local`（Ollama）と `ANLAGE_LLM=lmstudio`（LM Studio）は、同じ機械の中のサーバーを使い、
 外には何も送らない。詳しくは [`docs/nl-query.ja.md`](docs/nl-query.ja.md)。
 
 #### API を Postman で試す
