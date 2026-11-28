@@ -1,0 +1,31 @@
+{
+  "query": "n001-4",
+  "arm": "g_selection",
+  "repeat": 3,
+  "instructions_sha256": "3c459ade7d5fd8d39574551c1e1f4977106fb67e764cc7b93a80279f8e892c49",
+  "sha256": "d8a20cfe7bcb14637234f25a7c3816e2b56531db54e32eedb5eae583ecd11575",
+  "input": "候補の項目:\n1 | Systolic | Blood Pressure | 数値 |  | mm[Hg] | patient_blood_pressure.v1\n2 | Diastolic | Blood Pressure | 数値 |  | mm[Hg] | patient_blood_pressure.v1\n3 | Rate | Heart rate and rhythm | 数値 |  | /min | patient_blood_pressure.v1\n4 | 収縮期 | 血圧 | 数値 |  | mm[Hg] | CardiologyEncounter\n5 | 判定 | Body mass index | 文字列 |  |  | bmi_calculation\n6 | Body mass index | Body mass index | 数値 |  | kg/m2 | bmi_calculation\n7 | 臨床的に認識された日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n8 | 治癒日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n9 | 診断確度 | プロブレム・診断 | 値集合 | 疑い、推定、確定 |  | ProblemList\n10 | 拡張期 | 血圧 | 数値 |  | mm[Hg] | CardiologyEncounter\n11 | プロブレム・診断名 | プロブレム・診断 | 文字列 |  |  | ProblemList\n12 | 発症日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n13 | 最終更新日 | プロブレム・診断 | 日時 |  |  | ProblemList\n14 | 検査名 | 検体検査結果 | 文字列 |  |  | LabResultReport\n15 | 分析名 | 検体検査結果／検査分析結果 | 文字列 |  |  | LabResultReport\n16 | 分析結果 | 検体検査結果／検査分析結果 | 数値 |  |  | LabResultReport\n17 | 身長 | 身長 | 数値 |  | cm | bmi_calculation\n18 | 体重 | 体重 | 数値 |  | kg | bmi_calculation\n\n問い: テンプレート CardiologyEncounter の記録のうち、収縮期血圧が 140 mmHg 以上の記録の、収縮期血圧の値\n",
+  "response": "{\n  \"columns\": [\n    4\n  ],\n  \"conditions\": [\n    {\n      \"card\": 4,\n      \"operator\": \">=\",\n      \"value\": 140\n    }\n  ],\n  \"order\": null,\n  \"template_id\": false,\n  \"across_versions\": false,\n  \"reason\": null\n}",
+  "model": "qwen3:4b",
+  "input_tokens": 1430,
+  "output_tokens": 75,
+  "seconds": 13.49,
+  "status": "match",
+  "order_free": true,
+  "parseable": true,
+  "lint_ok": true,
+  "executed": true,
+  "card_match": true,
+  "aqls": [
+    "SELECT o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude\nFROM EHR e CONTAINS COMPOSITION c CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2]\nWHERE o/data[at0001]/events[at0006]/data[at0003]/items[at0004]/value/magnitude >= 140"
+  ],
+  "reason": null,
+  "rows": [
+    [
+      148.0
+    ],
+    [
+      152.0
+    ]
+  ]
+}

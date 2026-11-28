@@ -1,0 +1,22 @@
+{
+  "query": "n002-3",
+  "arm": "g_selection",
+  "repeat": 4,
+  "instructions_sha256": "3c459ade7d5fd8d39574551c1e1f4977106fb67e764cc7b93a80279f8e892c49",
+  "sha256": "fcf08a0575ed3d833f0f4cf8a80cfd63319705272251be22af5a4fd027a0c526",
+  "input": "候補の項目:\n1 | プロブレム・診断名 | プロブレム・診断 | 文字列 |  |  | ProblemList\n2 | 診断確度 | プロブレム・診断 | 値集合 | 疑い、推定、確定 |  | ProblemList\n3 | 発症日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n4 | 臨床的に認識された日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n5 | 治癒日時 | プロブレム・診断 | 日時 |  |  | ProblemList\n6 | 最終更新日 | プロブレム・診断 | 日時 |  |  | ProblemList\n7 | 収縮期 | 血圧 | 数値 |  | mm[Hg] | CardiologyEncounter\n8 | 拡張期 | 血圧 | 数値 |  | mm[Hg] | CardiologyEncounter\n9 | 検査名 | 検体検査結果 | 文字列 |  |  | LabResultReport\n10 | 分析名 | 検体検査結果／検査分析結果 | 文字列 |  |  | LabResultReport\n11 | 分析結果 | 検体検査結果／検査分析結果 | 数値 |  |  | LabResultReport\n12 | 身長 | 身長 | 数値 |  | cm | bmi_calculation\n13 | 体重 | 体重 | 数値 |  | kg | bmi_calculation\n14 | Body mass index | Body mass index | 数値 |  | kg/m2 | bmi_calculation\n15 | 判定 | Body mass index | 文字列 |  |  | bmi_calculation\n16 | Rate | Heart rate and rhythm | 数値 |  | /min | patient_blood_pressure.v1\n17 | Systolic | Blood Pressure | 数値 |  | mm[Hg] | patient_blood_pressure.v1\n18 | Diastolic | Blood Pressure | 数値 |  | mm[Hg] | patient_blood_pressure.v1\n\n問い: プロブレム・診断のうち、診断確度が「疑い」のものの、プロブレム・診断名\n",
+  "response": "{\n  \"columns\": [\n    1\n  ],\n  \"conditions\": [\n    {\n      \"card\": 2,\n      \"operator\": \"=\",\n      \"value\": \"疑い\"\n    }\n  ],\n  \"order\": null,\n  \"template_id\": false,\n  \"across_versions\": false,\n  \"reason\": null\n}",
+  "model": "qwen3:4b",
+  "input_tokens": 1414,
+  "output_tokens": 73,
+  "seconds": 14.59,
+  "status": "unparseable",
+  "order_free": false,
+  "parseable": false,
+  "lint_ok": false,
+  "executed": false,
+  "card_match": null,
+  "aqls": [],
+  "reason": "診断確度 に = は使えない",
+  "rows": []
+}
