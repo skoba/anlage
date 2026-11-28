@@ -7,7 +7,8 @@ RSpec.describe "Postman のコレクション（docs/demo/postman/）" do
   ENVIRONMENT = Rails.root.join("docs/demo/postman/anlage.postman_environment.json")
   ENGINE_MOUNT = "/openehr".freeze
   SAMPLE = { "subject_id" => "DEMO-01", "ehr_id" => "08ec1843-d1f3-4e8b-ab99-9194f41c745e",
-             "composition_uid" => "833da556-875f-4cf2-9931-ef04a6c0ce73" }.freeze
+             "composition_uid" => "833da556-875f-4cf2-9931-ef04a6c0ce73",
+             "observation_id" => "c04c7ce90f886413c9bb959582db02b6e-0" }.freeze
 
   let(:collection) { JSON.parse(COLLECTION.read) }
   let(:environment) { JSON.parse(ENVIRONMENT.read) }
@@ -41,22 +42,36 @@ RSpec.describe "Postman のコレクション（docs/demo/postman/）" do
     expect(requests.map { _1["request"]["auth"] }.compact).to be_empty
   end
 
-  it "環境の雛形は、接続先・利用者名・パスワード（空）・患者 ID・EHR ID・記録の uid を持つ" do
+  it "環境の雛形は、接続先・利用者名・パスワード（空）・患者 ID・EHR ID・記録の uid・Observation の id を持つ" do
     values = environment["values"].to_h { [ _1["key"], _1["value"] ] }
-    expect(values.keys).to eq(%w[base_url username password subject_id ehr_id composition_uid])
+    expect(values.keys).to eq(%w[base_url username password subject_id ehr_id composition_uid observation_id])
     expect(values["subject_id"]).to eq("DEMO-01")
     expect(values["password"]).to eq("")
     expect(values["base_url"]).to eq("http://localhost:8080")
   end
 
-  # R-20261127-5 の 1: いつも 0 件になる要求（anlage での FHIR の Observation。既知の制限 19）は入れない
-  it "FHIR の Observation の要求は入れない（FHIR 2 件、openEHR REST 4 件）" do
-    expect(collection["item"].map { |folder| folder["item"].size }).to eq([ 2, 4 ])
-    expect(requests.map { _1.dig("request", "url", "raw") }).to all(satisfy { !_1.include?("/Observation") })
+  # R-20261127-30: FHIR の読み出しをつないだ（既知の制限 19 は解消）ので、Observation と Condition の要求を戻す
+  it "FHIR は 5 件（metadata、StructureDefinition、Observation の検索と 1 件、Condition の検索）、openEHR REST は 4 件" do
+    expect(collection["item"].map { |folder| folder["item"].size }).to eq([ 5, 4 ])
+    expect(collection["item"].first["item"].map { _1["name"] })
+      .to eq([ "CapabilityStatement（metadata）", "StructureDefinition（ProblemList の問題・診断）",
+               "Observation の検索（その患者）", "Observation の 1 件", "Condition の検索（その患者のプロブレムリスト）" ])
+  end
+
+  it "Observation と Condition の検索は、subject に Patient/{{ehr_id}} を渡す。検索の 1 件目の id を observation_id に入れる" do
+    %w[Observation Condition].each do |type|
+      search = requests.find { _1["name"].start_with?("#{type} の検索") }
+      expect(search.dig("request", "url", "raw")).to eq("{{base_url}}/openehr/fhir/#{type}?subject=Patient/{{ehr_id}}")
+    end
+    observation = requests.find { _1["name"] == "Observation の 1 件" }
+    expect(observation.dig("request", "url", "raw")).to eq("{{base_url}}/openehr/fhir/Observation/{{observation_id}}")
+    script = requests.find { _1["name"] == "Observation の検索（その患者）" }["event"].find { _1["listen"] == "test" }.dig("script", "exec").join("\n")
+    expect(script).to include("pm.response.json().entry")
+    expect(script).to include('.set("observation_id", id)')
   end
 
   it "すべての要求のパスが、anlage か engine の routes で解決できる" do
-    expect(requests.size).to eq(6)
+    expect(requests.size).to eq(9)
     requests.each do |request|
       method = request.dig("request", "method").downcase.to_sym
       expect { recognize(method, path_of(request)) }.not_to raise_error, "#{request['name']}: #{method} #{path_of(request)}"

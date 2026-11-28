@@ -39,7 +39,8 @@ Each item is backed by specs in `spec/` (CI runs them on every push).
 - **Path cards (semantic index).** Every node of a registered template becomes a searchable card; search by Japanese clinical
   words, with a reviewed alias table.
 - **FHIR.** StructureDefinition profiles generated from each registered template (`/fhir/r5/StructureDefinition/:id`), and the
-  openehr-rails CapabilityStatement. Reading records as FHIR resources is not available yet (known limitation 19).
+  openehr-rails CapabilityStatement. Records are read as FHIR Observation and Condition resources (`/openehr/fhir/Observation`,
+  `/openehr/fhir/Condition`, searchable by `subject`); what the facade fills in itself is known limitation 24.
 - **openEHR REST.** EHR, COMPOSITION and AQL endpoints from openehr-rails (`/openehr/v1`), with a Postman collection in
   [`docs/demo/postman/`](docs/demo/postman/).
 
