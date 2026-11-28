@@ -545,3 +545,38 @@ rspec ./spec/lib/llm/adapters/local_spec.rb:105 # Llm::Adapters::Local.build …
 
 - 実際の LM Studio のサーバーには、つないでいない（Windows 側で、サーバーが立っていない。WSL は NAT。`docs/reports/s4-lmstudio-network-check.md`）
 - 考える分が出るか、`usage` に何が入るか、`response_format` で選択の形が縛れるか、モデルが無いときの状態の番号
+
+## R9 開発機の道具: LM Studio への中継（2026-11-28。`skoba/anlage#286`。R-20261128-10）
+
+### 自己承認した判断
+
+- **置き場所は `script/lmstudio_relay.rb`**（spec は `spec/script/`）。裁定は「開発機だけの道具。アプリのコードに入れない」。
+  `app/`・`lib/` に入れる案は、捨てた（アプリが読み込む）。リポジトリの外に置く案も、捨てた（spec が付けられず、記録に残らない）
+- **作りは、Ruby の標準のライブラリだけ**（`socket`・`open3`）。gem は足さない。`socat` などの道具で組む案は、捨てた
+  （HTTP の要求を読んで `curl.exe` の引数に直すところが、書けない）
+- **中継の先は固定**（Windows 側の `http://127.0.0.1:1234`）。同じ機械の中でない先は、立ち上げのときに断る
+- **`Authorization` のヘッダは渡さない**。`curl.exe` の引数に書くと、Windows 側のプロセスの一覧にトークンが出る。
+  LM Studio の既定は、トークンを求めない（`docs/reports/s4-lmstudio-network-check.md` 7 節）
+- 根拠の実測: WSL から `/mnt/c/Windows/System32/curl.exe`（8.23.0）を起こせる。標準入力を渡せる。サーバーが無いときは、終了の番号 7
+
+### Red（実行して失敗を確かめた）
+
+```
+Failure/Error: require Rails.root.join("script/lmstudio_relay").to_s
+
+LoadError:
+  cannot load such file -- /home/skoba/src/anlage-worktrees/lmstudio-relay/script/lmstudio_relay
+# ./spec/script/lmstudio_relay_spec.rb:4:in '<top (required)>'
+0 examples, 0 failures, 1 error occurred outside of examples
+```
+
+### Green
+
+`bundle exec rspec spec/script/lmstudio_relay_spec.rb` → 8 examples, 0 failures。`bin/rubocop script spec/script` → no offenses。
+
+実物の `curl.exe` を通した確かめ（LM Studio のサーバーは立っていない）: 中継（`127.0.0.1:11234`）に POST → 502、
+`curl が失敗しました（終了の番号 7）`。0.2 秒。
+
+### まだ確かめていないこと
+
+- LM Studio のサーバーが立っているときに、応答が返ること。日本語の本文が、Windows 側の `curl.exe` を通って崩れないこと（試しで見る）
