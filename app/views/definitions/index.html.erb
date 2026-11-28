@@ -1,0 +1,24 @@
+<%# skoba/anlage#296: 定義の組の一覧（読むだけ）。文言は docs/demo/ui-vocabulary.md の「定義の組」 %>
+<h1>定義の組</h1>
+
+<p id="definitions_note">この画面は読むだけです。登録・動かす・戻すは、サーバで rake definitions:register・definitions:activate・definitions:restore を実行します。</p>
+
+<% if @bundles.empty? %>
+  <p>登録した定義の組はありません。</p>
+<% else %>
+  <table id="definition_bundles" class="data-table">
+    <thead><tr><th>組</th><th>版</th><th>状態</th><th>登録した人</th><th>いまのテンプレートでの検査</th><th>登録した日時</th></tr></thead>
+    <tbody>
+      <% @bundles.each do |bundle| %>
+        <tr>
+          <td><%= link_to bundle.bundle_id, definition_path(bundle) %></td>
+          <td><%= bundle.version %></td>
+          <td><%= bundle_status_label(bundle.status) %></td>
+          <td><%= bundle.registered_by %></td>
+          <td><%= lint_summary(@reports.fetch(bundle.id)) %></td>
+          <td><%= l(bundle.created_at, format: "%Y-%m-%d %H:%M") %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

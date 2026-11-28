@@ -223,3 +223,19 @@ gem は足さない。migration は 1 つ。範囲の外にしたもの（画面
 - 語彙表（`docs/demo/ui-vocabulary.md`）の「定義の組」の行に、試しの表示の文 3 つを、文言の pin と同じ commit で足した
 - Change: 下書きの定義の組を `?preview=<行の id>` で試しに表示できる。定義のボタンから開いた帳票は、保存のあと、ボタンの `then` の画面に進む（Refs #294、Refs R-20261128-7。D-4c）。
   利用者に見える変更: あり（定義の組を設定・登録したときだけ。設定しなければ変わらない）
+
+## R11（2026-11-28）D-4d: 定義の組の画面 `/definitions`（読むだけ。`skoba/anlage#296`。R-20261128-7、計画 4 節）
+
+- Red `spec/requests/definitions_screen_spec.rb`（8 例）→ 8 examples, 8 failures（`undefined method 'definitions_path'`・`definition_path`、route の例は `[]`）
+- Green: `GET /definitions`（一覧）と `GET /definitions/:id`（版の画面）。`DefinitionsController`、`Definitions::FileDiff`（行の最長共通部分列。gem を足さない。
+  `diff-lcs` は rspec の依存で test にしか無い）、`DefinitionsHelper#lint_summary`・`bundle_status_label`、`patients` の画面と同じ部品の作り → 8 examples, 0 failures
+  - 1 回目の Green で 2 failures: spec に「案 0 件」と書いていたが、fixture の `logic/bmi_rules.yml` に `reviewed_by` が無く、検査は D8 の案を 1 件出す（実測）。spec を実測に合わせ、その理由を spec の頭に書いた
+  - `spec/requests`・`spec/lib/definitions`・`spec/docs`・見た目と配置の system spec: 284 examples, 0 failures
+- 画面から書き込む道は作らない: `/definitions` の route は GET の 2 つだけ（spec で固定。計画 4 節）
+- 検査の結果は、いまのテンプレートで検査し直したもの（`Definitions::ActiveScreen.lint`。鍵で覚える）。登録のときの `lint_report` は出さない
+- 自己承認した判断:
+  - 差分は「同じ組の、id が 1 つ前の行」とだけ比べる（版の番号ではなく登録の順。戻した版は、戻す前の最新と比べる）
+  - 画面の上のナビには、リンクを足さない（ナビは両方のレーンが触る共有のファイルで、計画に書いていない。入口は URL `/definitions`。足すかは、見せ方の段で決める）
+- 語彙表の「定義の組」の行に、画面の文言を、pin と同じ commit で足した
+- Change: 定義の組の画面 `/definitions` を足した。組と版の一覧、いまのテンプレートでの検査の結果、遷移の図、前の版との差分を読める。書き込みは rake のまま（Refs #296、Refs R-20261128-7。D-4d）。
+  利用者に見える変更: あり（新しい画面。読むだけ）

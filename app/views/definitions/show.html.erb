@@ -1,0 +1,64 @@
+<%# skoba/anlage#296: 定義の組の 1 つの版（読むだけ）。文言は docs/demo/ui-vocabulary.md の「定義の組」 %>
+<h1>定義の組 <%= @bundle.bundle_id %> <%= @bundle.version %></h1>
+
+<dl>
+  <dt>状態</dt><dd><%= bundle_status_label(@bundle.status) %></dd>
+  <dt>登録した人</dt><dd><%= @bundle.registered_by %></dd>
+  <% if @bundle.restored_from %><dt>戻した元の版</dt><dd><%= @bundle.restored_from %></dd><% end %>
+</dl>
+
+<% if @bundle.status == "draft" %>
+  <% if current_ehr %>
+    <p><%= link_to "この版を、患者 #{current_ehr.subject_id} の画面で試しに表示", patient_path(current_ehr.ehr_id, preview: @bundle.id), id: "definition_preview" %></p>
+  <% else %>
+    <p id="definition_preview_note">試しに表示するには、先に<%= link_to "患者", patients_path %>を選んでください。</p>
+  <% end %>
+<% end %>
+
+<section id="definition_lint" class="card">
+  <h2>いまのテンプレートでの検査</h2>
+  <p><%= lint_summary(@report) %></p>
+  <% if @report.problems.any? %>
+    <ul><% @report.problems.each do |problem| %><li><%= problem.to_s %></li><% end %></ul>
+  <% end %>
+</section>
+
+<section id="definition_diagram" class="card">
+  <h2>遷移の図</h2>
+  <% if @report.ok? %>
+    <%= transition_diagram(Definitions::Diagram.from(@report)) %>
+  <% else %>
+    <p>検査でエラーがあるので、図は出しません。</p>
+  <% end %>
+</section>
+
+<section id="definition_diff" class="card">
+  <% if @previous %>
+    <h2>前の版（<%= @previous.version %>）との差分</h2>
+    <% if @diff.empty? %>
+      <p>ファイルの中身は同じです。</p>
+    <% end %>
+    <% @diff.each do |file| %>
+      <figure data-definition-diff="<%= file.path %>">
+        <figcaption><%= file.path %>（<%= Definitions::FileDiff::STATUS_LABELS.fetch(file.status) %>）</figcaption>
+        <pre class="definition-diff"><% file.lines.each do |line| %><span class="diff-line diff-<%= { "+" => "added", "-" => "removed" }.fetch(line[0], "same") %>"><%= line %></span>
+<% end %></pre>
+      </figure>
+    <% end %>
+  <% else %>
+    <h2>前の版との差分</h2>
+    <p>前の版はありません。</p>
+  <% end %>
+</section>
+
+<section id="definition_files" class="card">
+  <h2>ファイル</h2>
+  <% @bundle.files.sort.each do |path, text| %>
+    <details>
+      <summary><%= path %></summary>
+      <pre><%= text %></pre>
+    </details>
+  <% end %>
+</section>
+
+<p><%= link_to "定義の組の一覧", definitions_path %></p>
