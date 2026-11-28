@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_23_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_28_000001) do
   create_table "compositions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.json "rm_composition", null: false
@@ -18,6 +18,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_23_000002) do
     t.string "uid"
     t.datetime "updated_at", null: false
     t.index ["template_id"], name: "index_compositions_on_template_id"
+  end
+
+  create_table "definition_bundles", force: :cascade do |t|
+    t.string "bundle_id", null: false
+    t.string "version", null: false
+    t.string "status", default: "draft", null: false
+    t.json "files", null: false
+    t.string "checksum", null: false
+    t.json "lint_report"
+    t.string "restored_from"
+    t.string "registered_by"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["bundle_id", "version"], name: "index_definition_bundles_on_bundle_id_and_version", unique: true
+    t.index ["bundle_id"], name: "index_definition_bundles_one_active", unique: true, where: "status = 'active'"
   end
 
   create_table "openehr_ehrs", force: :cascade do |t|
