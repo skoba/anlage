@@ -7,9 +7,10 @@ class DefinitionBundle < ApplicationRecord
   class LintFailed < StandardError; end
 
   STATUSES = %w[draft active superseded].freeze
-  # registered?: 行を足したか。errors: 検査のエラー（Definitions::Problem）。message: 足さなかった理由
-  Registration = Data.define(:bundle, :errors, :message) do
-    def registered? = message.nil? && errors.empty?
+  # status: :registered（足した）・:invalid（検査のエラー）・:exists（同じ中身が登録済み）・:conflict（同じ版で別の中身）。
+  # errors: 検査のエラー（Definitions::Problem）。message: 足さなかった理由
+  Registration = Data.define(:status, :bundle, :errors, :message) do
+    def registered? = status == :registered
   end
 
   validates :bundle_id, :version, :checksum, :files, presence: true
@@ -21,20 +22,21 @@ class DefinitionBundle < ApplicationRecord
   # files: path → YAML の文字（Definitions::Files.read）。registered_by は運用者の名前（患者の記録や計測には使わない）
   def self.register(files, registered_by:)
     report = Definitions::Linter.check(files)
-    return Registration.new(bundle: nil, errors: report.errors, message: nil) unless report.ok?
+    return Registration.new(status: :invalid, bundle: nil, errors: report.errors, message: nil) unless report.ok?
 
     bundle_id = report.bundle.id
     version = report.bundle.data["version"]
     existing = find_by(bundle_id:, version:)
-    if existing
-      message = existing.checksum == checksum(files) ? "組 #{bundle_id} の版 #{version} は登録済み" :
-                                                     "組 #{bundle_id} の版 #{version} は、別の中身で登録済み。bundle.yml の version を上げる"
-      return Registration.new(bundle: existing, errors: [], message:)
+    if existing&.checksum == checksum(files)
+      return Registration.new(status: :exists, bundle: existing, errors: [], message: "組 #{bundle_id} の版 #{version} は登録済み")
+    elsif existing
+      return Registration.new(status: :conflict, bundle: existing, errors: [],
+                              message: "組 #{bundle_id} の版 #{version} は、別の中身で登録済み。bundle.yml の version を上げる")
     end
 
     bundle = create!(bundle_id:, version:, files:, checksum: checksum(files), registered_by:,
                      lint_report: report.problems.map { _1.to_h.transform_keys(&:to_s) })
-    Registration.new(bundle:, errors: [], message: nil)
+    Registration.new(status: :registered, bundle:, errors: [], message: nil)
   end
 
   VERSION_LINE = /^version:.*$/
